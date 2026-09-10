@@ -36,6 +36,7 @@
                 <key>CFBundleTypeExtensions</key>
                 <array>
                     <string>ustx</string>
+                    <string>ustx31</string>
                 </array>
                 <key>CFBundleTypeIconFile</key>
                 <string>OpenUtau.icns</string>

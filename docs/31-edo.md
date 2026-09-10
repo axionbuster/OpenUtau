@@ -58,10 +58,10 @@ The optional Liquid Glass icon is not required for the standard icon to work.
 
 ## Fork version
 
-The local fork identifies itself as `0.1.570-edo31.2 [31-EDO]`, based on the
+The local fork identifies itself as `0.1.570-edo31.3 [31-EDO]`, based on the
 upstream 0.1.570 development line. The application title uses the informational
 version, preserving the fork suffix without the assembly's trailing zero. macOS
-uses numeric bundle version `0.1.570.2` and short version `0.1.570`. These build
+uses numeric bundle version `0.1.570.3` and short version `0.1.570`. These build
 versions are independent of the native project format revision.
 
 ## Image-scaling regression check

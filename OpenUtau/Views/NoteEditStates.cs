@@ -221,6 +221,7 @@ namespace OpenUtau.App.Views {
         private UNote? note;
         private bool playTone;
         private int activeTone;
+        private double? activeFrequency;
         protected override string? commandNameKey => "command.note.add";
 
         public NoteDrawEditState(
@@ -239,7 +240,8 @@ namespace OpenUtau.App.Views {
                     PlaybackManager.Inst.StopPlayback();
                 }
                 activeTone = note.GridTone;
-                PlaybackManager.Inst.PlayTone(MusicMath.ToneToFreq(note.AdjustedTone));
+                activeFrequency = MusicMath.ToneToFreq(note.AdjustedTone);
+                PlaybackManager.Inst.PlayTone(activeFrequency.Value);
             }
             if (note != null) {
                 var prev = vm.NotesViewModel.Part!.notes.FirstOrDefault(n => n.position < note.position && note.position < n.End);
@@ -259,10 +261,11 @@ namespace OpenUtau.App.Views {
                 return;
             }
             int tone = Math.Clamp(notesVm.PointToTone(point), 0, notesVm.TrackCount - 1);
-            if (activeTone != tone) {
+            if (playTone && activeTone != tone) {
                 // Tone has changed
-                PlaybackManager.Inst.EndTone(MusicMath.ToneToFreq(vm.NotesViewModel.GridToTone(activeTone)));
-                PlaybackManager.Inst.PlayTone(MusicMath.ToneToFreq(vm.NotesViewModel.GridToTone(tone)));
+                StopPreview();
+                activeFrequency = MusicMath.ToneToFreq(vm.NotesViewModel.GridToTone(tone));
+                PlaybackManager.Inst.PlayTone(activeFrequency.Value);
                 activeTone = tone;
             }
             int deltaTone = tone - note.GridTone;
@@ -296,9 +299,18 @@ namespace OpenUtau.App.Views {
             }
             valueTip.UpdateValueTip(note.duration.ToString());
         }
+        private void StopPreview() {
+            // Keep the exact frequency used at note-on: AdjustedTone is a float,
+            // while GridToTone is double precision, so recomputing can miss it.
+            if (activeFrequency is double frequency) {
+                PlaybackManager.Inst.EndTone(frequency);
+                activeFrequency = null;
+            }
+        }
+
         public override void End(IPointer pointer, Point point) {
             base.End(pointer, point);
-            PlaybackManager.Inst.EndTone(MusicMath.ToneToFreq(vm.NotesViewModel.GridToTone(activeTone)));
+            StopPreview();
         }
     }
 

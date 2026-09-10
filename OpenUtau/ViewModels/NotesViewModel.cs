@@ -42,6 +42,44 @@ namespace OpenUtau.App.ViewModels {
         public int TrackCount => Is31Edo ? Edo31.MaxStep : ViewConstants.MaxTone;
         public double PitchStep => Is31Edo ? Edo31.StepTone : 1;
         public double GridToTone(double row) => row * PitchStep;
+        // Display rows are independent of the document's exact pitch steps.
+        public int[]? DisplayRows { get; private set; }
+        public int DisplayTrackCount => DisplayRows?.Length ?? TrackCount;
+        [Reactive] public partial bool FoldDiatonic31 { get; set; }
+        public double StepToDisplayRow(double step) {
+            if (DisplayRows == null) { return step; }
+            int index = Array.BinarySearch(DisplayRows, (int)Math.Floor(step));
+            if (index < 0) { index = ~index - 1; }
+            index = Math.Clamp(index, 0, DisplayRows.Length - 2);
+            return index + (step - DisplayRows[index]) / (DisplayRows[index + 1] - DisplayRows[index]);
+        }
+        public double DisplayRowToStep(double row) {
+            if (DisplayRows == null) { return row; }
+            int index = Math.Clamp((int)Math.Floor(row), 0, DisplayRows.Length - 2);
+            return DisplayRows[index] + (row - index) * (DisplayRows[index + 1] - DisplayRows[index]);
+        }
+        private void RebuildDisplayRows(bool retainRows = false) {
+            double center = DisplayRowToStep(DisplayTrackCount - 1 - TrackOffset - ViewportTracks / 2);
+            if (Is31Edo && FoldDiatonic31) {
+                int tonic = ((Preferences.Default.PreferredKey31Fifths * 18) % 31 + 31) % 31;
+                var scale = new[] { 0, 5, 10, 13, 18, 23, 28 };
+                var rows = new SortedSet<int>(Enumerable.Range(0, TrackCount)
+                    .Where(step => scale.Contains((step - tonic + 31) % 31)));
+                if (retainRows && DisplayRows != null) { rows.UnionWith(DisplayRows); }
+                rows.UnionWith(Project.parts.OfType<UVoicePart>().SelectMany(p => p.notes).Select(n => n.GridTone));
+                var next = rows.ToArray();
+                if (DisplayRows != null && DisplayRows.SequenceEqual(next)) { return; }
+                DisplayRows = next;
+            } else {
+                DisplayRows = null;
+            }
+            this.RaisePropertyChanged(nameof(DisplayRows));
+            this.RaisePropertyChanged(nameof(DisplayTrackCount));
+            this.RaisePropertyChanged(nameof(VScrollBarMax));
+            TrackOffset = Math.Clamp(DisplayTrackCount - 1 - StepToDisplayRow(center) - ViewportTracks / 2, 0, VScrollBarMax);
+            MessageBus.Current.SendMessage(new NotesRefreshEvent());
+            MessageBus.Current.SendMessage(new Spelling31ChangedEvent());
+        }
         [Reactive] public partial double TickWidth { get; set; }
         public double TrackHeightMin => ViewConstants.NoteHeightMin;
         public double TrackHeightMax => ViewConstants.NoteHeightMax;
@@ -95,7 +133,7 @@ namespace OpenUtau.App.ViewModels {
         public double SmallChangeX => smallChangeX.Value;
         public double SmallChangeY => smallChangeY.Value;
         public double HScrollBarMax => Math.Max(0, TickCount - ViewportTicks);
-        public double VScrollBarMax => Math.Max(0, TrackCount - ViewportTracks);
+        public double VScrollBarMax => Math.Max(0, DisplayTrackCount - ViewportTracks);
         public UProject Project => DocManager.Inst.Project;
         [Reactive] public partial List<MenuItemViewModel> SnapDivs { get; set; }
         [Reactive] public partial List<MenuItemViewModel> Keys { get; set; }
@@ -130,6 +168,12 @@ namespace OpenUtau.App.ViewModels {
                 UpdateSnapDiv();
             });
 
+            FoldDiatonic31 = Preferences.Default.FoldDiatonic31;
+            this.WhenAnyValue(x => x.FoldDiatonic31).Skip(1).Subscribe(value => {
+                Preferences.Default.FoldDiatonic31 = value;
+                Preferences.Save();
+                RebuildDisplayRows();
+            });
             Keys = new List<MenuItemViewModel>();
             SetKeyCommand = ReactiveCommand.Create<int>(key => {
                 if (Is31Edo) {
@@ -321,7 +365,7 @@ namespace OpenUtau.App.ViewModels {
 
             TickWidth = ViewConstants.PianoRollTickWidthDefault;
             TrackHeight = ViewConstants.NoteHeightDefault;
-            TrackOffset = Is31Edo ? Edo31.MaxStep - 155 - 12 : 4 * 12 + 6;
+            TrackOffset = Is31Edo ? Math.Clamp(DisplayTrackCount - StepToDisplayRow(155) - 12, 0, VScrollBarMax) : 4 * 12 + 6;
             if (Preferences.Default.ShowTips) {
                 Preferences.Default.ShowTips = false;
                 Preferences.Save();
@@ -384,6 +428,7 @@ namespace OpenUtau.App.ViewModels {
         }
 
         private void UpdateKey() {
+            RebuildDisplayRows();
             this.RaisePropertyChanged(nameof(Is31Edo));
             this.RaisePropertyChanged(nameof(TrackCount));
             this.RaisePropertyChanged(nameof(VScrollBarMax));
@@ -417,7 +462,7 @@ namespace OpenUtau.App.ViewModels {
             double center = TrackOffset + position.Y * ViewportTracks;
             double trackHeight = TrackHeight * (1.0 + delta * 2);
             trackHeight = Math.Clamp(trackHeight, ViewConstants.NoteHeightMin, ViewConstants.NoteHeightMax);
-            trackHeight = Math.Max(trackHeight, Bounds.Height / TrackCount);
+            trackHeight = Math.Max(trackHeight, Bounds.Height / DisplayTrackCount);
             TrackHeight = trackHeight;
             double trackOffset = center - position.Y * ViewportTracks;
             TrackOffset = Math.Clamp(trackOffset, 0, VScrollBarMax);
@@ -467,15 +512,19 @@ namespace OpenUtau.App.ViewModels {
         }
 
         public int PointToTone(Point point) {
-            return TrackCount - 1 - (int)(point.Y / TrackHeight + TrackOffset);
+            return (int)Math.Round(DisplayRowToStep(DisplayTrackCount - 1 - (int)Math.Floor(point.Y / TrackHeight + TrackOffset)));
         }
         public double PointToToneDouble(Point point) {
-            return GridToTone(TrackCount - 1 - (point.Y / TrackHeight + TrackOffset) + 0.5);
+            return GridToTone(DisplayRowToStep(DisplayTrackCount - 1 - (point.Y / TrackHeight + TrackOffset) + 0.5));
         }
         public Point TickToneToPoint(double tick, double tone) {
             return new Point(
                 (tick - TickOffset) * TickWidth,
-                (TrackCount - 1 - tone / PitchStep - TrackOffset) * TrackHeight);
+                (DisplayTrackCount - 1 - StepToDisplayRow(tone / PitchStep) - TrackOffset) * TrackHeight);
+        }
+        public Point TickToneToCenterPoint(double tick, double tone) {
+            var point = TickToneToPoint(tick, tone);
+            return point.WithY(point.Y + TrackHeight / 2);
         }
         public Point TickToneToPoint(Vector2 tickTone) {
             return TickToneToPoint(tickTone.X, tickTone.Y);
@@ -1129,7 +1178,7 @@ namespace OpenUtau.App.ViewModels {
 
         private void FocusNote(UNote note) {
             TickOffset = Math.Clamp(note.position + note.duration * 0.5 - ViewportTicks * 0.5, 0, HScrollBarMax);
-            TrackOffset = Math.Clamp(TrackCount - note.GridTone + 2 - ViewportTracks * 0.5, 0, VScrollBarMax);
+            TrackOffset = Math.Clamp(DisplayTrackCount - StepToDisplayRow(note.GridTone) + 2 - ViewportTracks * 0.5, 0, VScrollBarMax);
         }
 
         private void ScrollIntoView(UNote note) {
@@ -1137,7 +1186,7 @@ namespace OpenUtau.App.ViewModels {
                 AutoScroll(TickToneToPoint(note.position, 0).X);
             }
             var toneMargin = 4;
-            var noteOffset = TrackCount - note.GridTone - 1;
+            var noteOffset = DisplayTrackCount - StepToDisplayRow(note.GridTone) - 1;
             if (noteOffset < TrackOffset + toneMargin) {
                 TrackOffset = Math.Max(noteOffset - toneMargin, 0);
             } else if (noteOffset > TrackOffset + ViewportTracks - toneMargin) {
@@ -1191,7 +1240,7 @@ namespace OpenUtau.App.ViewModels {
                 } else if (cmd is LoadProjectNotification) {
                     this.RaisePropertyChanged(nameof(Project));
                     UpdateKey();
-                    TrackOffset = Is31Edo ? Edo31.MaxStep - 155 - 12 : 4 * 12 + 6;
+                    TrackOffset = Is31Edo ? Math.Clamp(DisplayTrackCount - StepToDisplayRow(155) - 12, 0, VScrollBarMax) : 4 * 12 + 6;
                     UnloadPart();
                     LoadPortrait(null, null);
                     PrimaryKeyNotSupported = !IsExpSupported(PrimaryKey);
@@ -1258,6 +1307,7 @@ namespace OpenUtau.App.ViewModels {
             } else if (cmd is NoteCommand noteCommand) {
                 CleanupSelectedNotes();
                 if (noteCommand.Part == Part) {
+                    RebuildDisplayRows(retainRows: true);
                     RebuildPlaybackNoteIndex();
                     MessageBus.Current.SendMessage(new NotesRefreshEvent());
 

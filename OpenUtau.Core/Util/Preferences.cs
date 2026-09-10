@@ -156,6 +156,7 @@ namespace OpenUtau.Core.Util {
         [Serializable]
         public class SerializablePreferences {
             public int PreferredKey31Fifths = 2;
+            public bool FoldDiatonic31 = false;
             public WindowSize MainWindowSize = new WindowSize();
             public WindowSize PianorollWindowSize = new WindowSize();
             public int UndoLimit = 100;

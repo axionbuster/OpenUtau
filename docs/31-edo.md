@@ -13,6 +13,17 @@ preference, persists across launches, and defaults to **D** when unset. Changing
 does not mark the project modified. No preferred-key information is saved in the
 project. This is a spelling center, not a major/minor key declaration.
 
+The **Diatonic** checkbox at the start of the piano-roll toolbar collapses empty
+non-scale rows. It uses the seven-note major collection rooted at the preferred
+spelling key. Existing pitches anywhere in the project remain visible, including
+out-of-scale notes. Rows revealed during editing stay available until the view is
+expanded and collapsed again, so deleting a note does not shift the grid beneath
+the pointer. Uncheck it to restore all 31 steps per octave.
+
+This application preference persists across launches and is available only for
+31-EDO documents. It does not change notes, tuning, undo history, or project files.
+Pitch curves retain their exact pitch values and follow the folded display.
+
 Names come from a chain of 31 consecutive fifths: fifteen below the preferred key
 through fifteen above it. A fifth is 18 steps; a sharp raises a letter by two
 steps. Flats and sharps are distinct where appropriate. Octave numbers follow the
@@ -44,3 +55,11 @@ codesign --force --deep --sign - bin/osx-arm64/publish/OpenUtau.app
 The resulting bundle can be installed in `~/Applications`. Verify the copied
 bundle with `codesign --verify --deep --strict` and launch that installed copy.
 The optional Liquid Glass icon is not required for the standard icon to work.
+
+## Fork version
+
+The local fork identifies itself as `0.1.570-edo31.1 [31-EDO]`, based on the
+upstream 0.1.570 development line. The application title uses the informational
+version, preserving the fork suffix without the assembly's trailing zero. macOS
+uses numeric bundle version `0.1.570.1` and short version `0.1.570`. These build
+versions are independent of the native project format revision.

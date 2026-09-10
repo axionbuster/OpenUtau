@@ -13,6 +13,8 @@ namespace OpenUtau.App.Controls {
     class TrackBackground : TemplatedControl {
         public static readonly StyledProperty<bool> Is31EdoProperty = AvaloniaProperty.Register<TrackBackground, bool>(nameof(Is31Edo));
         public bool Is31Edo { get => GetValue(Is31EdoProperty); set => SetValue(Is31EdoProperty, value); }
+        public static readonly StyledProperty<int[]?> DisplayRowsProperty = AvaloniaProperty.Register<TrackBackground, int[]?>(nameof(DisplayRows));
+        public int[]? DisplayRows { get => GetValue(DisplayRowsProperty); set => SetValue(DisplayRowsProperty, value); }
         static readonly IBrush[] MicrotoneBrushes = {
             new SolidColorBrush(Color.Parse("#9BC9E8")), new SolidColorBrush(Color.Parse("#BACB9C")),
             new SolidColorBrush(Color.Parse("#F2EAD7")), new SolidColorBrush(Color.Parse("#E5BA85")),
@@ -79,7 +81,7 @@ namespace OpenUtau.App.Controls {
 
         protected override void OnPropertyChanged(AvaloniaPropertyChangedEventArgs change) {
             base.OnPropertyChanged(change);
-            if (change.Property == Is31EdoProperty ||
+            if (change.Property == DisplayRowsProperty || change.Property == Is31EdoProperty ||
                 change.Property == TrackHeightProperty ||
                 change.Property == TrackOffsetProperty ||
                 change.Property == ForegroundProperty ||
@@ -112,7 +114,9 @@ namespace OpenUtau.App.Controls {
             }
             while (top < Bounds.Height) {
                 if (IsPianoRoll && Is31Edo) {
-                    int step = Edo31.MaxStep - 1 - track;
+                    int row = (DisplayRows?.Length ?? Edo31.MaxStep) - 1 - track;
+                    if (row < 0 || row >= (DisplayRows?.Length ?? Edo31.MaxStep)) { break; }
+                    int step = DisplayRows == null ? row : DisplayRows[row];
                     var color = MicrotoneBrushes[Edo31.ColorFamily(step)];
                     context.DrawRectangle(IsKeyboard ? color : Background, null, new Rect(0, (int)top, Bounds.Width, TrackHeight));
                     if (!IsKeyboard) {

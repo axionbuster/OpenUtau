@@ -32,11 +32,13 @@ namespace OpenUtau.App {
             var previousSink = DocManager.Inst.CommandSink;
             DocManager.Inst.CommandSink = _ => { };
             int oldKey = Preferences.Default.PreferredKey31Fifths;
+            bool oldFold = Preferences.Default.FoldDiatonic31;
             string prefsPath = PathManager.Inst.PrefsFilePath;
             byte[]? prefs = File.Exists(prefsPath) ? File.ReadAllBytes(prefsPath) : null;
             Window? window = null;
             try {
                 Preferences.Default.PreferredKey31Fifths = 2;
+                Preferences.Default.FoldDiatonic31 = false;
                 DocManager.Inst.SearchAllLegacyPlugins();
                 var vm = new PianoRollViewModel();
                 var editor = new PianoRoll(vm);
@@ -69,6 +71,45 @@ namespace OpenUtau.App {
                 project.AfterSave();
                 notes.SetKeyCommand.Execute(2).Subscribe();
                 Capture(window, "keyboard-31edo.png");
+                Assert.Contains("[31-EDO]", new MainWindowViewModel().AppVersion);
+                Assert.Contains("0.1.570-edo31.1", new MainWindowViewModel().AppVersion);
+                var toggle = editor.FindControl<CheckBox>("DiatonicToggle");
+                Assert.True(toggle.IsVisible);
+                toggle.IsChecked = true;
+                Dispatcher.UIThread.RunJobs();
+                Assert.True(notes.FoldDiatonic31);
+                Assert.True(Preferences.Default.FoldDiatonic31);
+                Assert.InRange(notes.DisplayTrackCount, 77, 90);
+                Assert.Equal(341, notes.TrackCount);
+                Assert.DoesNotContain(156, notes.DisplayRows!);
+                Assert.Contains(155, notes.DisplayRows!); // Existing C remains visible in D major.
+                foreach (int step in notes.DisplayRows!) {
+                    var top = notes.TickToneToPoint(0, notes.GridToTone(step));
+                    var center = top.WithY(top.Y + notes.TrackHeight / 2);
+                    Assert.Equal(step, notes.PointToTone(center));
+                    Assert.InRange(Math.Abs(notes.PointToToneDouble(center) - notes.GridToTone(step)), 0, 1e-9);
+                    Assert.Equal(center, notes.TickToneToCenterPoint(0, notes.GridToTone(step)));
+                }
+                foreach (var note in part.notes) {
+                    var top = notes.TickToneToPoint(note.position + 60, note.AdjustedTone);
+                    var hitTest = typeof(NotesViewModel).GetField("HitTest", System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic)!.GetValue(notes)!;
+                    foreach (double y in new[] { top.Y + 1, top.Y + notes.TrackHeight - 1 }) {
+                        var hit = hitTest.GetType().GetMethod("HitTestNote")!.Invoke(hitTest, new object[] { top.WithY(y) })!;
+                        Assert.True((bool)hit.GetType().GetField("hitBody")!.GetValue(hit)!);
+                    }
+                }
+                Assert.Equal(savedBefore, DocManager.Inst.ChangesSaved);
+                project.BeforeSave();
+                Assert.Equal(before, Core.Format.Ustx31.Serialize(project));
+                project.AfterSave();
+                notes.TrackOffset = notes.DisplayTrackCount - 1 - notes.StepToDisplayRow(193);
+                Capture(window, "keyboard-31edo-diatonic.png");
+                notes.SetKeyCommand.Execute(0).Subscribe();
+                Assert.Contains(155, notes.DisplayRows!);
+                Assert.DoesNotContain(157, notes.DisplayRows!);
+                notes.FoldDiatonic31 = false;
+                Assert.Null(notes.DisplayRows);
+                notes.FoldDiatonic31 = true;
 
                 var ordinary = Core.Format.Ustx31.ConvertCopy(project, false);
                 DocManager.Inst.TakeProjectForTest(ordinary);
@@ -76,6 +117,8 @@ namespace OpenUtau.App {
                 notes.OnNext(new LoadPartNotification(ordinary.parts[0], ordinary, 0), false);
                 Dispatcher.UIThread.RunJobs();
                 Assert.Equal(132, notes.TrackCount);
+                Assert.Null(notes.DisplayRows);
+                Assert.False(toggle.IsVisible);
                 Assert.Equal(12, notes.Keys.Count);
                 Assert.DoesNotContain("Spelling", notes.KeyText);
                 Assert.False(editor.FindControl<MenuItem>("SpellingMenu").IsVisible);
@@ -84,6 +127,7 @@ namespace OpenUtau.App {
                 window?.Close();
                 ThreadGuard.SetUiThread(null);
                 Preferences.Default.PreferredKey31Fifths = oldKey;
+                Preferences.Default.FoldDiatonic31 = oldFold;
                 if (prefs != null) { File.WriteAllBytes(prefsPath, prefs); }
                 else if (File.Exists(prefsPath)) { File.Delete(prefsPath); }
                 DocManager.Inst.CommandSink = previousSink;

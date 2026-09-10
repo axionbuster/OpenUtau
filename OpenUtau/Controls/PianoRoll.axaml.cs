@@ -2013,7 +2013,7 @@ namespace OpenUtau.App.Controls {
                         double y = 0;
                         if (!notesVm.Selection.IsEmpty) {
                             x = (notesVm.Selection.Head!.position - notesVm.TickOffset) / notesVm.ViewportTicks;
-                            y = (notesVm.TrackCount - 1 - notesVm.Selection.Head.GridTone - notesVm.TrackOffset) / notesVm.ViewportTracks;
+                            y = (notesVm.DisplayTrackCount - 1 - notesVm.StepToDisplayRow(notesVm.Selection.Head.GridTone) - notesVm.TrackOffset) / notesVm.ViewportTracks;
                         } else if (notesVm.TickOffset != 0) {
                             x = 0.5;
                             y = 0.5;
@@ -2029,7 +2029,7 @@ namespace OpenUtau.App.Controls {
                         double y = 0;
                         if (!notesVm.Selection.IsEmpty) {
                             x = (notesVm.Selection.Head!.position - notesVm.TickOffset) / notesVm.ViewportTicks;
-                            y = (notesVm.TrackCount - 1 - notesVm.Selection.Head.GridTone - notesVm.TrackOffset) / notesVm.ViewportTracks;
+                            y = (notesVm.DisplayTrackCount - 1 - notesVm.StepToDisplayRow(notesVm.Selection.Head.GridTone) - notesVm.TrackOffset) / notesVm.ViewportTracks;
                         } else if (notesVm.TickOffset != 0) {
                             x = 0.5;
                             y = 0.5;

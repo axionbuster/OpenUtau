@@ -56,6 +56,7 @@
       <c:TrackBackground Grid.Column="0" Grid.Row="3" IsPianoRoll="True" IsKeyboard="True"
                          DataContext="{Binding NotesViewModel}"
                          Is31Edo="{Binding Is31Edo}"
+                         DisplayRows="{Binding DisplayRows}"
                          TrackHeight="{Binding TrackHeight}"
                          TrackOffset="{Binding TrackOffset}"
                          Key="{Binding Key}"
@@ -124,6 +125,7 @@
                          DataContext="{Binding NotesViewModel}"
                          Bounds="{Binding Bounds, Mode=OneWayToSource}"
                          Is31Edo="{Binding Is31Edo}"
+                         DisplayRows="{Binding DisplayRows}"
                          TrackHeight="{Binding TrackHeight}"
                          TrackOffset="{Binding TrackOffset}" IsPianoRoll="True"/>
       <c:TickBackground Grid.Row="2" Grid.RowSpan="2" Grid.Column="1" IsHitTestVisible="False"
@@ -383,6 +385,12 @@
 
         <Border Grid.Column="2">
           <StackPanel Orientation="Horizontal">
+            <TextBlock Text="Diatonic" VerticalAlignment="Center" Margin="4,0,4,0"
+                       IsVisible="{Binding NotesViewModel.Is31Edo}"/>
+            <CheckBox Name="DiatonicToggle" AutomationProperties.Name="Diatonic" Margin="0,0,8,0"
+                      IsVisible="{Binding NotesViewModel.Is31Edo}"
+                      IsChecked="{Binding NotesViewModel.FoldDiatonic31, Mode=TwoWay}"
+                      ToolTip.Tip="Collapse to the preferred key's major scale, keeping existing notes visible. Display only; uncheck to show all 31 steps."/>
             <ToggleButton Classes="toolbar" Margin="0" Padding="1" Height="20" Width="20" IsChecked="{Binding NotesViewModel.ShowTips}"
                           ToolTip.Tip="{DynamicResource pianoroll.toggle.tips}">
               <Grid Width="18" Height="18">
@@ -517,6 +525,7 @@
                 </Path>
               </Grid>
             </ToggleButton>
+
             <ToggleButton Name="SnapToggle" Classes="toolbar" Margin="0" Padding="1" Height="20" IsChecked="{Binding NotesViewModel.IsSnapOn}"
                           ToolTip.Tip="{DynamicResource pianoroll.toggle.snap}">
               <Border Width="18" Height="18">

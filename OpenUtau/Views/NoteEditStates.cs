@@ -131,7 +131,7 @@ namespace OpenUtau.App.Views {
             int y1 = Math.Max(tone, startTone);
 
             var leftTop = notesVm.TickToneToPoint(x0, notesVm.GridToTone(y1));
-            var Size = notesVm.TickToneToSize(x1 - x0, notesVm.GridToTone(y1 - y0));
+            var Size = notesVm.TickToneToSize(x1 - x0, (notesVm.StepToDisplayRow(y1) - notesVm.StepToDisplayRow(y0 + 1) + 1) * notesVm.PitchStep);
             Canvas.SetLeft(selectionBox, leftTop.X);
             Canvas.SetTop(selectionBox, leftTop.Y);
             selectionBox.Width = Size.Width + 1;
@@ -1028,7 +1028,7 @@ namespace OpenUtau.App.Views {
         }
         public override void Update(IPointer pointer, Point point) {
             var notesVm = vm.NotesViewModel;
-            float tone = (float)(notesVm.PointToToneDouble(point) - notesVm.PitchStep * 0.5);
+            float tone = (float)(notesVm.PointToToneDouble(point.WithY(point.Y + notesVm.TrackHeight / 2)));
             float newDepth = note.vibrato.ToneToDepth(note, tone);
             if (newDepth != note.vibrato.depth && notesVm.Part != null) {
                 DocManager.Inst.ExecuteCmd(new VibratoDepthCommand(notesVm.Part, note, newDepth));

@@ -532,7 +532,7 @@ namespace OpenUtau.App.Controls {
         private void RenderNoteBody(UNote note, NotesViewModel viewModel, DrawingContext context) {
             Point leftTop = viewModel.TickToneToPoint(note.position, note.AdjustedTone);
             leftTop = leftTop.WithX(leftTop.X + 1).WithY(Math.Round(leftTop.Y + 1));
-            Size size = viewModel.TickToneToSize(note.duration, 1);
+            Size size = viewModel.TickToneToSize(note.duration, viewModel.PitchStep);
             size = size.WithWidth(size.Width - 1).WithHeight(Math.Floor(size.Height - 2));
             leftTop += GetPlaybackBounceOffset(note);
             Point rightBottom = new Point(leftTop.X + size.Width, leftTop.Y + size.Height);
@@ -677,7 +677,7 @@ namespace OpenUtau.App.Controls {
             Point leftTop = viewModel.TickToneToPoint(partOffset + note.position, note.AdjustedTone);
             leftTop = leftTop.WithX(leftTop.X + 1).WithY(Math.Round(leftTop.Y + 1 + yOffset));
 
-            Size size = viewModel.TickToneToSize(note.duration, relativeSize);
+            Size size = viewModel.TickToneToSize(note.duration, relativeSize * viewModel.PitchStep);
             size = size.WithWidth(size.Width - 1).WithHeight(Math.Floor(size.Height - 2));
 
             Point rightBottom = new Point(leftTop.X + size.Width, leftTop.Y + size.Height);
@@ -693,7 +693,7 @@ namespace OpenUtau.App.Controls {
             var project = viewModel.Project;
             double p0Tick = project.timeAxis.MsPosToTickPos(note.PositionMs + pts[0].X) - viewModel.Part.position;
             double p0Tone = note.AdjustedTone + pts[0].Y / 10.0;
-            Point p0 = viewModel.TickToneToPoint(p0Tick, p0Tone - 0.5);
+            Point p0 = viewModel.TickToneToPoint(p0Tick, p0Tone - viewModel.PitchStep * 0.5);
             Point p_1 = p0;
             var points = new Points();          
             points.Add(p0);
@@ -707,14 +707,14 @@ namespace OpenUtau.App.Controls {
             for (int i = 1; i < pts.Count; i++) {
                 double p1Tick = project.timeAxis.MsPosToTickPos(note.PositionMs + pts[i].X) - viewModel.Part.position;
                 double p1Tone = note.AdjustedTone + pts[i].Y / 10.0;
-                Point p1 = viewModel.TickToneToPoint(p1Tick, p1Tone - 0.5);
+                Point p1 = viewModel.TickToneToPoint(p1Tick, p1Tone - viewModel.PitchStep * 0.5);
                 CubicSplineSegment? curve = null;
 
                 if (pts.Count > 2 && pts[i - 1].shape == PitchPointShape.sp) {
                     var p2 = p1;
                     if (i == 1) {
                         if (note.pitch.data[0].X > 0) {
-                            p_1 = viewModel.TickToneToPoint(note.position, p0Tone - 0.5);
+                            p_1 = viewModel.TickToneToPoint(note.position, p0Tone - viewModel.PitchStep * 0.5);
                         }
                     }
                     if (i < pts.Count - 1) {
@@ -722,7 +722,7 @@ namespace OpenUtau.App.Controls {
                         double p2Tone = note.AdjustedTone + pts[i + 1].Y / 10.0;
                         p2 = viewModel.TickToneToPoint(p2Tick, p2Tone - 0.5);
                     } else if (pts[i].X < note.DurationMs) {
-                        p2 = viewModel.TickToneToPoint(note.End, note.AdjustedTone - 0.5);
+                        p2 = viewModel.TickToneToPoint(note.End, note.AdjustedTone - viewModel.PitchStep * 0.5);
                     }
                     curve = new CubicSplineSegment(
                                 p_1.X, p_1.Y,
@@ -768,11 +768,11 @@ namespace OpenUtau.App.Controls {
             float nPos = vibrato.NormalizedStart;
             var point = vibrato.Evaluate(nPos, nPeriod, note);
             var points = new Points();
-            points.Add(viewModel.TickToneToPoint(point.X, point.Y - 0.5));
+            points.Add(viewModel.TickToneToPoint(point.X, point.Y - viewModel.PitchStep * 0.5));
             while (nPos < 1) {
                 nPos = Math.Min(1, nPos + nPeriod / 16);
                 point = vibrato.Evaluate(nPos, nPeriod, note);
-                points.Add(viewModel.TickToneToPoint(point.X, point.Y - 0.5));
+                points.Add(viewModel.TickToneToPoint(point.X, point.Y - viewModel.PitchStep * 0.5));
             }
             var geometry = new PolylineGeometry(points, false);
             context.DrawGeometry(null, pen, geometry);
@@ -836,7 +836,7 @@ namespace OpenUtau.App.Controls {
                     for (int i = startIdx; i < endIdx; ++i) {
                         int t = pitchStart + i * 5;
                         float p = phrase.pitches[i];
-                        points.Add(viewModel.TickToneToPoint(t, p / 100 - 0.5));
+                        points.Add(viewModel.TickToneToPoint(t, p / 100 - viewModel.PitchStep * 0.5));
                     }
                     var geometry = new PolylineGeometry(points, false);
                     context.DrawGeometry(null, pen, geometry);

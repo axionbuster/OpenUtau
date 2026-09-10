@@ -108,9 +108,15 @@ namespace OpenUtau.Core {
                 }
             }
         }
+        private void CheckNativeRange(int delta) {
+            if (Notes.Any(n => n.tone31.HasValue && ((long)n.GridTone + delta < 0 || (long)n.GridTone + delta >= Util.Edo31.MaxStep))) {
+                throw new ArgumentOutOfRangeException(nameof(delta), "Note move exceeds the 31-EDO editor range.");
+            }
+        }
         public override string ToString() { return $"Move {Notes.Count()} notes"; }
         public override void Execute() {
             lock (Part) {
+                CheckNativeRange(DeltaNoteNum);
                 foreach (UNote note in Notes) {
                     Part.notes.Remove(note);
                     note.position += DeltaPos;
@@ -124,6 +130,7 @@ namespace OpenUtau.Core {
         }
         public override void Unexecute() {
             lock (Part) {
+                CheckNativeRange(-DeltaNoteNum);
                 foreach (UNote note in Notes) {
                     Part.notes.Remove(note);
                     note.position -= DeltaPos;

@@ -32,6 +32,11 @@ Know how to code? Got an idea for an improvement? Don't keep it to yourself!
 - Contribute fixes via pull requests.
 - Check out the development roadmap on [Trello](https://trello.com/b/93ANoCIV/openutau) and discuss it on Discord.
 
+## Fork documentation
+
+- [31-EDO editing](docs/31-edo.md)
+- [Project format specification](docs/project-format.md)
+
 ## Plugin development
 
 Want to contribute plugins to help other users? Check out our API documentation:

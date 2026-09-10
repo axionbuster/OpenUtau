@@ -155,6 +155,10 @@ namespace OpenUtau.App.ViewModels {
                     NoteLoading = false;
                 });
 
+            SubscribeExtensions.Subscribe(MessageBus.Current.Listen<Spelling31ChangedEvent>(), _ => {
+                var note = selectedNotes.FirstOrDefault();
+                if (note?.tone31 != null) { Tone = Edo31.Name(note.tone31.Value, Preferences.Default.PreferredKey31Fifths); }
+            });
             DocManager.Inst.AddSubscriber(this);
         }
 
@@ -176,7 +180,7 @@ namespace OpenUtau.App.ViewModels {
                 }
 
                 Lyric = note.lyric;
-                Tone = MusicMath.GetToneName(note.tone);
+                Tone = (note.tone31.HasValue ? Edo31.Name(note.tone31.Value, Preferences.Default.PreferredKey31Fifths) : MusicMath.GetToneName(note.tone));
                 Tuning = note.tuning;
                 SetTuningFontWeight();
                 if (note.pitch.data.Count >= 2) {
@@ -362,7 +366,7 @@ namespace OpenUtau.App.ViewModels {
                     Lyric = note.lyric;
                     this.RaisePropertyChanged(nameof(Lyric));
                 } else if (cmd is MoveNoteCommand) {
-                    Tone = MusicMath.GetToneName(note.tone);
+                    Tone = (note.tone31.HasValue ? Edo31.Name(note.tone31.Value, Preferences.Default.PreferredKey31Fifths) : MusicMath.GetToneName(note.tone));
                     this.RaisePropertyChanged(nameof(Tone));
                 } else if (cmd is ChangeNoteTuningCommand) {
                     Tuning = note.tuning;
@@ -482,7 +486,7 @@ namespace OpenUtau.App.ViewModels {
                 } else if (tag == "Tone") {
                     try {
                         if (obj is string s && !string.IsNullOrEmpty(s)) {
-                            int tone = MusicMath.NameToTone(s);
+                            int tone = DocManager.Inst.Project.Is31Edo ? Edo31.ParseName(s) : MusicMath.NameToTone(s);
 
                             if ((s.StartsWith("+") || s.StartsWith("-")) && int.TryParse(s, out int i) && i != 0) {
                                 foreach (UNote note in selectedNotes) {
@@ -490,7 +494,7 @@ namespace OpenUtau.App.ViewModels {
                                 }
                             } else if (tone >= 0) {
                                 foreach (UNote note in selectedNotes) {
-                                    DocManager.Inst.ExecuteCmd(new MoveNoteCommand(Part, note, 0, tone - note.tone));
+                                    DocManager.Inst.ExecuteCmd(new MoveNoteCommand(Part, note, 0, tone - note.GridTone));
                                 }
                             } else {
                                 throw new FormatException();
@@ -500,7 +504,7 @@ namespace OpenUtau.App.ViewModels {
                         }
                     } catch {
                         var note = selectedNotes.FirstOrDefault();
-                        Tone = note != null ? MusicMath.GetToneName(note.tone) : string.Empty;
+                        Tone = note != null ? (note.tone31.HasValue ? Edo31.Name(note.tone31.Value, Preferences.Default.PreferredKey31Fifths) : MusicMath.GetToneName(note.tone)) : string.Empty;
                         this.RaisePropertyChanged(nameof(Tone));
                     }
                 } else if (tag == "Tuning") {

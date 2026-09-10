@@ -228,6 +228,27 @@ namespace OpenUtau.App.Views {
             DocManager.Inst.EndUndoGroup();
         }
 
+        async void OnMenuNew31(object sender, RoutedEventArgs args) {
+            if (!DocManager.Inst.ChangesSaved && !await AskIfSaveAndContinue()) { return; }
+            var project = Ustx.Create();
+            project.Is31Edo = true;
+            DocManager.Inst.Recovered = false;
+            DocManager.Inst.ExecuteCmd(new LoadProjectNotification(project));
+            viewModel.Page = 1;
+        }
+
+        async void OnMenuConvertTuning(object sender, RoutedEventArgs args) {
+            if (!DocManager.Inst.ChangesSaved && !await AskIfSaveAndContinue()) { return; }
+            try {
+                var project = Ustx31.ConvertCopy(DocManager.Inst.Project, !DocManager.Inst.Project.Is31Edo);
+                DocManager.Inst.Recovered = false;
+                DocManager.Inst.ExecuteCmd(new LoadProjectNotification(project));
+                viewModel.Page = 1;
+            } catch (Exception ex) {
+                await MessageBox.ShowError(this, ex);
+            }
+        }
+
         void OnMenuNew(object sender, RoutedEventArgs args) => NewProject();
         async void NewProject() {
             if (!DocManager.Inst.ChangesSaved && !await AskIfSaveAndContinue()) {
@@ -336,7 +357,7 @@ namespace OpenUtau.App.Views {
         async void OnMenuSaveAs(object sender, RoutedEventArgs args) => await SaveAs();
         async Task SaveAs() {
             var file = await FilePicker.SaveFileAboutProject(
-                this, "menu.file.saveas", FilePicker.USTX);
+                this, "menu.file.saveas", DocManager.Inst.Project.Is31Edo ? FilePicker.USTX31 : FilePicker.USTX);
             if (!string.IsNullOrEmpty(file)) {
                 viewModel.SaveProject(file);
             }
@@ -352,7 +373,7 @@ namespace OpenUtau.App.Views {
                     return;
                 }
                 file = Path.GetFileNameWithoutExtension(file);
-                file = $"{file}.ustx";
+                file = file + project.NativeExtension;
                 file = Path.Combine(PathManager.Inst.TemplatesPath, file);
                 Ustx.Save(file, project.CloneAsTemplate());
             };
@@ -947,7 +968,7 @@ namespace OpenUtau.App.Views {
         }
 
         async void OnDrop(object? sender, DragEventArgs args) {
-            string[] ProjectExts = { ".ustx", ".ust", ".vsqx", ".ufdata", ".musicxml", ".mid", ".midi", ".svp" };
+            string[] ProjectExts = { ".ustx31", ".ustx", ".ust", ".vsqx", ".ufdata", ".musicxml", ".mid", ".midi", ".svp" };
             string[] ArchiveExts = { ".zip", ".rar", ".uar" };
             string[] AudioExts = { ".mp3", ".wav", ".ogg", ".flac" };
             string[] SupportedExts = ProjectExts

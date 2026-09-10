@@ -55,6 +55,7 @@
                  SmallChange="{Binding SmallChangeY}" PointerWheelChanged="VScrollPointerWheelChanged"/>
       <c:TrackBackground Grid.Column="0" Grid.Row="3" IsPianoRoll="True" IsKeyboard="True"
                          DataContext="{Binding NotesViewModel}"
+                         Is31Edo="{Binding Is31Edo}"
                          TrackHeight="{Binding TrackHeight}"
                          TrackOffset="{Binding TrackOffset}"
                          Key="{Binding Key}"
@@ -122,6 +123,7 @@
                          Foreground="{DynamicResource TrackBackgroundAltBrush}"
                          DataContext="{Binding NotesViewModel}"
                          Bounds="{Binding Bounds, Mode=OneWayToSource}"
+                         Is31Edo="{Binding Is31Edo}"
                          TrackHeight="{Binding TrackHeight}"
                          TrackOffset="{Binding TrackOffset}" IsPianoRoll="True"/>
       <c:TickBackground Grid.Row="2" Grid.RowSpan="2" Grid.Column="1" IsHitTestVisible="False"
@@ -283,6 +285,10 @@
               </MenuItem>
             </MenuItem>
 
+            <MenuItem Name="SpellingMenu" Header="{Binding NotesViewModel.KeyText}"
+                      IsVisible="{Binding NotesViewModel.Is31Edo}"
+                      ItemsSource="{Binding NotesViewModel.Keys}" Classes="MenuItemWithSubMenu"
+                      ToolTip.Tip="Preferred spelling key for the application; does not change or modify the project."/>
             <MenuItem Header="{DynamicResource menu.view}">
               <MenuItem Header="{DynamicResource prefs.appearance.showportrait}" Click="OnMenuShowPortrait">
                 <MenuItem.Icon>
@@ -527,7 +533,7 @@
                              ItemsSource="{Binding NotesViewModel.SnapDivs}" KeyDown="OnSnapDivKeyDown"/>
               </Button.ContextMenu>
             </Button>
-            <Button Margin="0" Padding="0,1" Height="20" Width="40" Background="Transparent" Click="OnKeyMenuButton"
+            <Button Margin="0" Padding="0,1" Height="20" Width="40" Background="Transparent" Click="OnKeyMenuButton" IsVisible="{Binding !NotesViewModel.Is31Edo}"
               ToolTip.Tip="{DynamicResource pianoroll.key}">
               <TextBlock Grid.Column="0" Text="{Binding NotesViewModel.KeyText}"
                           TextAlignment="Right" FontSize="10" FontFamily="monospace"

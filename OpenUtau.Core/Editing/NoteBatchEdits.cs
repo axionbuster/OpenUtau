@@ -23,7 +23,7 @@ namespace OpenUtau.Core.Editing {
             var notes = selectedNotes.Count > 0 ? selectedNotes : part.notes.ToList();
             foreach (var note in notes) {
                 if (note.lyric != lyric && (note.Next == null || note.Next.position > note.End + 120)) {
-                    var addNote = project.CreateNote(note.tone, note.End, 120);
+                    var addNote = project.CreateGridNote(note.GridTone, note.End, 120);
                     foreach (var exp in note.phonemeExpressions.OrderBy(exp => exp.index)) {
                         addNote.SetExpression(project, project.tracks[part.trackNo], exp.abbr, new float?[] { exp.value });
                     }
@@ -99,7 +99,7 @@ namespace OpenUtau.Core.Editing {
                     } else {
                         duration = note.position - note.Prev.End;
                     }
-                    var addNote = project.CreateNote(note.tone, note.position - duration, duration);
+                    var addNote = project.CreateGridNote(note.GridTone, note.position - duration, duration);
                     foreach (var exp in note.phonemeExpressions.Where(exp => exp.index == 0)) {
                         addNote.SetExpression(project, project.tracks[part.trackNo], exp.abbr, new float?[] { exp.value });
                     }
@@ -212,7 +212,7 @@ namespace OpenUtau.Core.Editing {
             var currentNote = notes[0];
             foreach (var note in notes.Skip(1)) {
                 if (note.position == currentNote.position) {
-                    if (note.tone > currentNote.tone) {
+                    if (note.AdjustedTone > currentNote.AdjustedTone) {
                         docManager.ExecuteCmd(new RemoveNoteCommand(part, currentNote));
                         currentNote = note;
                     } else {
@@ -744,7 +744,7 @@ namespace OpenUtau.Core.Editing {
                 adjusted_boundaries[0] = 2;
                 foreach (int i in Enumerable.Range(0, phrase.notes.Length - 1)) {
                     var note = phrase.notes[i];
-                    var notePitch = note.tone * 100;
+                    var notePitch = note.adjustedTone * 100;
                     //var zero_point = points.FindIndex(note_boundaries[i], note_boundaries[i + 1] - note_boundaries[i], p => p.Y == 0);
                     var zero_point = Enumerable.Range(0, note_boundaries[i + 1] - note_boundaries[i])
                         .Select(j => note_boundaries[i + 1] - 1 - j)
@@ -764,7 +764,7 @@ namespace OpenUtau.Core.Editing {
                     var pitch = points.GetRange(adjusted_boundaries[i] - 2, adjusted_boundaries[i + 1] - (adjusted_boundaries[i] - 2))
                         .Select(p => new PitchPoint(
                             (float)timeAxis.MsBetweenTickPos(note.position + part.position, p.X + part.position),
-                            (float)(p.Y - note.tone * 100) / 10,
+                            (float)(p.Y - note.adjustedTone * 100) / 10,
                             p.shape))
                         .ToList();
                     pitchPointsPerNote[note.position + phrase.position - part.position]

@@ -198,8 +198,8 @@ namespace OpenUtau.App.Controls {
             }
             if (part is UVoicePart voicePart && voicePart.notes.Count > 0) {
                 // Notes
-                int maxTone = voicePart.notes.Max(note => note.tone);
-                int minTone = voicePart.notes.Min(note => note.tone);
+                int maxTone = voicePart.notes.Max(note => note.GridTone);
+                int minTone = voicePart.notes.Min(note => note.GridTone);
                 if (maxTone - minTone < 52) {
                     int additional = (52 - (maxTone - minTone)) / 2;
                     minTone -= additional;
@@ -207,8 +207,8 @@ namespace OpenUtau.App.Controls {
                 }
                 using var pushedState = context.PushTransform(Matrix.CreateScale(1, trackHeight / (maxTone - minTone)));
                 foreach (var note in voicePart.notes) {
-                    var start = new Point((int)(note.position * tickWidth), maxTone - note.tone);
-                    var end = new Point((int)(note.End * tickWidth), maxTone - note.tone);
+                    var start = new Point((int)(note.position * tickWidth), maxTone - note.GridTone);
+                    var end = new Point((int)(note.End * tickWidth), maxTone - note.GridTone);
                     context.DrawLine(notePen, start, end);
                 }
             } else if (part is UWavePart wavePart) {

@@ -6,6 +6,7 @@ using OpenUtau.Core.Util;
 using Xunit;
 
 namespace OpenUtau.Core.Ustx {
+    [Collection(RenderSingletonCollection.Name)]
     public class Edo31Test {
         static UProject Fixture(bool native) {
             var project = Format.Ustx.Create();
@@ -106,6 +107,21 @@ namespace OpenUtau.Core.Ustx {
             Assert.Equal(7, note.tuning);
         }
         [Fact]
+        public void InvalidMoveDoesNotRemoveOrPartiallyMoveNotes() {
+            var project = Fixture(true);
+            var part = (UVoicePart)project.parts[0];
+            var first = part.notes.First();
+            var last = project.CreateGridNote(340, 480, 480);
+            part.notes.Add(last);
+            var move = new MoveNoteCommand(part, part.notes.ToList(), 120, 1);
+            Assert.Throws<ArgumentOutOfRangeException>(() => move.Execute());
+            Assert.Equal(2, part.notes.Count);
+            Assert.Equal(156, first.tone31);
+            Assert.Equal(0, first.position);
+            Assert.Equal(340, last.tone31);
+        }
+
+        [Fact]
         public void ConversionLeavesSourceIntactAndExportsWithinHalfCent() {
             var source = Fixture(true);
             var original = SaveText(source);
@@ -130,6 +146,58 @@ namespace OpenUtau.Core.Ustx {
             Assert.ThrowsAny<Exception>(() => Formats.ImportTracks(ordinary, new[] { native }));
             Assert.Single(ordinary.tracks);
             Assert.True(native.CloneAsTemplate().Is31Edo);
+        }
+
+        [Fact]
+        public void ImportedProjectWithoutVersionCanConvertWithoutChangingSource() {
+            var source = Fixture(false);
+            source.ustxVersion = null;
+            var native = Ustx31.ConvertCopy(source, true);
+            Assert.Null(source.ustxVersion);
+            Assert.True(native.Is31Edo);
+            Assert.Equal(155, native.parts.OfType<UVoicePart>().Single().notes.First().tone31);
+        }
+
+        [Theory]
+        [InlineData(false)]
+        [InlineData(true)]
+        public void SaveAutosaveAndRecoveryRetainMode(bool native) {
+            var project = Fixture(native);
+            var dir = Path.Combine(Path.GetTempPath(), "ustx-lifecycle-" + Guid.NewGuid());
+            Directory.CreateDirectory(dir);
+            var original = Path.Combine(dir, "song" + project.NativeExtension);
+            var autosave = Path.Combine(dir, "song-autosave" + project.NativeExtension);
+            string prefsPath = PathManager.Inst.PrefsFilePath;
+            byte[] prefs = File.Exists(prefsPath) ? File.ReadAllBytes(prefsPath) : null;
+            string recoveryPath = Preferences.Default.RecoveryPath;
+            bool recovered = DocManager.Inst.Recovered;
+            var sink = DocManager.Inst.CommandSink;
+            UProject recovery = null;
+            DocManager.Inst.CommandSink = cmd => {
+                Assert.IsNotType<ErrorMessageNotification>(cmd);
+                if (cmd is LoadProjectNotification load) { recovery = load.project; }
+            };
+            try {
+                Format.Ustx.Save(original, project);
+                Assert.True(File.Exists(original));
+                Assert.True(project.Saved);
+                Format.Ustx.AutoSave(autosave, project);
+                Assert.True(File.Exists(autosave));
+                Assert.Equal(autosave, Preferences.Default.RecoveryPath);
+                Formats.RecoveryProject(new[] { autosave });
+                Assert.NotNull(recovery);
+                Assert.Equal(native, recovery.Is31Edo);
+                Assert.Equal(original, recovery.FilePath);
+                Assert.Equal(native, recovery.parts.OfType<UVoicePart>().Single().notes.First().tone31.HasValue);
+                if (!native) { Assert.DoesNotContain("features:", File.ReadAllText(autosave)); }
+            } finally {
+                DocManager.Inst.CommandSink = sink;
+                DocManager.Inst.Recovered = recovered;
+                Preferences.Default.RecoveryPath = recoveryPath;
+                if (prefs != null) { File.WriteAllBytes(prefsPath, prefs); }
+                else if (File.Exists(prefsPath)) { File.Delete(prefsPath); }
+                Directory.Delete(dir, true);
+            }
         }
     }
 }

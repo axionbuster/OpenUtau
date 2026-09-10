@@ -115,7 +115,7 @@ namespace OpenUtau.App.ViewModels {
                 .OrderByDescending(f => f.LastWriteTime));
             TemplateFiles.Clear();
             Directory.CreateDirectory(PathManager.Inst.TemplatesPath);
-            TemplateFiles.AddRange(Directory.GetFiles(PathManager.Inst.TemplatesPath, "*.ustx")
+            TemplateFiles.AddRange(Directory.GetFiles(PathManager.Inst.TemplatesPath, "*.ustx").Concat(Directory.GetFiles(PathManager.Inst.TemplatesPath, "*.ustx31")).ToArray()
                 .Select(file => new RecentFileInfo(file)));
 
             // create async commands that consult the view's save prompt
@@ -342,7 +342,7 @@ namespace OpenUtau.App.ViewModels {
 
         public void RefreshTemplates() {
             Directory.CreateDirectory(PathManager.Inst.TemplatesPath);
-            var templates = Directory.GetFiles(PathManager.Inst.TemplatesPath, "*.ustx");
+            var templates = Directory.GetFiles(PathManager.Inst.TemplatesPath, "*.ustx").Concat(Directory.GetFiles(PathManager.Inst.TemplatesPath, "*.ustx31")).ToArray();
             openTemplatesMenuItems.Clear();
             openTemplatesMenuItems.AddRange(templates.Select(file => new MenuItemViewModel() {
                 Header = Path.GetRelativePath(PathManager.Inst.TemplatesPath, file),

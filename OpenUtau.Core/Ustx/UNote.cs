@@ -19,10 +19,12 @@ namespace OpenUtau.Core.Ustx {
         public int tone;
         // Exact 31-EDO step from C-1; omitted from ordinary USTx notes.
         public int? tone31;
+        [YamlIgnore] public float PitchStep => tone31.HasValue ? 12f / 31 : 1f;
         [YamlIgnore] public int GridTone => tone31 ?? tone;
         [YamlIgnore] public float BaseTone => tone31.HasValue ? tone31.Value * (12f / 31) : tone;
         public void SetGridTone(int value) {
             if (tone31.HasValue) {
+                if (value < 0 || value >= Edo31.MaxStep) { throw new ArgumentOutOfRangeException(nameof(value)); }
                 tone31 = value;
                 tone = (int)Math.Round(value * (12.0 / 31));
             } else {
@@ -415,29 +417,29 @@ namespace OpenUtau.Core.Ustx {
         public Vector2 GetEnvelopeStart(UNote note) {
             return new Vector2(
                 note.position + note.duration * NormalizedStart,
-                note.tone - 3f);
+                note.BaseTone - 3f * note.PitchStep);
         }
 
         public Vector2 GetEnvelopeFadeIn(UNote note) {
             return new Vector2(
                 note.position + note.duration * (NormalizedStart + length / 100f * @in / 100f),
-                note.tone - 3f + depth / 50f);
+                note.BaseTone - 3f * note.PitchStep + depth / 50f);
         }
 
         public Vector2 GetEnvelopeFadeOut(UNote note) {
             return new Vector2(
                 note.position + note.duration * (1f - length / 100f * @out / 100f),
-                note.tone - 3f + depth / 50f);
+                note.BaseTone - 3f * note.PitchStep + depth / 50f);
         }
 
         public Vector2 GetEnvelopeEnd(UNote note) {
             return new Vector2(
                 note.position + note.duration,
-                note.tone - 3f);
+                note.BaseTone - 3f * note.PitchStep);
         }
 
         public Vector2 GetToggle(UNote note) {
-            return new Vector2(note.position + note.duration, note.tone - 1.5f);
+            return new Vector2(note.position + note.duration, note.BaseTone - 1.5f * note.PitchStep);
         }
 
         public void GetPeriodStartEnd(UProject project, UNote note, out Vector2 start, out Vector2 end) {
@@ -445,14 +447,14 @@ namespace OpenUtau.Core.Ustx {
             float shiftTick = periodTick * shift / 100f;
             start = new Vector2(
                 note.position + note.duration * NormalizedStart + shiftTick,
-                note.tone - 3.5f);
+                note.BaseTone - 3.5f * note.PitchStep);
             end = new Vector2(
                 note.position + note.duration * NormalizedStart + shiftTick + periodTick,
-                note.tone - 3.5f);
+                note.BaseTone - 3.5f * note.PitchStep);
         }
 
         public float ToneToDepth(UNote note, float tone) {
-            return (tone - (note.tone - 3f)) * 50f;
+            return (tone - (note.BaseTone - 3f * note.PitchStep)) * 50f;
         }
     }
 

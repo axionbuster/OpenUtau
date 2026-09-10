@@ -28,7 +28,7 @@ namespace OpenUtau.Core.Format {
                 }
             }
             string contents = string.Join("\n", lines);
-            if (contents.Contains("format: " + Ustx31.FormatId)) {
+            if (contents.Contains(Ustx31.FormatId) || System.String.Equals(Path.GetExtension(file), ".ustx31", System.StringComparison.OrdinalIgnoreCase)) {
                 return ProjectFormats.Ustx;
             } else if (contents.Contains(ustMatch)) {
                 return ProjectFormats.Ust;

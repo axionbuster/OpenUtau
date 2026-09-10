@@ -188,6 +188,10 @@ namespace OpenUtau.App.ViewModels {
             });
 
             legacyPluginCommand = ReactiveCommand.Create<Classic.Plugin>(async plugin => {
+                if (NotesViewModel.Is31Edo) {
+                    DocManager.Inst.ExecuteCmd(new ErrorMessageNotification(new InvalidOperationException("Convert a copy to USTx before using a legacy plugin.")));
+                    return;
+                }
                 if (NotesViewModel.Part == null || NotesViewModel.Part.notes.Count == 0) {
                     return;
                 }

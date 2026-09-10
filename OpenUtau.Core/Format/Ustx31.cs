@@ -34,7 +34,7 @@ namespace OpenUtau.Core.Format {
         }
         public static string Serialize(UProject project) {
             var notes = (project.voiceParts ?? project.parts.OfType<UVoicePart>().ToList()).SelectMany(p => p.notes);
-            if (notes.Any(n => n.tone31.HasValue != project.Is31Edo)) {
+            if (notes.Any(n => n.tone31.HasValue != project.Is31Edo || n.tone31 < 0 || n.tone31 >= Edo31.MaxStep)) {
                 throw new FileFormatException("Note tuning does not match the project format.");
             }
             string yaml = Yaml.DefaultSerializer.Serialize(project);
@@ -88,10 +88,12 @@ namespace OpenUtau.Core.Format {
         }
         /// <summary>Make an independent conversion; leave the source and its path untouched.</summary>
         public static UProject ConvertCopy(UProject source, bool to31) {
+            var previousVersion = source.ustxVersion;
+            source.ustxVersion = Ustx.kUstxVersion;
             source.BeforeSave();
             UProject copy;
             try { copy = Deserialize(Serialize(source)); }
-            finally { source.AfterSave(); }
+            finally { source.AfterSave(); source.ustxVersion = previousVersion; }
             foreach (var note in (copy.voiceParts ?? new()).SelectMany(p => p.notes)) {
                 double target = note.AdjustedTone;
                 if (to31) {

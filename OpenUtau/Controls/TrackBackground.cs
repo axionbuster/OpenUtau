@@ -11,6 +11,13 @@ using ReactiveUI.Primitives;
 
 namespace OpenUtau.App.Controls {
     class TrackBackground : TemplatedControl {
+        public static readonly StyledProperty<bool> Is31EdoProperty = AvaloniaProperty.Register<TrackBackground, bool>(nameof(Is31Edo));
+        public bool Is31Edo { get => GetValue(Is31EdoProperty); set => SetValue(Is31EdoProperty, value); }
+        static readonly IBrush[] MicrotoneBrushes = {
+            new SolidColorBrush(Color.Parse("#9BC9E8")), new SolidColorBrush(Color.Parse("#BACB9C")),
+            new SolidColorBrush(Color.Parse("#F2EAD7")), new SolidColorBrush(Color.Parse("#E5BA85")),
+            new SolidColorBrush(Color.Parse("#CBB2DD")),
+        };
         public static readonly DirectProperty<TrackBackground, double> TrackHeightProperty =
             AvaloniaProperty.RegisterDirect<TrackBackground, double>(
                 nameof(TrackHeight),
@@ -65,13 +72,15 @@ namespace OpenUtau.App.Controls {
         private int _key;
 
         public TrackBackground() {
+            MessageBus.Current.Listen<OpenUtau.App.ViewModels.Spelling31ChangedEvent>().Subscribe(_ => InvalidateVisual());
             MessageBus.Current.Listen<ThemeChangedEvent>()
                 .Subscribe(e => InvalidateVisual());
         }
 
         protected override void OnPropertyChanged(AvaloniaPropertyChangedEventArgs change) {
             base.OnPropertyChanged(change);
-            if (change.Property == TrackHeightProperty ||
+            if (change.Property == Is31EdoProperty ||
+                change.Property == TrackHeightProperty ||
                 change.Property == TrackOffsetProperty ||
                 change.Property == ForegroundProperty ||
                 change.Property == KeyProperty) {
@@ -102,6 +111,24 @@ namespace OpenUtau.App.Controls {
                     break;
             }
             while (top < Bounds.Height) {
+                if (IsPianoRoll && Is31Edo) {
+                    int step = Edo31.MaxStep - 1 - track;
+                    var color = MicrotoneBrushes[Edo31.ColorFamily(step)];
+                    context.DrawRectangle(IsKeyboard ? color : Background, null, new Rect(0, (int)top, Bounds.Width, TrackHeight));
+                    if (!IsKeyboard) {
+                        using (context.PushOpacity(0.12)) {
+                            context.DrawRectangle(color, null, new Rect(0, (int)top, Bounds.Width, TrackHeight));
+                        }
+                    }
+                    context.DrawLine(new Pen(Brushes.Gray, 0.5), new Point(0, (int)top), new Point(Bounds.Width, (int)top));
+                    if (IsKeyboard && TrackHeight >= 12) {
+                        var label = TextLayoutCache.Get(Edo31.Name(step, Preferences.Default.PreferredKey31Fifths), Brushes.Black, 12);
+                        label.Draw(context, new Point(Bounds.Width - 4 - label.Width, top + (TrackHeight - label.Height) / 2));
+                    }
+                    track++;
+                    top += TrackHeight;
+                    continue;
+                }
                 bool isAltTrack = IsAltTrack(track) ^ (ThemeManager.IsDarkMode && !IsKeyboard);
                 bool isCenterKey = IsKeyboard && IsCenterKey(track);
                 var brush = isCenterKey ? ThemeManager.CenterKeyBrush

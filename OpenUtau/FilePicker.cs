@@ -19,8 +19,9 @@ namespace OpenUtau.App {
         private static int NSAppInitState;
         #endif
         public static FilePickerFileType ProjectFiles { get; } = new("Project Files") {
-            Patterns = new[] { "*.ustx", "*.vsqx", "*.ust", "*.mid", "*.midi", "*.ufdata", "*.musicxml", "*.svp" },
+            Patterns = new[] { "*.ustx31", "*.ustx", "*.vsqx", "*.ust", "*.mid", "*.midi", "*.ufdata", "*.musicxml", "*.svp" },
         };
+        public static FilePickerFileType USTX31 { get; } = new("31-EDO project") { Patterns = new[] { "*.ustx31" } };
         public static FilePickerFileType USTX { get; } = new("USTX") {
             Patterns = new[] { "*.ustx" },
         };
@@ -246,6 +247,7 @@ namespace OpenUtau.App {
                  new FilePickerSaveOptions {
                      Title = ThemeManager.GetString(titleKey),
                      FileTypeChoices = types,
+                     DefaultExtension = types.Length == 1 && types[0] == USTX31 ? "ustx31" : types.Length == 1 && types[0] == USTX ? "ustx" : null,
                      ShowOverwritePrompt = true,
                      SuggestedStartLocation = location,
                      SuggestedFileName = filename,

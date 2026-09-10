@@ -24,6 +24,7 @@ using static ReactiveUI.Primitives.SubscribeExtensions;
 
 namespace OpenUtau.App.ViewModels {
     public class NotesRefreshEvent { }
+    public class Spelling31ChangedEvent { }
     public class RealCurveRefreshEvent { }
     public class NotesSelectionEvent {
         public readonly UNote[] selectedNotes;
@@ -37,7 +38,10 @@ namespace OpenUtau.App.ViewModels {
     public partial class NotesViewModel : ViewModelBase, ICmdSubscriber {
         [Reactive] public partial Rect Bounds { get; set; }
         public int TickCount => Part?.Duration ?? 480 * 4;
-        public int TrackCount => ViewConstants.MaxTone;
+        public bool Is31Edo => Project.Is31Edo;
+        public int TrackCount => Is31Edo ? Edo31.MaxStep : ViewConstants.MaxTone;
+        public double PitchStep => Is31Edo ? Edo31.StepTone : 1;
+        public double GridToTone(double row) => row * PitchStep;
         [Reactive] public partial double TickWidth { get; set; }
         public double TrackHeightMin => ViewConstants.NoteHeightMin;
         public double TrackHeightMax => ViewConstants.NoteHeightMax;
@@ -128,6 +132,14 @@ namespace OpenUtau.App.ViewModels {
 
             Keys = new List<MenuItemViewModel>();
             SetKeyCommand = ReactiveCommand.Create<int>(key => {
+                if (Is31Edo) {
+                    Preferences.Default.PreferredKey31Fifths = key;
+                    Preferences.Save();
+                    UpdateKey();
+                    MessageBus.Current.SendMessage(new NotesRefreshEvent());
+                    MessageBus.Current.SendMessage(new Spelling31ChangedEvent());
+                    return;
+                }
                 DocManager.Inst.StartUndoGroup("command.project.key");
                 DocManager.Inst.ExecuteCmd(new KeyCommand(Project, key));
                 DocManager.Inst.EndUndoGroup();
@@ -212,7 +224,11 @@ namespace OpenUtau.App.ViewModels {
                             CommandParameter = div,
                         }));
                     Keys.Clear();
-                    Keys.AddRange(MusicMath.KeysInOctave
+                    if (project.Is31Edo) {
+                        Keys.AddRange(Enumerable.Range(-15, 31).Select(fifths => new MenuItemViewModel {
+                            Header = Edo31.FifthName(fifths), Command = SetKeyCommand, CommandParameter = fifths,
+                        }));
+                    } else Keys.AddRange(MusicMath.KeysInOctave
                         .Select((key, index) => new MenuItemViewModel {
                             Header = $"1={key.Item1}",
                             Command = SetKeyCommand,
@@ -305,7 +321,7 @@ namespace OpenUtau.App.ViewModels {
 
             TickWidth = ViewConstants.PianoRollTickWidthDefault;
             TrackHeight = ViewConstants.NoteHeightDefault;
-            TrackOffset = 4 * 12 + 6;
+            TrackOffset = Is31Edo ? Edo31.MaxStep - 155 - 12 : 4 * 12 + 6;
             if (Preferences.Default.ShowTips) {
                 Preferences.Default.ShowTips = false;
                 Preferences.Save();
@@ -368,6 +384,14 @@ namespace OpenUtau.App.ViewModels {
         }
 
         private void UpdateKey() {
+            this.RaisePropertyChanged(nameof(Is31Edo));
+            this.RaisePropertyChanged(nameof(TrackCount));
+            this.RaisePropertyChanged(nameof(VScrollBarMax));
+            if (Is31Edo) {
+                Key = Preferences.Default.PreferredKey31Fifths;
+                KeyText = "Spelling: " + Edo31.FifthName(Key);
+                return;
+            }
             Key = userKey;
             KeyText = "1=" + MusicMath.KeysInOctave[userKey].Item1;
         }
@@ -443,21 +467,21 @@ namespace OpenUtau.App.ViewModels {
         }
 
         public int PointToTone(Point point) {
-            return ViewConstants.MaxTone - 1 - (int)(point.Y / TrackHeight + TrackOffset);
+            return TrackCount - 1 - (int)(point.Y / TrackHeight + TrackOffset);
         }
         public double PointToToneDouble(Point point) {
-            return ViewConstants.MaxTone - 1 - (point.Y / TrackHeight + TrackOffset) + 0.5;
+            return GridToTone(TrackCount - 1 - (point.Y / TrackHeight + TrackOffset) + 0.5);
         }
         public Point TickToneToPoint(double tick, double tone) {
             return new Point(
                 (tick - TickOffset) * TickWidth,
-                (ViewConstants.MaxTone - 1 - tone - TrackOffset) * TrackHeight);
+                (TrackCount - 1 - tone / PitchStep - TrackOffset) * TrackHeight);
         }
         public Point TickToneToPoint(Vector2 tickTone) {
             return TickToneToPoint(tickTone.X, tickTone.Y);
         }
         public Size TickToneToSize(double ticks, double tone) {
-            return new Size(ticks * TickWidth, tone * TrackHeight);
+            return new Size(ticks * TickWidth, tone / PitchStep * TrackHeight);
         }
 
         public UNote? MaybeAddNote(Point point, bool useLastLength) {
@@ -466,13 +490,13 @@ namespace OpenUtau.App.ViewModels {
             }
             var project = DocManager.Inst.Project;
             int tone = PointToTone(point);
-            if (tone >= ViewConstants.MaxTone || tone < 0) {
+            if (tone >= TrackCount || tone < 0) {
                 return null;
             }
             int snapUnit = project.resolution * 4 / SnapDiv;
             int tick = PointToTick(point);
             int snappedTick = (int)Math.Floor((double)tick / snapUnit) * snapUnit;
-            UNote note = project.CreateNote(tone, snappedTick,
+            UNote note = project.CreateGridNote(tone, snappedTick,
                 useLastLength ? _lastNoteLength : IsSnapOn ? snapUnit : 15);
             DocManager.Inst.ExecuteCmd(new AddNoteCommand(Part, note));
             return note;
@@ -489,6 +513,7 @@ namespace OpenUtau.App.ViewModels {
             LoadPortrait(part, project);
             LoadWindowTitle(part, project);
             LoadTrackColor(part, project);
+            this.RaisePropertyChanged(nameof(Project));
             UpdateKey();
         }
 
@@ -752,7 +777,7 @@ namespace OpenUtau.App.ViewModels {
                 return;
             }
             var tempNotes = Part.notes
-                .Where(note => note.End > x0 && note.position < x1 && note.tone > y0 && note.tone <= y1)
+                .Where(note => note.End > x0 && note.position < x1 && note.GridTone > y0 && note.GridTone <= y1)
                 .ToList();
 
             Selection.SetTemporarySelection(tempNotes);
@@ -782,11 +807,11 @@ namespace OpenUtau.App.ViewModels {
 
             var fromNote = Selection.LastOrDefault();
             int DEFAULT_TONE = 12 * 5; // C4
-            int tone = fromNote?.tone ?? DEFAULT_TONE;
+            int tone = fromNote?.GridTone ?? (Is31Edo ? 155 : DEFAULT_TONE);
             int tick = fromNote?.RightBound ?? (int)TickOffset;
             int dur = fromNote?.duration ?? snapUnit;
             DocManager.Inst.StartUndoGroup("command.note.add");
-            UNote note = DocManager.Inst.Project.CreateNote(tone, tick, dur);
+            UNote note = DocManager.Inst.Project.CreateGridNote(tone, tick, dur);
             DocManager.Inst.ExecuteCmd(new AddNoteCommand(Part, note));
             SelectNote(note);
             DocManager.Inst.EndUndoGroup();
@@ -796,8 +821,9 @@ namespace OpenUtau.App.ViewModels {
             if (Part == null || Selection.IsEmpty) {
                 return;
             }
+            if (Is31Edo && Math.Abs(deltaNoteNum) == 12) { deltaNoteNum = Math.Sign(deltaNoteNum) * 31; }
             var selectedNotes = Selection.ToList();
-            if (selectedNotes.Any(note => note.tone + deltaNoteNum <= 0 || note.tone + deltaNoteNum >= ViewConstants.MaxTone)) {
+            if (selectedNotes.Any(note => note.GridTone + deltaNoteNum < 0 || note.GridTone + deltaNoteNum >= TrackCount)) {
                 return;
             }
             DocManager.Inst.StartUndoGroup("command.note.move");
@@ -889,6 +915,10 @@ namespace OpenUtau.App.ViewModels {
 
         public void PasteNotes() {
             if (Part != null && DocManager.Inst.NotesClipboard != null && DocManager.Inst.NotesClipboard.Count > 0) {
+                if (DocManager.Inst.NotesClipboard.Any(n => n.tone31.HasValue != Is31Edo)) {
+                    DocManager.Inst.ExecuteCmd(new ErrorMessageNotification(new FileFormatException("Convert a project copy before pasting between tuning systems.")));
+                    return;
+                }
                 int snapUnit = DocManager.Inst.Project.resolution * 4 / SnapDiv;
                 int left = (DocManager.Inst.playPosTick / snapUnit) * snapUnit;
                 int minPosition = DocManager.Inst.NotesClipboard.Select(note => note.position).Min();
@@ -921,8 +951,8 @@ namespace OpenUtau.App.ViewModels {
         /// </summary>
         public void PastePlainNotes() {
             UNote toPlainNote(UNote note) {
-                var plainNote = DocManager.Inst.Project.CreateNote(
-                    note.tone,
+                var plainNote = DocManager.Inst.Project.CreateGridNote(
+                    note.GridTone,
                     note.position,
                     note.duration);
                 plainNote.lyric = note.lyric;
@@ -930,6 +960,10 @@ namespace OpenUtau.App.ViewModels {
             }
 
             if (Part != null && DocManager.Inst.NotesClipboard != null && DocManager.Inst.NotesClipboard.Count > 0) {
+                if (DocManager.Inst.NotesClipboard.Any(n => n.tone31.HasValue != Is31Edo)) {
+                    DocManager.Inst.ExecuteCmd(new ErrorMessageNotification(new FileFormatException("Convert a project copy before pasting between tuning systems.")));
+                    return;
+                }
                 int snapUnit = DocManager.Inst.Project.resolution * 4 / SnapDiv;
                 int left = (DocManager.Inst.playPosTick / snapUnit) * snapUnit;
                 int minPosition = DocManager.Inst.NotesClipboard.Select(note => note.position).Min();
@@ -959,6 +993,10 @@ namespace OpenUtau.App.ViewModels {
 
         public async void PasteSelectedParams(Window window) {
             if (Part != null && DocManager.Inst.NotesClipboard != null && DocManager.Inst.NotesClipboard.Count > 0) {
+                if (DocManager.Inst.NotesClipboard.Any(n => n.tone31.HasValue != Is31Edo)) {
+                    DocManager.Inst.ExecuteCmd(new ErrorMessageNotification(new FileFormatException("Convert a project copy before pasting between tuning systems.")));
+                    return;
+                }
                 var selectedNotes = Selection.ToList();
                 if (selectedNotes.Count == 0) {
                     return;
@@ -1091,7 +1129,7 @@ namespace OpenUtau.App.ViewModels {
 
         private void FocusNote(UNote note) {
             TickOffset = Math.Clamp(note.position + note.duration * 0.5 - ViewportTicks * 0.5, 0, HScrollBarMax);
-            TrackOffset = Math.Clamp(ViewConstants.MaxTone - note.tone + 2 - ViewportTracks * 0.5, 0, VScrollBarMax);
+            TrackOffset = Math.Clamp(TrackCount - note.GridTone + 2 - ViewportTracks * 0.5, 0, VScrollBarMax);
         }
 
         private void ScrollIntoView(UNote note) {
@@ -1099,7 +1137,7 @@ namespace OpenUtau.App.ViewModels {
                 AutoScroll(TickToneToPoint(note.position, 0).X);
             }
             var toneMargin = 4;
-            var noteOffset = ViewConstants.MaxTone - note.tone - 1;
+            var noteOffset = TrackCount - note.GridTone - 1;
             if (noteOffset < TrackOffset + toneMargin) {
                 TrackOffset = Math.Max(noteOffset - toneMargin, 0);
             } else if (noteOffset > TrackOffset + ViewportTracks - toneMargin) {
@@ -1151,6 +1189,9 @@ namespace OpenUtau.App.ViewModels {
                     TickOffset = Math.Clamp(tickOffset, 0, HScrollBarMax);
                     PrimaryKeyNotSupported = !IsExpSupported(PrimaryKey);
                 } else if (cmd is LoadProjectNotification) {
+                    this.RaisePropertyChanged(nameof(Project));
+                    UpdateKey();
+                    TrackOffset = Is31Edo ? Edo31.MaxStep - 155 - 12 : 4 * 12 + 6;
                     UnloadPart();
                     LoadPortrait(null, null);
                     PrimaryKeyNotSupported = !IsExpSupported(PrimaryKey);

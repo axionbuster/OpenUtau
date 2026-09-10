@@ -26,20 +26,20 @@ namespace OpenUtau.App.Views {
         public void Begin(IPointer pointer, Point point) {
             pointer.Capture(element);
             var tone = vm.NotesViewModel.PointToTone(point);
-            PlaybackManager.Inst.PlayTone(MusicMath.ToneToFreq(tone));
+            PlaybackManager.Inst.PlayTone(MusicMath.ToneToFreq(vm.NotesViewModel.GridToTone(tone)));
             activeTone = tone;
         }
         public void Update(IPointer pointer, Point point) {
             var tone = vm.NotesViewModel.PointToTone(point);
             if (activeTone != tone) {
-                PlaybackManager.Inst.EndTone(MusicMath.ToneToFreq(activeTone));
-                PlaybackManager.Inst.PlayTone(MusicMath.ToneToFreq(tone));
+                PlaybackManager.Inst.EndTone(MusicMath.ToneToFreq(vm.NotesViewModel.GridToTone(activeTone)));
+                PlaybackManager.Inst.PlayTone(MusicMath.ToneToFreq(vm.NotesViewModel.GridToTone(tone)));
                 activeTone = tone;
             }
         }
         public void End(IPointer pointer, Point point) {
             pointer.Capture(null);
-            PlaybackManager.Inst.EndTone(MusicMath.ToneToFreq(activeTone));
+            PlaybackManager.Inst.EndTone(MusicMath.ToneToFreq(vm.NotesViewModel.GridToTone(activeTone)));
         }
     }
 
@@ -130,8 +130,8 @@ namespace OpenUtau.App.Views {
             int y0 = Math.Min(tone, startTone) - 1;
             int y1 = Math.Max(tone, startTone);
 
-            var leftTop = notesVm.TickToneToPoint(x0, y1);
-            var Size = notesVm.TickToneToSize(x1 - x0, y1 - y0);
+            var leftTop = notesVm.TickToneToPoint(x0, notesVm.GridToTone(y1));
+            var Size = notesVm.TickToneToSize(x1 - x0, notesVm.GridToTone(y1 - y0));
             Canvas.SetLeft(selectionBox, leftTop.X);
             Canvas.SetTop(selectionBox, leftTop.Y);
             selectionBox.Width = Size.Width + 1;
@@ -174,16 +174,16 @@ namespace OpenUtau.App.Views {
                 return;
             }
 
-            int deltaTone = notesVm.PointToTone(point) - note.tone;
+            int deltaTone = notesVm.PointToTone(point) - note.GridTone;
             int minDeltaTone;
             int maxDeltaTone;
             var selectedNotes = notesVm.Selection.ToList();
             if (selectedNotes.Count > 0) {
-                minDeltaTone = -selectedNotes.Select(p => p.tone).Min();
-                maxDeltaTone = ViewConstants.MaxTone - 1 - selectedNotes.Select(p => p.tone).Max();
+                minDeltaTone = -selectedNotes.Select(p => p.GridTone).Min();
+                maxDeltaTone = notesVm.TrackCount - 1 - selectedNotes.Select(p => p.GridTone).Max();
             } else {
-                minDeltaTone = -note.tone;
-                maxDeltaTone = ViewConstants.MaxTone - 1 - note.tone;
+                minDeltaTone = -note.GridTone;
+                maxDeltaTone = notesVm.TrackCount - 1 - note.GridTone;
             }
             deltaTone = Math.Clamp(deltaTone, minDeltaTone, maxDeltaTone);
 
@@ -238,8 +238,8 @@ namespace OpenUtau.App.Views {
                     // Stop playback if playing project
                     PlaybackManager.Inst.StopPlayback();
                 }
-                activeTone = note.tone;
-                PlaybackManager.Inst.PlayTone(MusicMath.ToneToFreq(note.tone));
+                activeTone = note.GridTone;
+                PlaybackManager.Inst.PlayTone(MusicMath.ToneToFreq(note.AdjustedTone));
             }
             if (note != null) {
                 var prev = vm.NotesViewModel.Part!.notes.FirstOrDefault(n => n.position < note.position && note.position < n.End);
@@ -258,14 +258,14 @@ namespace OpenUtau.App.Views {
             if (part == null) {
                 return;
             }
-            int tone = notesVm.PointToTone(point);
+            int tone = Math.Clamp(notesVm.PointToTone(point), 0, notesVm.TrackCount - 1);
             if (activeTone != tone) {
                 // Tone has changed
-                PlaybackManager.Inst.EndTone(MusicMath.ToneToFreq(activeTone));
-                PlaybackManager.Inst.PlayTone(MusicMath.ToneToFreq(tone));
+                PlaybackManager.Inst.EndTone(MusicMath.ToneToFreq(vm.NotesViewModel.GridToTone(activeTone)));
+                PlaybackManager.Inst.PlayTone(MusicMath.ToneToFreq(vm.NotesViewModel.GridToTone(tone)));
                 activeTone = tone;
             }
-            int deltaTone = tone - note.tone;
+            int deltaTone = tone - note.GridTone;
             int snapUnit = project.resolution * 4 / notesVm.SnapDiv;
             int newEnd = notesVm.PointToTick(point);
             if (notesVm.IsSnapOn) {
@@ -298,7 +298,7 @@ namespace OpenUtau.App.Views {
         }
         public override void End(IPointer pointer, Point point) {
             base.End(pointer, point);
-            PlaybackManager.Inst.EndTone(MusicMath.ToneToFreq(activeTone));
+            PlaybackManager.Inst.EndTone(MusicMath.ToneToFreq(vm.NotesViewModel.GridToTone(activeTone)));
         }
     }
 
@@ -651,7 +651,7 @@ namespace OpenUtau.App.Views {
                 var snapTo = note.Prev == null ? note : note.Prev.End == note.position ? note.Prev : note;
                 deltaY = (snapTo.AdjustedTone - note.AdjustedTone) * 10 - pitchPoint.Y;
             } else if (ctrlHeld) {
-                var snappedSemitone = Math.Round(notesVm.PointToToneDouble(point) - note.AdjustedTone, MidpointRounding.AwayFromZero);
+                var snappedSemitone = Math.Round((notesVm.PointToToneDouble(point) - note.AdjustedTone) / notesVm.PitchStep, MidpointRounding.AwayFromZero) * notesVm.PitchStep;
                 deltaY = snappedSemitone * 10 - pitchPoint.Y;
             } else if (altShiftHeld && note.pitch.data.Count > 2 && !isLast) {
                 deltaY = note.pitch.data[index + 1].Y - pitchPoint.Y;
@@ -1028,7 +1028,7 @@ namespace OpenUtau.App.Views {
         }
         public override void Update(IPointer pointer, Point point) {
             var notesVm = vm.NotesViewModel;
-            float tone = (float)notesVm.PointToToneDouble(point) - 0.5f;
+            float tone = (float)(notesVm.PointToToneDouble(point) - notesVm.PitchStep * 0.5);
             float newDepth = note.vibrato.ToneToDepth(note, tone);
             if (newDepth != note.vibrato.depth && notesVm.Part != null) {
                 DocManager.Inst.ExecuteCmd(new VibratoDepthCommand(notesVm.Part, note, newDepth));

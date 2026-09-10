@@ -1,14 +1,19 @@
 ﻿using Xunit;
 using Avalonia;
 using Avalonia.Headless;
+using Avalonia.Headless.XUnit;
 using Avalonia.Styling;
+using ReactiveUI.Avalonia;
 using OpenUtau.App;
 
 [assembly: AvaloniaTestApplication(typeof(TestAppBuilder))]
+[assembly: AvaloniaTestIsolation(AvaloniaTestIsolationLevel.PerAssembly)]
 
 public class TestAppBuilder {
     public static AppBuilder BuildAvaloniaApp() => AppBuilder.Configure<App>()
-        .UseHeadless(new AvaloniaHeadlessPlatformOptions());
+        .UseSkia()
+        .UseReactiveUI(_ => { })
+        .UseHeadless(new AvaloniaHeadlessPlatformOptions { UseHeadlessDrawing = false });
 }
 
 namespace OpenUtau.App {
@@ -19,11 +24,9 @@ namespace OpenUtau.App {
             Assert.False(typeof(Program).IsAbstract);
         }
 
-        [Fact]
+        [AvaloniaFact]
         public void StringsTest() {
-            var appBuilder = TestAppBuilder.BuildAvaloniaApp()
-                .SetupWithoutStarting();
-            var app = appBuilder.Instance as App;
+            var app = Application.Current as App;
             Assert.NotNull(app);
 
             var languages = App.GetLanguages();

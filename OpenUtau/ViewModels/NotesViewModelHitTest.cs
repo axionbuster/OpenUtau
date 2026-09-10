@@ -77,7 +77,7 @@ namespace OpenUtau.App.ViewModels {
                 result.note = note;
                 result.hitX = true;
                 var tone = viewModel.PointToToneDouble(point);
-                if (tone > note.AdjustedTone + 0.5 || tone < note.AdjustedTone - 0.5) {
+                if (tone > note.AdjustedTone + viewModel.PitchStep * 0.5 || tone < note.AdjustedTone - viewModel.PitchStep * 0.5) {
                     continue;
                 }
                 result.hitBody = true;

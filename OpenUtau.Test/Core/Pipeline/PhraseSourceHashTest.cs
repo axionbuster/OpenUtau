@@ -186,6 +186,23 @@ namespace OpenUtau.Core.Pipeline {
             return (project, track, part);
         }
 
+        [Fact]
+        public void NativeStepReachesRenderPitchAndChangesCacheIdentity() {
+            var (project, track, part) = BuildFixture();
+            var before = RenderPhrase.FromPart(project, track, part)[0];
+            var note = part.notes.First();
+            note.tone31 = 156;
+            note.SetGridTone(156);
+            var after = RenderPhrase.FromPart(project, track, part)[0];
+            float deltaCents = (note.AdjustedTone - before.notes[0].adjustedTone) * 100;
+            Assert.InRange(Math.Abs(after.notes[0].adjustedTone - (156 * 12.0 / 31 + .1)), 0, 0.00001);
+            Assert.NotEqual(before.hash, after.hash);
+            // Away from transitions, the existing curve is translated by the exact target offset.
+            int index = Array.FindIndex(before.pitches, p => p > 6050 && p < 6150);
+            Assert.True(index >= 0);
+            Assert.InRange(Math.Abs((after.pitches[index] - before.pitches[index]) - deltaCents), 0, 0.01);
+        }
+
         static string Hashes(params RenderPhrase[] phrases) {
             var lines = new List<string>();
             foreach (var phrase in phrases) {

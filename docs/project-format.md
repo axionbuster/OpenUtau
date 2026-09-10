@@ -1,7 +1,7 @@
 # Project formats
 
 The fork supports ordinary `.ustx` documents and native `.ustx31` documents.
-The native format is revision 1. Its initial feature is fixed 31-EDO.
+The native format is revision 1. Its initial feature is fixed 31-TET.
 
 ## Ordinary USTx
 
@@ -35,11 +35,11 @@ The extension is a user-facing distinction, not the sole format discriminator.
 
 ## Note pitch
 
-Native notes store `tone31`, an integer number of 31-EDO steps above C-1.
+Native notes store `tone31`, an integer number of 31-TET steps above C-1.
 The editor covers eleven octaves: steps 0 through 340. C4 is step 155.
 The target MIDI-coordinate pitch is `tone31 * 12 / 31 + tuning / 100`.
 Frequency is `440 * 2^((pitch - 69) / 12)`. This anchors C-1 to the ordinary
-MIDI reference; the 31-EDO A derived from it is not exactly 440 Hz.
+MIDI reference; the 31-TET A derived from it is not exactly 440 Hz.
 
 `tone` remains the nearest integer semitone used for singer/sample selection;
 it is derived from `tone31` in native documents. `tuning` remains an additional
@@ -59,7 +59,7 @@ mixed tuning modes before changing the destination; convert a copy first.
 
 Conversion creates an independent, unsaved document with no destination path:
 
-- To 31-EDO: round each sounding note target to the nearest 31-EDO step and clear
+- To 31-TET: round each sounding note target to the nearest 31-TET step and clear
   its per-note cent offset. Relative pitch curves and vibrato remain unchanged.
 - To USTx: derive the nearest semitone and integer-cent offset. Per-note target
   rounding is at most half a cent. Exact temperament identity is lost.

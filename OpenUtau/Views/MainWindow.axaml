@@ -22,8 +22,8 @@
                 ZIndex="1">
           <MenuItem Header="{DynamicResource menu.file}" IsEnabled="{Binding Page}">
             <MenuItem Header="{DynamicResource menu.file.new}" InputGesture="Ctrl+N" Click="OnMenuNew"/>
-            <MenuItem Header="New 31-EDO project" Click="OnMenuNew31"/>
-            <MenuItem Header="Convert a copy between 12-EDO and 31-EDO…" Click="OnMenuConvertTuning"/>
+            <MenuItem Header="New 31-TET project" Click="OnMenuNew31"/>
+            <MenuItem Header="Convert a copy between 12-TET and 31-TET…" Click="OnMenuConvertTuning"/>
             <MenuItem Header="{DynamicResource menu.file.newfromtemplate}" ItemsSource="{Binding OpenTemplatesMenuItems}" Classes="MenuItemWithSubMenu"/>
             <MenuItem Header="{DynamicResource menu.file.savetemplate}" Click="OnMenuSaveTemplate"/>
             <MenuItem Header="-" Height="1"/>

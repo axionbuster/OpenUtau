@@ -71,8 +71,8 @@ namespace OpenUtau.App {
                 project.AfterSave();
                 notes.SetKeyCommand.Execute(2).Subscribe();
                 Capture(window, "keyboard-31edo.png");
-                Assert.Contains("[31-EDO]", new MainWindowViewModel().AppVersion);
-                Assert.Contains("0.1.570-edo31.4", new MainWindowViewModel().AppVersion);
+                Assert.Contains("[31-TET]", new MainWindowViewModel().AppVersion);
+                Assert.Contains("0.1.570-tet31.5", new MainWindowViewModel().AppVersion);
                 var toggle = editor.FindControl<CheckBox>("DiatonicToggle");
                 Assert.True(toggle.IsVisible);
                 toggle.IsChecked = true;

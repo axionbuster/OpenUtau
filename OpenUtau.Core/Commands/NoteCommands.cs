@@ -110,7 +110,7 @@ namespace OpenUtau.Core {
         }
         private void CheckNativeRange(int delta) {
             if (Notes.Any(n => n.tone31.HasValue && ((long)n.GridTone + delta < 0 || (long)n.GridTone + delta >= Util.Edo31.MaxStep))) {
-                throw new ArgumentOutOfRangeException(nameof(delta), "Note move exceeds the 31-EDO editor range.");
+                throw new ArgumentOutOfRangeException(nameof(delta), "Note move exceeds the 31-TET editor range.");
             }
         }
         public override string ToString() { return $"Move {Notes.Count()} notes"; }

@@ -1,6 +1,6 @@
-# Writing in 31-EDO
+# Writing in 31-TET
 
-Choose **File → New 31-EDO project**, or open a `.ustx31` file. Ordinary `.ustx`
+Choose **File → New 31-TET project**, or open a `.ustx31` file. Ordinary `.ustx`
 projects keep their existing keyboard, key control, and pitch editing behavior.
 
 The native keyboard has 31 equal steps per octave. Draw and drag notes by one
@@ -21,7 +21,7 @@ expanded and collapsed again, so deleting a note does not shift the grid beneath
 the pointer. Uncheck it to restore all 31 steps per octave.
 
 This application preference persists across launches and is available only for
-31-EDO documents. It does not change notes, tuning, undo history, or project files.
+31-TET documents. It does not change notes, tuning, undo history, or project files.
 Pitch curves retain their exact pitch values and follow the folded display.
 
 Names come from a chain of 31 consecutive fifths: fifteen below the preferred key
@@ -30,8 +30,8 @@ steps. Flats and sharps are distinct where appropriate. Octave numbers follow th
 written letter, including spellings that cross C. Double sharps use 𝄪; repeated flats and combined symbols represent more remote
 alterations.
 
-**File → Convert a copy between 12-EDO and 31-EDO** creates a separate unsaved
-document. Conversion to 31-EDO rounds note targets to the nearest step; conversion
+**File → Convert a copy between 12-TET and 31-TET** creates a separate unsaved
+document. Conversion to 31-TET rounds note targets to the nearest step; conversion
 to USTx approximates targets with integer cents. Save the copy under a new name.
 Convert whole projects before importing tracks or pasting between tuning systems.
 
@@ -58,10 +58,10 @@ The optional Liquid Glass icon is not required for the standard icon to work.
 
 ## Fork version
 
-The local fork identifies itself as `0.1.570-edo31.4 [31-EDO]`, based on the
+The local fork identifies itself as `0.1.570-tet31.5 [31-TET]`, based on the
 upstream 0.1.570 development line. The application title uses the informational
 version, preserving the fork suffix without the assembly's trailing zero. macOS
-uses numeric bundle version `0.1.570.4` and short version `0.1.570`. These build
+uses numeric bundle version `0.1.570.5` and short version `0.1.570`. These build
 versions are independent of the native project format revision.
 
 ## Image-scaling regression check

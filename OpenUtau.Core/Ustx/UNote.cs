@@ -17,7 +17,7 @@ namespace OpenUtau.Core.Ustx {
         public int position;
         public int duration;
         public int tone;
-        // Exact 31-EDO step from C-1; omitted from ordinary USTx notes.
+        // Exact 31-TET step from C-1; omitted from ordinary USTx notes.
         public int? tone31;
         [YamlIgnore] public float PitchStep => tone31.HasValue ? 12f / 31 : 1f;
         [YamlIgnore] public int GridTone => tone31 ?? tone;

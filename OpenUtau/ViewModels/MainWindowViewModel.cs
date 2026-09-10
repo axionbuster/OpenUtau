@@ -77,7 +77,7 @@ namespace OpenUtau.App.ViewModels {
                 var assembly = typeof(MainWindowViewModel).Assembly;
                 string version = System.Reflection.CustomAttributeExtensions.GetCustomAttribute<System.Reflection.AssemblyInformationalVersionAttribute>(assembly)?.InformationalVersion.Split('+')[0]
                     ?? assembly.GetName().Version?.ToString(3) ?? "unknown";
-                return $"OpenUtau v{version} [31-EDO]";
+                return $"OpenUtau v{version} [31-TET]";
             }
         }
         [Reactive] public partial double Progress { get; set; }

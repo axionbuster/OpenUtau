@@ -34,7 +34,7 @@ Know how to code? Got an idea for an improvement? Don't keep it to yourself!
 
 ## Fork documentation
 
-- [31-EDO editing](docs/31-edo.md)
+- [31-TET editing](docs/31-edo.md)
 - [Project format specification](docs/project-format.md)
 
 ## Plugin development

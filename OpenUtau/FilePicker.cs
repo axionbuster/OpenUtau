@@ -21,7 +21,7 @@ namespace OpenUtau.App {
         public static FilePickerFileType ProjectFiles { get; } = new("Project Files") {
             Patterns = new[] { "*.ustx31", "*.ustx", "*.vsqx", "*.ust", "*.mid", "*.midi", "*.ufdata", "*.musicxml", "*.svp" },
         };
-        public static FilePickerFileType USTX31 { get; } = new("31-EDO project") { Patterns = new[] { "*.ustx31" } };
+        public static FilePickerFileType USTX31 { get; } = new("31-TET project") { Patterns = new[] { "*.ustx31" } };
         public static FilePickerFileType USTX { get; } = new("USTX") {
             Patterns = new[] { "*.ustx" },
         };

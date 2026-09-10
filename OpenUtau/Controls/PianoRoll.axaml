@@ -390,7 +390,7 @@
             <CheckBox Name="DiatonicToggle" AutomationProperties.Name="Diatonic" Margin="0,0,8,0"
                       IsVisible="{Binding NotesViewModel.Is31Edo}"
                       IsChecked="{Binding NotesViewModel.FoldDiatonic31, Mode=TwoWay}"
-                      ToolTip.Tip="Collapse to the preferred key's major scale, keeping existing notes visible. Display only; uncheck to show all 31 steps."/>
+                      ToolTip.Tip="Collapse to the preferred key's major and natural minor scales, keeping existing notes visible. Display only; uncheck to show all 31 steps."/>
             <ToggleButton Classes="toolbar" Margin="0" Padding="1" Height="20" Width="20" IsChecked="{Binding NotesViewModel.ShowTips}"
                           ToolTip.Tip="{DynamicResource pianoroll.toggle.tips}">
               <Grid Width="18" Height="18">

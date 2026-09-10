@@ -72,17 +72,23 @@ namespace OpenUtau.App {
                 notes.SetKeyCommand.Execute(2).Subscribe();
                 Capture(window, "keyboard-31edo.png");
                 Assert.Contains("[31-EDO]", new MainWindowViewModel().AppVersion);
-                Assert.Contains("0.1.570-edo31.3", new MainWindowViewModel().AppVersion);
+                Assert.Contains("0.1.570-edo31.4", new MainWindowViewModel().AppVersion);
                 var toggle = editor.FindControl<CheckBox>("DiatonicToggle");
                 Assert.True(toggle.IsVisible);
                 toggle.IsChecked = true;
                 Dispatcher.UIThread.RunJobs();
                 Assert.True(notes.FoldDiatonic31);
                 Assert.True(Preferences.Default.FoldDiatonic31);
-                Assert.InRange(notes.DisplayTrackCount, 77, 90);
+                Assert.Equal(110, notes.DisplayTrackCount);
+                // D major and D natural minor, with both forms of degrees 3, 6, and 7.
+                foreach (int step in new[] { 160, 165, 168, 170, 173, 178, 181, 183, 186, 188 }) {
+                    Assert.Contains(step, notes.DisplayRows!);
+                }
+                Assert.Contains(155, notes.DisplayRows!); // C in D natural minor.
+                Assert.Contains(186, notes.DisplayRows!); // C in D natural minor.
                 Assert.Equal(341, notes.TrackCount);
                 Assert.DoesNotContain(156, notes.DisplayRows!);
-                Assert.Contains(155, notes.DisplayRows!); // Existing C remains visible in D major.
+                Assert.Contains(165, notes.DisplayRows!); // Existing E remains visible.
                 foreach (int step in notes.DisplayRows!) {
                     var top = notes.TickToneToPoint(0, notes.GridToTone(step));
                     var center = top.WithY(top.Y + notes.TrackHeight / 2);
@@ -107,6 +113,9 @@ namespace OpenUtau.App {
                 notes.SetKeyCommand.Execute(0).Subscribe();
                 Assert.Contains(155, notes.DisplayRows!);
                 Assert.DoesNotContain(157, notes.DisplayRows!);
+                foreach (int step in new[] { 155, 160, 163, 165, 168, 173, 176, 178, 181, 183 }) {
+                    Assert.Contains(step, notes.DisplayRows!);
+                }
                 notes.FoldDiatonic31 = false;
                 Assert.Null(notes.DisplayRows);
                 notes.FoldDiatonic31 = true;

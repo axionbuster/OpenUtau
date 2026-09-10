@@ -62,7 +62,8 @@ namespace OpenUtau.App.ViewModels {
             double center = DisplayRowToStep(DisplayTrackCount - 1 - TrackOffset - ViewportTracks / 2);
             if (Is31Edo && FoldDiatonic31) {
                 int tonic = ((Preferences.Default.PreferredKey31Fifths * 18) % 31 + 31) % 31;
-                var scale = new[] { 0, 5, 10, 13, 18, 23, 28 };
+                // Major and natural minor share the preferred tonic.
+                var scale = new[] { 0, 5, 8, 10, 13, 18, 21, 23, 26, 28 };
                 var rows = new SortedSet<int>(Enumerable.Range(0, TrackCount)
                     .Where(step => scale.Contains((step - tonic + 31) % 31)));
                 if (retainRows && DisplayRows != null) { rows.UnionWith(DisplayRows); }

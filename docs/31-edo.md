@@ -14,8 +14,8 @@ does not mark the project modified. No preferred-key information is saved in the
 project. This is a spelling center, not a major/minor key declaration.
 
 The **Diatonic** checkbox at the start of the piano-roll toolbar collapses empty
-non-scale rows. It uses the seven-note major collection rooted at the preferred
-spelling key. Existing pitches anywhere in the project remain visible, including
+non-scale rows. It uses the combined major and natural minor collections rooted at the same
+preferred spelling key (ten pitches per octave). Existing pitches anywhere in the project remain visible, including
 out-of-scale notes. Rows revealed during editing stay available until the view is
 expanded and collapsed again, so deleting a note does not shift the grid beneath
 the pointer. Uncheck it to restore all 31 steps per octave.
@@ -58,10 +58,10 @@ The optional Liquid Glass icon is not required for the standard icon to work.
 
 ## Fork version
 
-The local fork identifies itself as `0.1.570-edo31.3 [31-EDO]`, based on the
+The local fork identifies itself as `0.1.570-edo31.4 [31-EDO]`, based on the
 upstream 0.1.570 development line. The application title uses the informational
 version, preserving the fork suffix without the assembly's trailing zero. macOS
-uses numeric bundle version `0.1.570.3` and short version `0.1.570`. These build
+uses numeric bundle version `0.1.570.4` and short version `0.1.570`. These build
 versions are independent of the native project format revision.
 
 ## Image-scaling regression check

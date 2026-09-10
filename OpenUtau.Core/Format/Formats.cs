@@ -28,7 +28,9 @@ namespace OpenUtau.Core.Format {
                 }
             }
             string contents = string.Join("\n", lines);
-            if (contents.Contains(ustMatch)) {
+            if (contents.Contains("format: " + Ustx31.FormatId)) {
+                return ProjectFormats.Ustx;
+            } else if (contents.Contains(ustMatch)) {
                 return ProjectFormats.Ust;
             } else if (contents.Contains(ustxMatchJson) || contents.Contains(ustxMatchYaml)) {
                 return ProjectFormats.Ustx;
@@ -136,7 +138,7 @@ namespace OpenUtau.Core.Format {
         public static void RecoveryProject(string[] files) {
             UProject project = ReadProject(files);
             if (project != null) {
-                string originalPath = project.FilePath.Replace("-autosave.ustx", ".ustx").Replace("-backup.ustx", ".ustx");
+                string originalPath = project.FilePath.Replace("-autosave" + project.NativeExtension, project.NativeExtension).Replace("-backup" + project.NativeExtension, project.NativeExtension);
                 if (File.Exists(originalPath)) {
                     project.FilePath = originalPath;
                 } else {
@@ -158,6 +160,9 @@ namespace OpenUtau.Core.Format {
         public static void ImportTracks(UProject project, UProject[] loadedProjects, bool importTempo = true) {
             if (loadedProjects == null || loadedProjects.Length < 1) {
                 return;
+            }
+            if (loadedProjects.Any(loaded => loaded.Is31Edo != project.Is31Edo)) {
+                throw new FileFormatException("Convert a copy to the destination tuning before importing tracks.");
             }
             int initialTracks = project.tracks.Count;
             int initialParts = project.parts.Count;

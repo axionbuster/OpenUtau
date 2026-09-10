@@ -93,17 +93,18 @@ namespace OpenUtau.Core.Format {
         }
 
         public static UProject Create() {
-            UProject project = new UProject() { Saved = false };
+            UProject project = new UProject() { Saved = false, ustxVersion = kUstxVersion };
             AddDefaultExpressions(project);
             return project;
         }
 
         public static void Save(string filePath, UProject project) {
             try {
+                Ustx31.CheckSavePath(filePath, project);
                 project.ustxVersion = kUstxVersion;
                 project.FilePath = filePath;
                 project.BeforeSave();
-                File.WriteAllText(filePath, Yaml.DefaultSerializer.Serialize(project), Encoding.UTF8);
+                File.WriteAllText(filePath, Ustx31.Serialize(project), Encoding.UTF8);
                 project.Saved = true;
                 project.AfterSave();
                 Preferences.Default.RecoveryPath = string.Empty;
@@ -119,7 +120,7 @@ namespace OpenUtau.Core.Format {
             try {
                 project.ustxVersion = kUstxVersion;
                 project.BeforeSave();
-                File.WriteAllText(filePath, Yaml.DefaultSerializer.Serialize(project), Encoding.UTF8);
+                File.WriteAllText(filePath, Ustx31.Serialize(project), Encoding.UTF8);
                 project.AfterSave();
                 Preferences.Default.RecoveryPath = filePath;
                 Preferences.Save();
@@ -130,7 +131,10 @@ namespace OpenUtau.Core.Format {
 
         public static UProject Load(string filePath) {
             string text = File.ReadAllText(filePath, Encoding.UTF8);
-            UProject project = Yaml.DefaultDeserializer.Deserialize<UProject>(text);
+            UProject project = Ustx31.Deserialize(text);
+            if (project.ustxVersion > kUstxVersion) {
+                throw new FileFormatException("Project file is newer than software.");
+            }
             AddDefaultExpressions(project);
             project.FilePath = filePath;
             project.Saved = true;

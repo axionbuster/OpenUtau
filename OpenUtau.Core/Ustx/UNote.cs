@@ -17,6 +17,18 @@ namespace OpenUtau.Core.Ustx {
         public int position;
         public int duration;
         public int tone;
+        // Exact 31-EDO step from C-1; omitted from ordinary USTx notes.
+        public int? tone31;
+        [YamlIgnore] public int GridTone => tone31 ?? tone;
+        [YamlIgnore] public float BaseTone => tone31.HasValue ? tone31.Value * (12f / 31) : tone;
+        public void SetGridTone(int value) {
+            if (tone31.HasValue) {
+                tone31 = value;
+                tone = (int)Math.Round(value * (12.0 / 31));
+            } else {
+                tone = value;
+            }
+        }
         public string lyric = NotePresets.Default.DefaultLyric;
         public UPitch pitch;
         public UVibrato vibrato;
@@ -31,7 +43,7 @@ namespace OpenUtau.Core.Ustx {
         /// <summary>
         /// The final tone, taking tuning into consideration
         /// </summary>
-        [YamlIgnore] public float AdjustedTone => tone + tuning / 100f;
+        [YamlIgnore] public float AdjustedTone => BaseTone + tuning / 100f;
 
         /// <summary>
         /// Position of the note in milliseconds, relative to the beginning of the project.
@@ -259,6 +271,7 @@ namespace OpenUtau.Core.Ustx {
                 pitch = pitch.Clone(),
                 vibrato = vibrato.Clone(),
                 tuning = tuning,
+                tone31 = tone31,
                 PhonemizerOverride = PhonemizerOverride,
                 phonemeExpressions = phonemeExpressions.Select(exp => exp.Clone()).ToList(),
                 phonemeOverrides = phonemeOverrides.Select(o => o.Clone()).ToList(),

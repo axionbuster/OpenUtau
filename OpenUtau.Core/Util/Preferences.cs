@@ -60,6 +60,7 @@ namespace OpenUtau.Core.Util {
             //Users can choose adding .ust, .vsqx and .mid files to recent files or not
             string ext = Path.GetExtension(filePath);
             switch(ext){
+                case ".ustx31":
                 case ".ustx":
                     AddRecentFile(filePath);
                     break;
@@ -154,6 +155,7 @@ namespace OpenUtau.Core.Util {
 
         [Serializable]
         public class SerializablePreferences {
+            public int PreferredKey31Fifths = 2;
             public WindowSize MainWindowSize = new WindowSize();
             public WindowSize PianorollWindowSize = new WindowSize();
             public int UndoLimit = 100;

@@ -33,6 +33,8 @@ namespace OpenUtau.Core.Ustx {
     }
 
     public class UProject {
+        [YamlIgnore] public bool Is31Edo { get; set; }
+        [YamlIgnore] public string NativeExtension => Is31Edo ? ".ustx31" : ".ustx";
         public string name = "New Project";
         public string comment = string.Empty;
         public string outputDir = "Vocal";
@@ -131,6 +133,13 @@ namespace OpenUtau.Core.Ustx {
             return note;
         }
 
+        public UNote CreateGridNote(int gridTone, int posTick, int durTick) {
+            var note = CreateNote(0, posTick, durTick);
+            if (Is31Edo) { note.tone31 = gridTone; }
+            note.SetGridTone(gridTone);
+            return note;
+        }
+
         public UNote CreateNote(int noteNum, int posTick, int durTick) {
             var note = CreateNote();
             note.tone = noteNum;
@@ -163,6 +172,7 @@ namespace OpenUtau.Core.Ustx {
         public UProject CloneAsTemplate() {
             var project = new UProject() {
                 ustxVersion = ustxVersion,
+                Is31Edo = Is31Edo,
             };
             foreach (var kv in expressions) {
                 project.expressions.Add(kv.Key, kv.Value.Clone());

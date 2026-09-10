@@ -203,7 +203,7 @@ namespace OpenUtau.Core {
                 string filename = untitled
                     ? "Untitled"
                     : Path.GetFileNameWithoutExtension(Project.FilePath);
-                string backup = Path.Join(dir, filename + "-backup.ustx");
+                string backup = Path.Join(dir, filename + "-backup" + Project.NativeExtension);
                 Log.Information($"Saving backup {backup}.");
                 Format.Ustx.AutoSave(backup, Project);
                 Log.Information($"Saved backup {backup}.");
@@ -232,7 +232,7 @@ namespace OpenUtau.Core {
                     ? "Untitled"
                     : Path.GetFileNameWithoutExtension(Project.FilePath);
 
-                string backup = Path.Join(dir, filename + "-autosave.ustx");
+                string backup = Path.Join(dir, filename + "-autosave" + Project.NativeExtension);
                 Log.Information($"Autosave {backup}.");
                 Format.Ustx.AutoSave(backup, Project);
                 Log.Information($"Autosaved {backup}.");

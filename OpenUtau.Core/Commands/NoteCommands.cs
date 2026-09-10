@@ -114,7 +114,7 @@ namespace OpenUtau.Core {
                 foreach (UNote note in Notes) {
                     Part.notes.Remove(note);
                     note.position += DeltaPos;
-                    note.tone += DeltaNoteNum;
+                    note.SetGridTone(note.GridTone + DeltaNoteNum);
                     Part.notes.Add(note);
                 }
                 if (NewPartDuration > 0) {
@@ -127,7 +127,7 @@ namespace OpenUtau.Core {
                 foreach (UNote note in Notes) {
                     Part.notes.Remove(note);
                     note.position -= DeltaPos;
-                    note.tone -= DeltaNoteNum;
+                    note.SetGridTone(note.GridTone - DeltaNoteNum);
                     Part.notes.Add(note);
                 }
                 Part.Duration = OldPartDuration;

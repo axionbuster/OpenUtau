@@ -584,7 +584,11 @@ namespace OpenUtau.App.ViewModels {
             if (targetWidth == 0) {
                 targetWidth = 1;
             }
-            return Portrait.CreateScaledBitmap(new PixelSize(targetWidth, targetHeight));
+            // This method takes ownership of the decoded source. The unscaled
+            // branch above returns it; scaling must keep it alive, then release it.
+            using (Portrait) {
+                return Portrait.CreateScaledBitmap(new PixelSize(targetWidth, targetHeight));
+            }
         }
 
         private void LoadPortrait(UPart? part, UProject? project) {

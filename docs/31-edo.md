@@ -58,8 +58,23 @@ The optional Liquid Glass icon is not required for the standard icon to work.
 
 ## Fork version
 
-The local fork identifies itself as `0.1.570-edo31.1 [31-EDO]`, based on the
+The local fork identifies itself as `0.1.570-edo31.2 [31-EDO]`, based on the
 upstream 0.1.570 development line. The application title uses the informational
 version, preserving the fork suffix without the assembly's trailing zero. macOS
-uses numeric bundle version `0.1.570.1` and short version `0.1.570`. These build
+uses numeric bundle version `0.1.570.2` and short version `0.1.570`. These build
 versions are independent of the native project format revision.
+
+## Image-scaling regression check
+
+Avatar and portrait scaling must keep the owning bitmap alive until the native
+operation completes. A temporary bitmap can be finalized during the operation,
+releasing the Skia image and crashing the application. `BitmapLoaderTest` forces
+collection at the scaling boundary and checks the native handle before calling
+Skia, so this failure produces an assertion rather than a process crash.
+
+Run this check with optimized code and tiered compilation disabled to exercise
+the shortened object lifetimes that exposed the failure:
+
+```sh
+DOTNET_TieredCompilation=0 DOTNET_ReadyToRun=0 dotnet test OpenUtau.Test/OpenUtau.Test.csproj -p:Optimize=true --filter 'FullyQualifiedName~BitmapLoaderTest'
+```

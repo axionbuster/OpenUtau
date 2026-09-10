@@ -509,7 +509,7 @@ namespace OpenUtau.App.ViewModels {
             }
             try {
                 using var stream = new MemoryStream(singer.AvatarData);
-                Avatar = new Bitmap(stream).CreateScaledBitmap(new PixelSize(100, 100));
+                Avatar = Controls.BitmapLoader.LoadScaled(stream, new PixelSize(100, 100));
             } catch (Exception e) {
                 Avatar = null;
                 Log.Error(e, "Failed to decode avatar.");

@@ -28,3 +28,19 @@ See [Project formats](project-format.md) for exact pitch reference, conversion
 rules, file compatibility, and format versioning.
 
 Legacy UTAU plugins require conversion to an ordinary USTx copy first.
+
+## Local macOS packaging
+
+Build the self-contained Apple Silicon bundle, then complete its standard icon
+and file associations (the bundler omits the document-type XML):
+
+```sh
+dotnet restore OpenUtau/OpenUtau.csproj -r osx-arm64
+dotnet msbuild OpenUtau/OpenUtau.csproj -t:BundleApp -p:Configuration=Release -p:RuntimeIdentifier=osx-arm64 -p:UseAppHost=true -p:SelfContained=true -p:OutputPath=../bin/osx-arm64/
+uv run python .github/scripts/finalize-macos-bundle.py bin/osx-arm64/publish/OpenUtau.app
+codesign --force --deep --sign - bin/osx-arm64/publish/OpenUtau.app
+```
+
+The resulting bundle can be installed in `~/Applications`. Verify the copied
+bundle with `codesign --verify --deep --strict` and launch that installed copy.
+The optional Liquid Glass icon is not required for the standard icon to work.

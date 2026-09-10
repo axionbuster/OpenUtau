@@ -74,10 +74,10 @@ namespace OpenUtau.App.ViewModels {
         public bool ProjectSaved => !string.IsNullOrEmpty(DocManager.Inst.Project.FilePath) && DocManager.Inst.Project.Saved;
         public string AppVersion {
             get {
-                Version? version = System.Reflection.Assembly.GetEntryAssembly()?.GetName().Version;
-                string suffix = Core.Util.ReleaseChannel.FromVersion(version) is { } channel
-                    ? $" ({channel})" : string.Empty;
-                return $"OpenUtau v{version}{suffix}";
+                var assembly = typeof(MainWindowViewModel).Assembly;
+                string version = System.Reflection.CustomAttributeExtensions.GetCustomAttribute<System.Reflection.AssemblyInformationalVersionAttribute>(assembly)?.InformationalVersion.Split('+')[0]
+                    ?? assembly.GetName().Version?.ToString(3) ?? "unknown";
+                return $"OpenUtau v{version} [31-EDO]";
             }
         }
         [Reactive] public partial double Progress { get; set; }

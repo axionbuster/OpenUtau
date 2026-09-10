@@ -209,7 +209,14 @@ namespace OpenUtau.App.ViewModels {
             }
         }
 
-        public void NewProject() {
+        public void NewProject(bool is31Edo = false) {
+            if (is31Edo) {
+                var project = Core.Format.Ustx.Create();
+                project.Is31Edo = true;
+                DocManager.Inst.Recovered = false;
+                DocManager.Inst.ExecuteCmd(new LoadProjectNotification(project));
+                return;
+            }
             var defaultTemplate = Path.Combine(PathManager.Inst.TemplatesPath, "default.ustx");
             if (File.Exists(defaultTemplate)) {
                 try {

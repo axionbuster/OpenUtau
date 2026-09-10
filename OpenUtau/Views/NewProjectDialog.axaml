@@ -1,0 +1,15 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        x:Class="OpenUtau.App.Views.NewProjectDialog"
+        Title="New project" Icon="/Assets/open-utau.ico"
+        SizeToContent="WidthAndHeight" CanResize="False"
+        WindowStartupLocation="CenterOwner">
+  <StackPanel Margin="24" Spacing="20">
+    <TextBlock Text="Choose the tuning for your new project."/>
+    <StackPanel Orientation="Horizontal" Spacing="12" HorizontalAlignment="Center">
+      <Button Content="31-TET" MinWidth="90" Click="On31Tet"/>
+      <Button Content="12-TET" MinWidth="90" Click="On12Tet"/>
+      <Button Content="{DynamicResource button.cancel}" MinWidth="90" Click="OnCancel"/>
+    </StackPanel>
+  </StackPanel>
+</Window>

@@ -230,10 +230,7 @@ namespace OpenUtau.App.Views {
 
         async void OnMenuNew31(object sender, RoutedEventArgs args) {
             if (!DocManager.Inst.ChangesSaved && !await AskIfSaveAndContinue()) { return; }
-            var project = Ustx.Create();
-            project.Is31Edo = true;
-            DocManager.Inst.Recovered = false;
-            DocManager.Inst.ExecuteCmd(new LoadProjectNotification(project));
+            viewModel.NewProject(is31Edo: true);
             viewModel.Page = 1;
         }
 
@@ -251,10 +248,14 @@ namespace OpenUtau.App.Views {
 
         void OnMenuNew(object sender, RoutedEventArgs args) => NewProject();
         async void NewProject() {
+            var tuning = await new NewProjectDialog().ShowDialog<int?>(this);
+            if (tuning == null) {
+                return;
+            }
             if (!DocManager.Inst.ChangesSaved && !await AskIfSaveAndContinue()) {
                 return;
             }
-            viewModel.NewProject();
+            viewModel.NewProject(is31Edo: tuning == 31);
             viewModel.Page = 1;
         }
 

@@ -1,6 +1,8 @@
 # Writing in 31-TET
 
-Choose **File → New 31-TET project**, or open a `.ustx31` file. Ordinary `.ustx`
+Choose **New → 31-TET** from the Start page or **File → New**, use the direct
+**File → New 31-TET project** shortcut, or open a `.ustx31` file.
+The New dialog also offers **12-TET** and **Cancel**. Ordinary `.ustx`
 projects keep their existing keyboard, key control, and pitch editing behavior.
 
 The native keyboard has 31 equal steps per octave. Draw and drag notes by one
@@ -58,10 +60,10 @@ The optional Liquid Glass icon is not required for the standard icon to work.
 
 ## Fork version
 
-The local fork identifies itself as `0.1.570-tet31.5 [31-TET]`, based on the
+The local fork identifies itself as `0.1.570-tet31.6 [31-TET]`, based on the
 upstream 0.1.570 development line. The application title uses the informational
 version, preserving the fork suffix without the assembly's trailing zero. macOS
-uses numeric bundle version `0.1.570.5` and short version `0.1.570`. These build
+uses numeric bundle version `0.1.570.6` and short version `0.1.570`. These build
 versions are independent of the native project format revision.
 
 ## Image-scaling regression check

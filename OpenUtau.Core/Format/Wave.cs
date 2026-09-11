@@ -61,23 +61,50 @@ namespace OpenUtau.Core.Format {
             return GetSamples(provider);
         }
 
-        /// <summary>Writes a 44.1 kHz mono float buffer as a 16-bit WAV — the renderer cache file format.</summary>
-        public static void WriteMono16Wav(string path, float[] samples) {
-            using var writer = new WaveFileWriter(path, new WaveFormat(44100, 16, 1));
-            var pcm = new byte[samples.Length * 2];
-            for (int i = 0; i < samples.Length; ++i) {
-                float v = samples[i];
-                if (v > 1f) {
-                    v = 1f;
-                }
-                if (v < -1f) {
-                    v = -1f;
-                }
-                var s = (short)(v * short.MaxValue);
-                pcm[i * 2] = (byte)(s & 0xFF);
-                pcm[i * 2 + 1] = (byte)((s >> 8) & 0xFF);
+        /// <summary>Read disposable render-cache audio; an unreadable entry is a cache miss.</summary>
+        public static float[] ReadMonoCache(string path) {
+            if (!File.Exists(path)) {
+                return null;
             }
-            writer.Write(pcm, 0, pcm.Length);
+            try {
+                using var stream = OpenFile(path);
+                var samples = GetSamples(stream.ToSampleProvider().ToMono(1, 0));
+                return samples.Length > 0 ? samples : null;
+            } catch (Exception e) {
+                // Do not delete here: another render may have replaced the entry meanwhile.
+                Serilog.Log.Warning(e, "Ignoring unreadable render cache {Path}", path);
+                return null;
+            }
+        }
+
+        /// <summary>Atomically publish a complete 44.1 kHz mono 16-bit render-cache WAV.</summary>
+        public static void WriteMono16Wav(string path, float[] samples) {
+            // Writers use separate files so concurrent renders cannot read a partial header
+            // or truncate each other's output. Dispose finalizes the WAV before publication.
+            var tempPath = path + "." + Guid.NewGuid().ToString("N") + ".tmp";
+            try {
+                using (var writer = new WaveFileWriter(tempPath, new WaveFormat(44100, 16, 1))) {
+                    var pcm = new byte[samples.Length * 2];
+                    for (int i = 0; i < samples.Length; ++i) {
+                        float v = samples[i];
+                        if (v > 1f) {
+                            v = 1f;
+                        }
+                        if (v < -1f) {
+                            v = -1f;
+                        }
+                        var s = (short)(v * short.MaxValue);
+                        pcm[i * 2] = (byte)(s & 0xFF);
+                        pcm[i * 2 + 1] = (byte)((s >> 8) & 0xFF);
+                    }
+                    writer.Write(pcm, 0, pcm.Length);
+                }
+                File.Move(tempPath, path, overwrite: true);
+            } finally {
+                if (File.Exists(tempPath)) {
+                    File.Delete(tempPath);
+                }
+            }
         }
 
         public static float[] GetSamples(ISampleProvider sampleProvider) {

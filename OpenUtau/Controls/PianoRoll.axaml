@@ -387,7 +387,7 @@
           <StackPanel Orientation="Horizontal">
             <TextBlock Text="Diatonic" VerticalAlignment="Center" Margin="4,0,4,0"
                        IsVisible="{Binding NotesViewModel.Is31Edo}"/>
-            <CheckBox Name="DiatonicToggle" AutomationProperties.Name="Diatonic" Margin="0,0,8,0"
+            <CheckBox Focusable="False" Name="DiatonicToggle" AutomationProperties.Name="Diatonic" Margin="0,0,8,0"
                       IsVisible="{Binding NotesViewModel.Is31Edo}"
                       IsChecked="{Binding NotesViewModel.FoldDiatonic31, Mode=TwoWay}"
                       ToolTip.Tip="Collapse to the preferred key's major and natural minor scales, keeping existing notes visible. Display only; uncheck to show all 31 steps."/>

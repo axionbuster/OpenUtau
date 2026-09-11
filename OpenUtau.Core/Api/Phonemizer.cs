@@ -297,7 +297,12 @@ namespace OpenUtau.Api {
         public string GetParentVoiceColor() {
             if (project != null && track != null) {
                 if (track.TryGetExpDescriptor(project, Core.Format.Ustx.CLR, out var trackCLR)) {
-                    return track.VoiceColorExp.options[(int)trackCLR.CustomDefaultValue];
+                    // A singer may have no colors yet, or a saved default may no longer exist.
+                    var colors = track.VoiceColorExp?.options;
+                    int index = (int)trackCLR.CustomDefaultValue;
+                    if (colors != null && index >= 0 && index < colors.Length) {
+                        return colors[index];
+                    }
                 }
             }
             return string.Empty;

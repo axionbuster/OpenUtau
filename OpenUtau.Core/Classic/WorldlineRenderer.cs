@@ -72,7 +72,8 @@ namespace OpenUtau.Classic {
             }
             var task = Task.Run(() => {
                 var result = Layout(phrase);
-                var wavPath = Path.Join(PathManager.Inst.CachePath, $"wdl-v{version}-{phrase.hash:x16}.wav");
+                // r2 discards phrase tails rendered with undersized native control curves.
+                var wavPath = Path.Join(PathManager.Inst.CachePath, $"wdl-v{version}-r2-{phrase.hash:x16}.wav");
                 phrase.AddCacheFile(wavPath);
                 string progressInfo = $"Track {trackNo + 1}: {this} {string.Join(" ", phrase.phones.Select(p => p.phoneme))}";
                 progress.Complete(0, progressInfo);

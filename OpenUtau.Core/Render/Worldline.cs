@@ -164,6 +164,12 @@ namespace OpenUtau.Core.Render {
             double framePeriod, int fs,
             double[] gender, double[] tension,
             double[] breathiness, double[] voicing) {
+            // Native synthesis reads f0.Length values from every control pointer.
+            // Phoneme tails can extend past the renderer's estimated curve length.
+            gender = FitSynthesisCurve(gender, f0.Length, 0.5);
+            tension = FitSynthesisCurve(tension, f0.Length, 0.5);
+            breathiness = FitSynthesisCurve(breathiness, f0.Length, 0.5);
+            voicing = FitSynthesisCurve(voicing, f0.Length, 1.0);
             unsafe {
                 IntPtr buffer = IntPtr.Zero;
                 int size = WorldSynthesis(
@@ -195,6 +201,12 @@ namespace OpenUtau.Core.Render {
             double framePeriod, int fs,
             double[] gender, double[] tension,
             double[] breathiness, double[] voicing) {
+            // Native synthesis reads f0.Length values from every control pointer.
+            // Phoneme tails can extend past the renderer's estimated curve length.
+            gender = FitSynthesisCurve(gender, f0.Length, 0.5);
+            tension = FitSynthesisCurve(tension, f0.Length, 0.5);
+            breathiness = FitSynthesisCurve(breathiness, f0.Length, 0.5);
+            voicing = FitSynthesisCurve(voicing, f0.Length, 1.0);
             unsafe {
                 IntPtr buffer = IntPtr.Zero;
                 int size = WorldSynthesis(
@@ -208,6 +220,19 @@ namespace OpenUtau.Core.Render {
                 Marshal.FreeCoTaskMem(buffer);
                 return data;
             }
+        }
+
+        internal static double[] FitSynthesisCurve(double[]? curve, int length, double defaultValue) {
+            if (curve != null && curve.Length >= length) {
+                return curve;
+            }
+            var result = new double[length];
+            int copied = curve?.Length ?? 0;
+            if (copied > 0) {
+                Array.Copy(curve!, result, copied);
+            }
+            Array.Fill(result, copied > 0 ? curve![copied - 1] : defaultValue, copied, length - copied);
+            return result;
         }
 
         [StructLayout(LayoutKind.Sequential)]
@@ -687,9 +712,10 @@ namespace OpenUtau.Core.Render {
                 }
 
                 if (f0Curve != null) {
+                    var fittedF0 = FitSynthesisCurve(f0Curve, totalFrames, 0.0);
                     for (int i = 0; i < totalFrames; ++i) {
                         if (f0Out.GetAtIndex<double>(i) > config.f0_floor) {
-                            f0Out[i] = f0Curve[i];
+                            f0Out[i] = fittedF0[i];
                         }
                     }
                 }

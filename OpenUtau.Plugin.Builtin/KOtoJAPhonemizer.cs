@@ -314,8 +314,22 @@ namespace OpenUtau.Plugin.Builtin {
         /// </summary>
         public override void SetUp(Note[][] groups, UProject project, UTrack track) {
             base.SetUp(groups, project, track);
-            // variate lyrics 
-            RomanizeNotes(groups, false);
+            // Preserve a sung h onset for VoiSona. Treat it as a sandhi boundary
+            // so the preceding coda is not moved onto (or consumed by) that onset.
+            // Explicit pronunciation hints still take precedence in Process.
+            if (track.Singer is OpenUtau.Core.VoiSona.VoiSonaSinger) {
+                int start = 0;
+                for (int i = 1; i <= groups.Length; i++) {
+                    bool hInitial = i < groups.Length && groups[i][0].lyric.Length == 1
+                        && groups[i][0].lyric[0] >= '하' && groups[i][0].lyric[0] <= '힣';
+                    if (i == groups.Length || hInitial) {
+                        RomanizeNotes(groups.Skip(start).Take(i - start).ToArray(), false);
+                        start = i;
+                    }
+                }
+            } else {
+                RomanizeNotes(groups, false);
+            }
         }
 
         /// <summary>
@@ -513,7 +527,9 @@ namespace OpenUtau.Plugin.Builtin {
                 string cv = ToHiragana(AltCv.TryGetValue(currPhoneme, out var mapped) ? mapped : currPhoneme);
                 string coda = currIMF[2] switch {
                     "n" => "ん", "m" => "む", "r" => "る",
-                    "k" => "く", "t" => "と", "p" => "ぷ", _ => "",
+                    // A Japanese closure approximation avoids an extra sung vowel.
+                    // It does not retain the Korean stop's place of articulation.
+                    "k" or "t" or "p" => "っ", _ => "",
                 };
                 return new Result { phonemes = new[] { new Phoneme { phoneme = cv + coda } } };
             }

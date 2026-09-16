@@ -639,6 +639,38 @@ namespace OpenUtau.App.Views {
             window.Activate();
         }
 
+        private System.Diagnostics.Process? voisonaSetup;
+
+        async void OnMenuInstallVoiSona(object sender, RoutedEventArgs args) {
+            try {
+                Core.VoiSona.VoiSonaSingerLoader.Register();
+                DocManager.Inst.ExecuteCmd(new SingersChangedNotification());
+                var singers = Core.VoiSona.VoiSonaSingerLoader.Discover(Core.VoiSona.VoiSonaSingerLoader.VoiceRoot);
+                string message = singers.Count == 0
+                    ? "VoiSona is registered. Use Sign in / Manage voices to install Chis-A, then Refresh voices."
+                    : "Available singers:\n" + string.Join("\n", singers.Select(s => s.Name)) + "\n\nChoose a singer on a track. If rendering asks for sign-in, use Tools → VoiSona → Sign in / Manage voices once.";
+                await MessageBox.Show(this, "VoiSona", message, MessageBox.MessageBoxButtons.Ok);
+            } catch (Exception e) { await MessageBox.ShowError(this, e); }
+        }
+
+        async void OnMenuSetupVoiSona(object sender, RoutedEventArgs args) {
+            if (voisonaSetup != null && !voisonaSetup.HasExited) {
+                await MessageBox.Show(this, "VoiSona", "The VoiSona setup window is already open.", MessageBox.MessageBoxButtons.Ok);
+                return;
+            }
+            try {
+                voisonaSetup = Core.VoiSona.VoiSonaRenderer.OpenSetup();
+                await voisonaSetup.WaitForExitAsync();
+                if (voisonaSetup.ExitCode != 0) throw new InvalidOperationException("VoiSona setup failed. Check that the VoiSona Song Audio Unit is installed.");
+                DocManager.Inst.ExecuteCmd(new SingersChangedNotification());
+            } catch (Exception e) { await MessageBox.ShowError(this, e); }
+            finally { voisonaSetup?.Dispose(); voisonaSetup = null; }
+        }
+
+        void OnMenuRefreshVoiSona(object sender, RoutedEventArgs args) {
+            DocManager.Inst.ExecuteCmd(new SingersChangedNotification());
+        }
+
         async void OnMenuInstallSinger(object sender, RoutedEventArgs args) {
             var file = await FilePicker.OpenFileAboutSinger(
                 this, "menu.tools.singer.install", FilePicker.ArchiveFiles);

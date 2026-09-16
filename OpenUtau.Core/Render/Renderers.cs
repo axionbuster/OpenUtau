@@ -15,6 +15,7 @@ namespace OpenUtau.Core.Render {
         public const string VOGEN = "VOGEN";
         public const string DIFFSINGER = "DIFFSINGER";
         public const string VOICEVOX = "VOICEVOX";
+        public const string VOISONA = "VOISONA";
 
         static readonly string[] classicRenderers = new[] { WORLDLINE_R, CLASSIC };
         static readonly string[] enunuRenderers = new[] { ENUNU };
@@ -33,6 +34,8 @@ namespace OpenUtau.Core.Render {
                     return vogenRenderers;
                 case USingerType.DiffSinger:
                     return diffSingerRenderers;
+                case USingerType.VoiSona:
+                    return new[] { VOISONA };
                 case USingerType.Voicevox:
                     return voicevoxRenderers;
                 default:
@@ -68,6 +71,8 @@ namespace OpenUtau.Core.Render {
                 return new Vogen.VogenRenderer();
             } else if (renderer == DIFFSINGER) {
                 return new DiffSinger.DiffSingerRenderer();
+            } else if (renderer == VOISONA) {
+                return new VoiSona.VoiSonaRenderer();
             } else if (renderer == VOICEVOX) {
                 return new Voicevox.VoicevoxRenderer();
             }

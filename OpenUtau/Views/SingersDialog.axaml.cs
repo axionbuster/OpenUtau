@@ -58,7 +58,7 @@ namespace OpenUtau.App.Views {
 
         async void OnSetImage(object sender, RoutedEventArgs args) {
             var viewModel = (DataContext as SingersViewModel)!;
-            if (viewModel.Singer == null) {
+            if (viewModel.Singer == null || !viewModel.IsEditableSinger) {
                 return;
             }
             var file = await FilePicker.OpenFile(
@@ -84,7 +84,7 @@ namespace OpenUtau.App.Views {
 
         async void OnSetPortrait(object sender, RoutedEventArgs args) {
             var viewModel = (DataContext as SingersViewModel)!;
-            if (viewModel.Singer == null) {
+            if (viewModel.Singer == null || !viewModel.IsEditableSinger) {
                 return;
             }
             var file = await FilePicker.OpenFile(
@@ -110,7 +110,7 @@ namespace OpenUtau.App.Views {
 
         async void OnPublish(object sender, RoutedEventArgs args) {
             var viewModel = (DataContext as SingersViewModel)!;
-            if (viewModel.Singer == null) {
+            if (viewModel.Singer == null || !viewModel.IsEditableSinger) {
                 return;
             }
             var dialog = new SingerPublishDialog();
@@ -139,7 +139,7 @@ namespace OpenUtau.App.Views {
 
         async void OnEditSubbanksButton(object sender, RoutedEventArgs args) {
             var viewModel = (DataContext as SingersViewModel)!;
-            if (viewModel.Singer == null) {
+            if (viewModel.Singer == null || !viewModel.IsEditableSinger) {
                 return;
             }
             var dialog = new EditSubbanksDialog();

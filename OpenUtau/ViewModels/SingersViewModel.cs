@@ -26,6 +26,7 @@ namespace OpenUtau.App.ViewModels {
         [Reactive] public partial Bitmap? Avatar { get; set; }
         [Reactive] public partial string? Info { get; set; }
         [Reactive] public partial bool HasWebsite { get; set; }
+        public bool IsEditableSinger => Singer != null && Singer.SingerType != USingerType.VoiSona;
         public bool IsClassic => Singer != null && Singer.SingerType == USingerType.Classic;
         public bool UseSearchAlias => Singer != null && (Singer.SingerType == USingerType.Classic || Singer.SingerType == USingerType.Enunu);
         public ObservableCollectionExtended<USubbank> Subbanks => subbanks;
@@ -96,6 +97,7 @@ namespace OpenUtau.App.ViewModels {
                         LoadSubbanks();
                         DocManager.Inst.ExecuteCmd(new OtoChangedNotification());
                         this.RaisePropertyChanged(nameof(IsClassic));
+                        this.RaisePropertyChanged(nameof(IsEditableSinger));
                         this.RaisePropertyChanged(nameof(UseSearchAlias));
                         var encodings = new Encoding[] {
                             Encoding.GetEncoding("shift_jis"),
@@ -224,6 +226,7 @@ namespace OpenUtau.App.ViewModels {
         }
 
         private void ModifyConfig(USinger singer, Action<VoicebankConfig> modify) {
+            if (singer.SingerType == USingerType.VoiSona) return;
             var yamlFile = Path.Combine(singer.Location, "character.yaml");
             VoicebankConfig? config = null;
             if (File.Exists(yamlFile)) {

@@ -32,6 +32,7 @@ namespace OpenUtau.Core {
             var oldSingers = Singers.Values.ToList();
             var singers = ClassicSingerLoader.FindAllSingers()
                 .Concat(Vogen.VogenSingerLoader.FindAllSingers())
+                .Concat(VoiSona.VoiSonaSingerLoader.FindAllSingers())
                 .Distinct();
             Singers = singers
                 .ToLookup(s => s.Id)

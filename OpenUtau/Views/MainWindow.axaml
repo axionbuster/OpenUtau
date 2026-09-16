@@ -74,6 +74,11 @@
             <MenuItem Header="{DynamicResource phoneticassistant.caption}" Click="OnMenuPhoneticAssistant"/>
             <MenuItem Header="{DynamicResource menu.tools.singers}" Click="OnMenuSingers"/>
             <MenuItem Header="{DynamicResource menu.tools.singer.install}" Click="OnMenuInstallSinger"/>
+            <MenuItem Header="VoiSona" IsVisible="{OnPlatform macOS=True, Default=False}">
+              <MenuItem Header="Install as singers" Click="OnMenuInstallVoiSona"/>
+              <MenuItem Header="Sign in / Manage voices" Click="OnMenuSetupVoiSona"/>
+              <MenuItem Header="Refresh voices" Click="OnMenuRefreshVoiSona"/>
+            </MenuItem>
             <MenuItem Header="{DynamicResource menu.tools.wavtoolresampler.install}" Click="OnMenuInstallWavtoolResampler"/>
             <MenuItem Header="{DynamicResource menu.tools.packages}" Click="OnMenuPackageManager"/>
             <MenuItem Header="{DynamicResource menu.tools.prefs}" Click="OnMenuPreferences"/>

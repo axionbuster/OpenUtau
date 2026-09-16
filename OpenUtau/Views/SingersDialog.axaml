@@ -75,17 +75,17 @@
         <Button.ContextMenu>
           <ContextMenu Name="SingerMenu" Placement="Bottom">
             <MenuItem Header="{DynamicResource singers.visitwebsite}" Click="OnVisitWebsite" IsEnabled="{Binding HasWebsite}"/>
-            <MenuItem Header="{DynamicResource singers.setimage}" Click="OnSetImage"/>
-            <MenuItem Header="{DynamicResource singers.setportrait}" Click="OnSetPortrait"/>
-            <MenuItem Header="{DynamicResource singers.setencoding}" ItemsSource="{Binding SetEncodingMenuItems}" Classes="MenuItemWithSubMenu"/>
-            <MenuItem Header="{DynamicResource singers.setsingertype}" ItemsSource="{Binding SetSingerTypeMenuItems}" Classes="MenuItemWithSubMenu"/>
-            <MenuItem Header="{DynamicResource singers.setdefaultphonemizer}" ItemsSource="{Binding SetDefaultPhonemizerMenuItems}" Classes="MenuItemWithSubMenu"/>
+            <MenuItem Header="{DynamicResource singers.setimage}" IsEnabled="{Binding IsEditableSinger}" Click="OnSetImage"/>
+            <MenuItem Header="{DynamicResource singers.setportrait}" IsEnabled="{Binding IsEditableSinger}" Click="OnSetPortrait"/>
+            <MenuItem Header="{DynamicResource singers.setencoding}" IsEnabled="{Binding IsEditableSinger}" ItemsSource="{Binding SetEncodingMenuItems}" Classes="MenuItemWithSubMenu"/>
+            <MenuItem Header="{DynamicResource singers.setsingertype}" IsEnabled="{Binding IsEditableSinger}" ItemsSource="{Binding SetSingerTypeMenuItems}" Classes="MenuItemWithSubMenu"/>
+            <MenuItem Header="{DynamicResource singers.setdefaultphonemizer}" IsEnabled="{Binding IsEditableSinger}" ItemsSource="{Binding SetDefaultPhonemizerMenuItems}" Classes="MenuItemWithSubMenu"/>
             <MenuItem Header="{DynamicResource singers.usefilename}" IsVisible="{Binding IsClassic}" Click="OnSetUseFilenameAsAlias">
               <MenuItem.Icon>
                 <CheckBox Classes="menu" IsChecked="{Binding UseFilenameAsAlias}" />
               </MenuItem.Icon>
             </MenuItem>
-            <MenuItem Header="{DynamicResource singers.publish}" Click="OnPublish"/>
+            <MenuItem Header="{DynamicResource singers.publish}" IsEnabled="{Binding IsEditableSinger}" Click="OnPublish"/>
             <MenuItem Header="{DynamicResource singers.merge}" IsVisible="{Binding IsClassic}" Click="OnMerge"/>
             <MenuItem Header="{DynamicResource singers.errorreport}" Command="{Binding ErrorReport}"/>
             <MenuItem Header="{DynamicResource singers.refresh}" Command="{Binding Refresh}"/>
@@ -114,7 +114,7 @@
     <StackPanel Grid.Row="0" Grid.Column="2" Spacing="10" Margin="0,0,10,0" Height="20"
                 Orientation="Horizontal" HorizontalAlignment="Right" VerticalAlignment="Bottom">
       <Button Margin="0" Content="{DynamicResource singers.subbanks.edit}" Click="OnEditSubbanksButton"
-              IsEnabled="{Binding Singer, Converter={x:Static ObjectConverters.IsNotNull}}"/>
+              IsEnabled="{Binding IsEditableSinger}"/>
     </StackPanel>
 
 

@@ -93,4 +93,19 @@
   <PropertyGroup Condition="'$([System.Runtime.InteropServices.RuntimeInformation]::IsOSPlatform($([System.Runtime.InteropServices.OSPlatform]::Windows)))' == 'true'">
     <DefineConstants>WINDOWS</DefineConstants>
   </PropertyGroup>
+  <PropertyGroup>
+    <VoiSonaArch Condition="'$(RuntimeIdentifier)' == 'osx-x64'">x86_64</VoiSonaArch>
+    <VoiSonaArch Condition="'$(RuntimeIdentifier)' == 'osx-arm64'">arm64</VoiSonaArch>
+    <VoiSonaArch Condition="'$(VoiSonaArch)' == '' and '$([System.Runtime.InteropServices.RuntimeInformation]::ProcessArchitecture)' == 'Arm64'">arm64</VoiSonaArch>
+    <VoiSonaArch Condition="'$(VoiSonaArch)' == ''">x86_64</VoiSonaArch>
+    <VoiSonaHelper>$(MSBuildProjectDirectory)/obj/voisona/$(VoiSonaArch)/openutau-voisona-host</VoiSonaHelper>
+  </PropertyGroup>
+  <ItemGroup Condition="$([MSBuild]::IsOSPlatform('OSX'))">
+    <None Include="$(VoiSonaHelper)" Link="openutau-voisona-host" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" />
+  </ItemGroup>
+  <Target Name="BuildVoiSonaHelper" BeforeTargets="BeforeBuild" Condition="$([MSBuild]::IsOSPlatform('OSX'))"
+          Inputs="$(MSBuildProjectDirectory)/../native/voisona/main.swift" Outputs="$(VoiSonaHelper)">
+    <MakeDir Directories="$(MSBuildProjectDirectory)/obj/voisona/$(VoiSonaArch)" />
+    <Exec Command="xcrun swiftc -O -target $(VoiSonaArch)-apple-macos12.0 &quot;$(MSBuildProjectDirectory)/../native/voisona/main.swift&quot; -o &quot;$(VoiSonaHelper)&quot;" />
+  </Target>
 </Project>

@@ -7,6 +7,20 @@
         Icon="/Assets/open-utau.ico"
         Title="{DynamicResource dialogs.tracksettings.caption}"
         Height="184" Width="320" WindowStartupLocation="CenterOwner" CanResize="False">
+  <Window.Styles>
+    <Style Selector="NumericUpDown">
+      <Setter Property="Height" Value="32"/>
+      <Setter Property="Margin" Value="0,2"/>
+      <Setter Property="Padding" Value="4,0"/>
+    </Style>
+    <Style Selector="NumericUpDown /template/ TextBox">
+      <Setter Property="Height" Value="30"/>
+      <Setter Property="MinHeight" Value="30"/>
+      <Setter Property="Margin" Value="0"/>
+      <Setter Property="Padding" Value="4,0"/>
+      <Setter Property="VerticalContentAlignment" Value="Center"/>
+    </Style>
+  </Window.Styles>
   <Border Margin="{Binding $parent.WindowDecorationMargin}">
     <StackPanel Margin="8">
       <TextBlock Text="{DynamicResource warning.renderer}" IsVisible="{Binding IsNotClassic}"/>
@@ -32,10 +46,13 @@
       </Grid>
       <StackPanel IsVisible="{Binding IsVoiSona}" Spacing="8" Margin="4">
         <TextBlock Text="VoiSona native parameters" FontWeight="Bold"/>
-        <CheckBox Name="NativePitch" Content="Use VoiSona-generated pitch" IsChecked="{Binding NativePitch}"/>
+        <Grid ColumnDefinitions="28,*">
+          <CheckBox Name="NativePitch" AutomationProperties.Name="Use VoiSona-generated pitch" IsChecked="{Binding NativePitch}"/>
+          <TextBlock Grid.Column="1" Text="Use VoiSona-generated pitch" VerticalAlignment="Center"/>
+        </Grid>
         <TextBlock Text="Native pitch uses rounded 12-TET notes and replaces OpenUtau pitch curves and vibrato. Leave off to preserve exact 31-TET tuning."
                    TextWrapping="Wrap" FontSize="12"/>
-        <Grid ColumnDefinitions="*,120" RowDefinitions="Auto,Auto,Auto,Auto,Auto" Margin="0,4">
+        <Grid ColumnDefinitions="*,150" RowDefinitions="Auto,Auto,Auto,Auto,Auto" Margin="0,4">
           <TextBlock Grid.Row="0" Text="TUNE · Pitch accuracy" VerticalAlignment="Center"/>
           <NumericUpDown Name="PitchAccuracy" Grid.Row="0" Grid.Column="1" Minimum="-1" Maximum="1" Increment="0.05" FormatString="0.00"
                          Value="{Binding VoiSona.PitchAccuracy}" IsEnabled="{Binding NativePitch}"/>

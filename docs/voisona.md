@@ -66,3 +66,15 @@ OPENUTAU_TEST_VOISONA=1 dotnet test OpenUtau.Test/OpenUtau.Test.csproj --filter 
 ```
 
 Set `OPENUTAU_VOISONA_ARTIFACTS` to a directory to retain generated USTx31 projects, rendered WAVs and native requests for independent inspection. These tests create their own fixtures and do not modify source songs. VoiSona updates can change its state format or synthesis behavior; repeat the installed-engine checks after an update.
+
+### Bounded concurrency measurement (2026-09-16)
+
+With VoiSona AU 1.18.0.5 on an 8-logical-processor, 16 GiB Mac, a matched fixture of four distinct Japanese phrases (6.5 seconds of rendered audio each) was run in the order serial, four workers, two workers, four workers, serial. Each pass removed its own OpenUtau audio cache and launched fresh helpers; OS/model file caches were not flushed. Timings included helper startup, readiness checks, capture, teardown, and FLAC cache writing:
+
+| Workers | Elapsed seconds |
+| --- | --- |
+| 1 | 48.10, 44.71 |
+| 2 (playback limit) | 26.80 |
+| 4 (export limit) | 15.98, 17.34 |
+
+The mean serial/four-worker ratio was 2.79 on this short fixture. This is not a whole-song speedup guarantee or a comparison with native VoiSona multitrack export. All outputs were finite, nonzero and the expected length; cache rereads matched exactly, including simultaneous identical-state requests. No independent pronunciation/timbre audition was performed. The opt-in `VoiSonaThroughputTest` retains timing JSON under `OPENUTAU_VOISONA_ARTIFACTS` and separately exercises playback, mixdown and stem-export routing.

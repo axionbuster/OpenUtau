@@ -49,3 +49,15 @@ end-to-end rendering benchmark. They support a storage improvement, not a speedu
 measurement on a supplied cache directory. `AudioExportTest` covers exact PCM,
 24-bit error, atomic publication, concurrent writes, stereo seeking, final partial
 frames, and WAV/FLAC/M4A containers. Native engine integration tests remain opt-in.
+
+## Delivery verification
+
+Installed `0.1.570-tet31.16` in `~/Applications/OpenUtau.app`; the copied Core DLL
+matches the published bundle and deep/strict code-sign verification passed.
+The installed app launched with the expected version. A separate harness loaded
+its installed Core/NAudio assemblies and bundled codecs and exported a one-second
+44.1 kHz stereo fixture to WAV, FLAC, and M4A. WAV/FLAC decoded to all 88,200
+interleaved samples; independent ffprobe inspection identified the M4A as stereo
+44.1 kHz AAC. This verifies installed encoding, not a completed menu-driven export
+or a listening audition. Final focused regression: 32 passed, 4 explicitly skipped
+native-engine integration tests; the 130-file benchmark also passed separately.

@@ -4,6 +4,7 @@ import AppKit
 import AVFoundation
 import AudioToolbox
 import CoreAudioKit
+import Darwin
 
 setbuf(stdout, nil)
 func fourCC(_ s: String) -> UInt32 { s.utf8.reduce(0) { ($0 << 8) | UInt32($1) } }
@@ -29,6 +30,29 @@ if !setup {
         guard let j = job, j.protocolVersion == 1, j.durationMs.isFinite, j.durationMs > 0,
               j.durationMs <= 600_000, !j.state.isEmpty else { throw HostError("Unsupported or invalid render request.") }
     } catch { fputs("VoiSona request error: \(error)\n", stderr); exit(2) }
+}
+// VoiSona's teardown can enumerate the host working directory. Finder-launched
+// applications can inherit /, which can stall that enumeration indefinitely.
+// Always give the plugin an empty private directory, including direct CLI calls.
+let hostWorkingDirectory = (job.map { URL(fileURLWithPath: $0.result).deletingLastPathComponent() }
+    ?? FileManager.default.temporaryDirectory).appendingPathComponent(".voisona-host-" + UUID().uuidString)
+do {
+    try FileManager.default.createDirectory(at: hostWorkingDirectory, withIntermediateDirectories: true)
+    guard FileManager.default.changeCurrentDirectoryPath(hostWorkingDirectory.path) else { throw HostError("Cannot enter VoiSona working directory.") }
+} catch { fputs("VoiSona working directory error: \(error)\n", stderr); exit(2) }
+
+// These guards run away from the plugin's native message loop. They still fire
+// if AU initialization or destruction blocks it, or the OpenUtau parent exits.
+// _exit intentionally bypasses plugin destructors only on emergency shutdown.
+let originalParent = getppid()
+let parentWatchdog = DispatchSource.makeTimerSource(queue: DispatchQueue.global(qos: .utility))
+parentWatchdog.schedule(deadline: .now() + 1, repeating: 1)
+parentWatchdog.setEventHandler {
+    if originalParent != 1 && getppid() != originalParent { _exit(125) }
+}
+parentWatchdog.resume()
+if let j = job {
+    DispatchQueue.global(qos: .utility).asyncAfter(deadline: .now() + max(150, j.durationMs / 1000 * 2 + 30) + 5) { _exit(124) }
 }
 final class Host: NSObject, NSApplicationDelegate, NSWindowDelegate {
     var node: AVAudioUnit?
@@ -176,6 +200,8 @@ final class Host: NSObject, NSApplicationDelegate, NSWindowDelegate {
     }
     func finish(_ error: String?) {
         guard !finishing else { return }; finishing = true
+        // Successful audio must not leave a hung child after the parent closes.
+        DispatchQueue.global(qos: .utility).asyncAfter(deadline: .now() + 5) { _exit(124) }
         if let error = error {
             exitCode = 1
             fputs("\(error)\n", stderr)
@@ -194,7 +220,10 @@ final class Host: NSObject, NSApplicationDelegate, NSWindowDelegate {
         window?.orderOut(nil); window?.contentViewController = nil
         editor = nil; window = nil; node = nil; engine = nil
         // ONNX teardown completes on the native message loop before process exit.
-        DispatchQueue.main.asyncAfter(deadline: .now() + 1) { exit(self.exitCode) }
+        DispatchQueue.main.asyncAfter(deadline: .now() + 1) {
+            try? FileManager.default.removeItem(at: hostWorkingDirectory)
+            exit(self.exitCode)
+        }
     }
 }
 let app = NSApplication.shared

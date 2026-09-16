@@ -115,6 +115,7 @@ namespace OpenUtau.Core.VoiSona {
             await File.WriteAllTextAsync(request, JsonConvert.SerializeObject(job), token);
             using var process = new Process { StartInfo = new ProcessStartInfo(helper) {
                 UseShellExecute = false, RedirectStandardOutput = true, RedirectStandardError = true, CreateNoWindow = true,
+                WorkingDirectory = directory,
             }};
             process.StartInfo.ArgumentList.Add(request);
             if (!process.Start()) throw new InvalidOperationException("Could not start the VoiSona renderer.");
@@ -161,7 +162,9 @@ namespace OpenUtau.Core.VoiSona {
         public static Process OpenSetup() {
             if (!OperatingSystem.IsMacOS()) throw new PlatformNotSupportedException("VoiSona requires macOS.");
             if (!File.Exists(HelperPath)) throw new FileNotFoundException("VoiSona helper is missing. Reinstall OpenUtau.", HelperPath);
-            var start = new ProcessStartInfo(HelperPath) { UseShellExecute = false };
+            string directory = Path.Combine(PathManager.Inst.CachePath, "voisona-setup");
+            Directory.CreateDirectory(directory);
+            var start = new ProcessStartInfo(HelperPath) { UseShellExecute = false, WorkingDirectory = directory };
             start.ArgumentList.Add("--setup");
             return Process.Start(start) ?? throw new InvalidOperationException("Could not open VoiSona setup.");
         }

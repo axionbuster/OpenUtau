@@ -95,6 +95,19 @@ namespace OpenUtau.Core {
             await Assert.ThrowsAnyAsync<OperationCanceledException>(() => VoiSonaRenderer.RunHelper("not-an-executable", new(), "/unused", cancel.Token));
         }
         [MacFact]
+        public async Task HelperRunsInsideItsIsolatedJobDirectory() {
+            string dir = Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString()); Directory.CreateDirectory(dir);
+            try {
+                string script = Path.Combine(dir, "fake-host");
+                await File.WriteAllTextAsync(script, "#!/bin/sh\npwd > cwd.txt\nprintf '%s' '{\"protocolVersion\":1,\"ok\":true,\"frames\":44100,\"sampleRate\":44100}' > result.json\n");
+                File.SetUnixFileMode(script, UnixFileMode.UserRead | UnixFileMode.UserWrite | UnixFileMode.UserExecute);
+                var job = new VoiSonaJob { durationMs = 1000, cancel = Path.Combine(dir, "cancel"), result = Path.Combine(dir, "result.json") };
+                await VoiSonaRenderer.RunHelper(script, job, dir, CancellationToken.None);
+                Assert.True(File.Exists(Path.Combine(dir, "cwd.txt")));
+                Assert.Equal(Path.GetFileName(dir), Path.GetFileName((await File.ReadAllTextAsync(Path.Combine(dir, "cwd.txt"))).Trim()));
+            } finally { Directory.Delete(dir, true); }
+        }
+        [MacFact]
         public async Task SilentSuccessfulProcessIsNotASuccessfulRender() {
             string dir = Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString()); Directory.CreateDirectory(dir);
             try {

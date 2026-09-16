@@ -66,6 +66,21 @@ namespace OpenUtau.Core {
             Assert.Equal(173 * 12.0 / 31, phrase.notes[0].adjustedTone, 4);
         }
         [Fact]
+        public void EnglishMarkersAndHumHintsSurviveTheRealPhonemizerPipeline() {
+            var project = PronunciationFixture("early", "+~", "+", "hmm [mm]", "+~");
+            project.tracks[0].Singer = new VoiSonaSinger("en_US", "test", "/unused");
+            project.tracks[0].Phonemizer = new DefaultPhonemizer();
+            Phonemize(project);
+            var phrase = Assert.Single(((UVoicePart)project.parts[0]).renderPhrases);
+            var state = VoiSonaState.FromPhrase(phrase, (VoiSonaSinger)project.tracks[0].Singer);
+            string text = Encoding.UTF8.GetString(state.State);
+            Assert.Contains("axr", text);
+            Assert.Contains("l,iy", text);
+            Assert.Contains("mm", text);
+            Assert.DoesNotContain("[mm]", text);
+            Assert.Equal(new[] { "early", "+~", "+", "hmm [mm]", "+~" }, ((UVoicePart)project.parts[0]).notes.Select(n => n.lyric));
+        }
+        [Fact]
         public void UnconvertedHangulFailsInsteadOfRenderingNoise() {
             var project = KoreanFixture(); project.tracks[0].Phonemizer = new DefaultPhonemizer();
             Phonemize(project);

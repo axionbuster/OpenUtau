@@ -359,7 +359,9 @@ namespace OpenUtau.Core.Render {
                 VoiSona.VoiSonaRenderer.Concurrency(exporting, Environment.ProcessorCount),
                 (tuple, passCancellation) => tuple.phrase.renderer is VoiSona.VoiSonaRenderer
                     && !(tuple.phrase.xsy?.Any(x => x > 0) ?? false)
-                    ? tuple.phrase.renderer.Render(tuple.phrase, progress, tuple.request.trackNo, passCancellation, true)
+                    ? exporting
+                        ? ((VoiSona.VoiSonaRenderer)tuple.phrase.renderer).RenderExport(tuple.phrase, progress, tuple.request.trackNo, passCancellation)
+                        : tuple.phrase.renderer.Render(tuple.phrase, progress, tuple.request.trackNo, passCancellation, true)
                     : Task.FromResult<RenderResult>(null), cancellation.Token);
             foreach (var (tuple, prepared) in scheduled) {
                 if (cancellation.IsCancellationRequested) {

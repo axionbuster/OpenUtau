@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Text;
+using System.Text.RegularExpressions;
 using OpenUtau.Core.Render;
 
 namespace OpenUtau.Core.VoiSona {
@@ -50,7 +51,7 @@ namespace OpenUtau.Core.VoiSona {
         }
     }
 
-    internal sealed record VoiSonaNote(double StartMs, double DurationMs, double Tone, string Lyric);
+    internal sealed record VoiSonaNote(double StartMs, double DurationMs, double Tone, string Lyric, string? Phoneme = null);
     internal sealed record VoiSonaScore(byte[] State, double DurationMs);
 
     internal static class VoiSonaState {
@@ -61,7 +62,7 @@ namespace OpenUtau.Core.VoiSona {
         public static VoiSonaScore FromPhrase(RenderPhrase phrase, VoiSonaSinger singer) {
             var notes = phrase.notes.Where(n => n.endMs > phrase.positionMs && n.positionMs < phrase.endMs)
                 .Select(n => new VoiSonaNote(n.positionMs - phrase.positionMs + HeadMs, n.durationMs,
-                    n.adjustedTone, Lyric(n))).ToArray();
+                    n.adjustedTone, singer.NoteLanguage == 2 && n.lyric.Contains('[') ? n.lyric : Lyric(n))).ToArray();
             double length = Math.Max(phrase.durationMs + HeadMs + TailMs, notes.Max(n => n.StartMs + n.DurationMs) + TailMs);
             var age = phrase.curves.FirstOrDefault(c => c.Item1 == "alp")?.Item2;
             var husky = phrase.curves.FirstOrDefault(c => c.Item1 == "hus")?.Item2;
@@ -99,6 +100,68 @@ namespace OpenUtau.Core.VoiSona {
             }
             return merged;
         }
+        static readonly HashSet<string> EnglishPhonemes = new(
+            "aa ae ax axr ah ao aw ay b ch d dh eh ey f g hh ih iy jh k l m n ng ow oy p r s sh t th uh uw v w y z zh tt dd mm nn".Split(' '));
+        static readonly object EnglishLock = new();
+        static G2p.ArpabetG2p? english;
+        internal static IReadOnlyList<VoiSonaNote> EnglishNotes(IReadOnlyList<VoiSonaNote> notes) {
+            var result = new List<VoiSonaNote>();
+            for (int i = 0; i < notes.Count;) {
+                var head = notes[i];
+                var hint = Regex.Match(head.Lyric, @"^(.*?)\s*\[([^\]]+)\]\s*$");
+                if (hint.Success) {
+                    var symbols = hint.Groups[2].Value.Split(new[] { ' ', ',' }, StringSplitOptions.RemoveEmptyEntries);
+                    if (symbols.Length == 0 || symbols.Any(p => !EnglishPhonemes.Contains(p)))
+                        throw new ArgumentException($"Invalid VoiSona English pronunciation hint: {hint.Groups[2].Value}");
+                    head = head with { Lyric = hint.Groups[1].Value.Trim(), Phoneme = string.Join(",", symbols) };
+                }
+                if (head.Lyric.StartsWith('+'))
+                    throw new ArgumentException("VoiSona extension notes must follow a lyric without a gap.");
+                int end = i + 1;
+                while (end < notes.Count && notes[end].Lyric.StartsWith('+')) {
+                    if (Math.Abs(notes[end - 1].StartMs + notes[end - 1].DurationMs - notes[end].StartMs) > 0.1)
+                        throw new ArgumentException("VoiSona extension notes must follow a lyric without a gap.");
+                    end++;
+                }
+                // Keep native pronunciation for words without an explicit syllable boundary.
+                if (end == i + 1) { result.Add(head); i = end; continue; }
+                string[] phones;
+                int[] vowels;
+                lock (EnglishLock) {
+                    english ??= new G2p.ArpabetG2p();
+                    phones = head.Phoneme?.Split(',') ?? english.Query(head.Lyric.ToLowerInvariant())
+                        ?? throw new ArgumentException($"Cannot determine English syllables for '{head.Lyric}'.");
+                    vowels = Enumerable.Range(0, phones.Length).Where(n => english.IsVowel(phones[n]) || phones[n] is "ax" or "axr" or "mm" or "nn").ToArray();
+                }
+                if (vowels.Length <= 1) {
+                    result.Add(head with { DurationMs = notes[end - 1].StartMs + notes[end - 1].DurationMs - head.StartMs });
+                    i = end; continue;
+                }
+                var starts = new List<int> { i };
+                for (int j = i + 1; j < end && starts.Count < vowels.Length; j++) {
+                    if (!notes[j].Lyric.StartsWith("+~") && !notes[j].Lyric.StartsWith("+*")) starts.Add(j);
+                }
+                starts.Add(end);
+                for (int syllable = 0; syllable < starts.Count - 1; syllable++) {
+                    int a = starts[syllable], b = starts[syllable + 1];
+                    int first = syllable == 0 ? 0 : vowels[syllable - 1] + 1;
+                    int last = b == end ? phones.Length : vowels[syllable] + 1;
+                    // VoiSona uses axr for ARPAbet's rhotic vowel er.
+                    var syllables = new List<string>();
+                    int cursor = first;
+                    for (int v = syllable; v < vowels.Length && vowels[v] < last; v++) {
+                        int stop = v == vowels.Length - 1 ? last : vowels[v] + 1;
+                        syllables.Add(string.Join(",", phones.Skip(cursor).Take(stop - cursor).Select(p => p == "er" ? "axr" : p)));
+                        cursor = stop;
+                    }
+                    string phoneme = string.Join("|", syllables);
+                    result.Add(notes[a] with { Lyric = head.Lyric, Phoneme = phoneme,
+                        DurationMs = notes[b - 1].StartMs + notes[b - 1].DurationMs - notes[a].StartMs });
+                }
+                i = end;
+            }
+            return result;
+        }
         public static VoiSonaScore Build(VoiSonaSinger singer, IReadOnlyList<VoiSonaNote> notes,
                 double lengthMs, Func<double, double> pitch, VoiSonaSettings? settings = null,
                 Func<double, double>? age = null, Func<double, double>? husky = null) {
@@ -107,7 +170,7 @@ namespace OpenUtau.Core.VoiSona {
                 throw new ArgumentException("VoiSona phrases must contain notes and be at most ten minutes long.");
             var score = new VoiSonaTree("Score", ("PhonemeSeparatedBySyllable", true));
             double previousEnd = -1;
-            foreach (var n in MergeExtensions(notes)) {
+            foreach (var n in singer.NoteLanguage == 2 ? EnglishNotes(notes) : MergeExtensions(notes)) {
                 if (!double.IsFinite(n.StartMs) || !double.IsFinite(n.DurationMs) || !double.IsFinite(n.Tone)
                         || n.StartMs < 0 || n.DurationMs <= 0 || n.StartMs < previousEnd - 0.1)
                     throw new ArgumentException("VoiSona requires non-overlapping notes with positive durations.");
@@ -116,10 +179,20 @@ namespace OpenUtau.Core.VoiSona {
                 if (midi < 0 || midi > 127) throw new ArgumentException("VoiSona note is outside MIDI range 0–127.");
                 string lyric = n.Lyric;
                 if (string.IsNullOrWhiteSpace(lyric)) throw new ArgumentException("VoiSona needs a lyric on each note.");
-                score.Add(new VoiSonaTree("Note", ("Clock", (int)Math.Round(n.StartMs * 1.92)),
+                var nativeNote = new VoiSonaTree("Note", ("Clock", (int)Math.Round(n.StartMs * 1.92)),
                     ("Duration", Math.Max(1, (int)Math.Round(n.DurationMs * 1.92))),
                     ("PitchStep", midi % 12), ("PitchOctave", midi / 12 - 1), ("Lyric", lyric),
-                    ("Syllabic", 0), ("NoteLanguage", singer.NoteLanguage), ("DoReMi", false)));
+                    ("Syllabic", 0), ("NoteLanguage", singer.NoteLanguage), ("DoReMi", false));
+                if (n.Phoneme != null) {
+                    // VoiSona replaces Phoneme from the lyric on load unless its
+                    // analyzed-pronunciation bookkeeping accompanies the override.
+                    // Verified by reading back the prepared AU state, not just audio.
+                    nativeNote.Attributes.Add("Phoneme", n.Phoneme);
+                    nativeNote.Attributes.Add("DefaultPhoneme", n.Phoneme);
+                    nativeNote.Attributes.Add("PastAnalyzedPhoneme", n.Phoneme);
+                    nativeNote.Attributes.Add("AnalyzedNoteLanguage", singer.NoteLanguage);
+                }
+                score.Add(nativeNote);
             }
             int frames = (int)Math.Ceiling(lengthMs / 5);
             var f0 = new VoiSonaTree("LogF0", ("Length", frames));

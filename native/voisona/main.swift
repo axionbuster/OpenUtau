@@ -22,11 +22,14 @@ struct HostError: Error, CustomStringConvertible {
     init(_ description: String) { self.description = description }
 }
 let setup = CommandLine.arguments.contains("--setup")
+// Opt-in lifecycle test seam: mimic a plugin that blocks during destruction.
+let testTeardownStall = CommandLine.arguments.contains("--test-teardown-stall")
+let arguments = CommandLine.arguments.filter { $0 != "--test-teardown-stall" }
 var job: Job?
 if !setup {
     do {
-        guard CommandLine.arguments.count == 2 else { throw HostError("Expected one render request path.") }
-        job = try JSONDecoder().decode(Job.self, from: Data(contentsOf: URL(fileURLWithPath: CommandLine.arguments[1])))
+        guard arguments.count == 2 else { throw HostError("Expected one render request path.") }
+        job = try JSONDecoder().decode(Job.self, from: Data(contentsOf: URL(fileURLWithPath: arguments[1])))
         guard let j = job, j.protocolVersion == 1, j.durationMs.isFinite, j.durationMs > 0,
               j.durationMs <= 600_000, !j.state.isEmpty else { throw HostError("Unsupported or invalid render request.") }
     } catch { fputs("VoiSona request error: \(error)\n", stderr); exit(2) }
@@ -63,6 +66,7 @@ final class Host: NSObject, NSApplicationDelegate, NSWindowDelegate {
     var moving = false
     var exitCode: Int32 = 0
     var finishing = false
+    var renderCommitted = false
     let started = Date()
     func applicationDidFinishLaunching(_ notification: Notification) {
         let desc = AudioComponentDescription(componentType: fourCC("aumu"), componentSubType: fourCC("VSSi"),
@@ -191,6 +195,7 @@ final class Host: NSObject, NSApplicationDelegate, NSWindowDelegate {
                     try FileManager.default.moveItem(atPath: scratch, toPath: j.output)
                     let response: [String: Any] = ["protocolVersion": 1, "ok": true, "frames": samples.count, "sampleRate": 44100, "attempts": attempt + 1]
                     try JSONSerialization.data(withJSONObject: response).write(to: URL(fileURLWithPath: j.result), options: .atomic)
+                    renderCommitted = true
                     finish(nil); return
                 }
                 previous = coverage ? samples : nil
@@ -200,16 +205,21 @@ final class Host: NSObject, NSApplicationDelegate, NSWindowDelegate {
     }
     func finish(_ error: String?) {
         guard !finishing else { return }; finishing = true
-        // Successful audio must not leave a hung child after the parent closes.
-        DispatchQueue.global(qos: .utility).asyncAfter(deadline: .now() + 5) { _exit(124) }
+        exitCode = error == nil && (setup || renderCommitted) ? 0 : 1
+        // A completed WAV and atomic success manifest are the transaction boundary.
+        // VoiSona can block in its destructor under a GUI parent. Try normal cleanup,
+        // then let the OS reclaim this isolated host without discarding valid audio.
+        // Capture the terminal code now; a failed or canceled render cannot become success.
+        let terminalCode = exitCode
+        DispatchQueue.global(qos: .utility).asyncAfter(deadline: .now() + 5) { _exit(terminalCode) }
         if let error = error {
-            exitCode = 1
             fputs("\(error)\n", stderr)
             if let j = job {
                 try? JSONSerialization.data(withJSONObject: ["protocolVersion": 1, "ok": false, "error": error])
                     .write(to: URL(fileURLWithPath: j.result), options: .atomic)
             }
         }
+        if testTeardownStall { Thread.sleep(forTimeInterval: 60) }
         moving = false
         engine?.stop()
         if let n = node {

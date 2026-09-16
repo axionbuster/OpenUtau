@@ -166,6 +166,27 @@ namespace OpenUtau.Core {
             Assert.NotEqual(phrase.hash, updated.hash);
         }
         [InstalledVoiSonaFact]
+        public async Task StalledTeardownPreservesCommittedSuccessAndRejectsCanceledAudio() {
+            string dir = Path.Combine(Path.GetTempPath(), "voisona-teardown-" + Guid.NewGuid().ToString("N")); Directory.CreateDirectory(dir);
+            try {
+                string wrapper = Path.Combine(dir, "stall-host");
+                string quotedHelper = "'" + VoiSonaRenderer.HelperPath.Replace("'", "'\"'\"'") + "'";
+                await File.WriteAllTextAsync(wrapper, "#!/bin/sh\nexec " + quotedHelper + " --test-teardown-stall \"$1\"\n");
+                File.SetUnixFileMode(wrapper, UnixFileMode.UserRead | UnixFileMode.UserWrite | UnixFileMode.UserExecute);
+                var singer = VoiSonaSingerLoader.Discover(VoiSonaSingerLoader.VoiceRoot).First();
+                var score = VoiSonaState.Build(singer, new[] {new VoiSonaNote(500, 1000, 69, "あ")}, 2000, _ => 69);
+                var job = new VoiSonaJob {state = score.State, durationMs = 2000,
+                    output = Path.Combine(dir, "audio.wav"), result = Path.Combine(dir, "result.json"), cancel = Path.Combine(dir, "cancel"),
+                    noteWindows = new[] {new[] {500.0, 1500.0}}};
+                await VoiSonaRenderer.RunHelper(wrapper, job, dir, CancellationToken.None, timeout: TimeSpan.FromSeconds(45));
+                Assert.NotNull(VoiSonaRenderer.TryReadAudio(job.output, 88200));
+                File.Delete(job.output); File.Delete(job.result); await File.WriteAllTextAsync(job.cancel, "cancel");
+                await Assert.ThrowsAsync<InvalidOperationException>(() => VoiSonaRenderer.RunHelper(wrapper, job, dir, CancellationToken.None, timeout: TimeSpan.FromSeconds(20)));
+                Assert.False(File.Exists(job.output));
+                Assert.False(JObject.Parse(await File.ReadAllTextAsync(job.result)).Value<bool>("ok"));
+            } finally { Directory.Delete(dir, true); }
+        }
+        [InstalledVoiSonaFact]
         public async Task ActualNativePhraseRendersAndCachesWithTempoChange() {
             string artifacts = Environment.GetEnvironmentVariable("OPENUTAU_VOISONA_ARTIFACTS") ?? Path.Combine(Path.GetTempPath(), "voisona-artifacts");
             Directory.CreateDirectory(artifacts);

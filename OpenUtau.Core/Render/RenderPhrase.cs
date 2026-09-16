@@ -520,6 +520,7 @@ namespace OpenUtau.Core.Render {
             using (var stream = new MemoryStream()) {
                 using (var writer = new BinaryWriter(stream)) {
                     writer.Write(singer.Id);
+                    if (singer is VoiSona.VoiSonaSinger) writer.Write(singer.Version);
                     writer.Write(renderer?.ToString() ?? "");
                     writer.Write(wavtool ?? "");
                     writer.Write(timeAxis.Timestamp);

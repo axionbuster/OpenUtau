@@ -133,7 +133,7 @@ namespace OpenUtau.Core.VoiSona {
                 }
                 return string.Join("\n", lines);
             });
-            using var deadline = new CancellationTokenSource(timeout ?? TimeSpan.FromSeconds(160));
+            using var deadline = new CancellationTokenSource(timeout ?? TimeSpan.FromSeconds(Math.Max(150, job.durationMs / 1000 * 2 + 30) + 10));
             using var linked = CancellationTokenSource.CreateLinkedTokenSource(token, deadline.Token);
             try { await process.WaitForExitAsync(linked.Token); }
             catch (OperationCanceledException) {

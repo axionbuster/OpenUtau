@@ -80,6 +80,18 @@ namespace OpenUtau.Core {
             await Assert.ThrowsAnyAsync<OperationCanceledException>(() => VoiSonaRenderer.RunHelper("not-an-executable", new(), "/unused", cancel.Token));
         }
         [MacFact]
+        public async Task SilentSuccessfulProcessIsNotASuccessfulRender() {
+            string dir = Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString()); Directory.CreateDirectory(dir);
+            try {
+                string script = Path.Combine(dir, "fake-host");
+                await File.WriteAllTextAsync(script, "#!/bin/sh\nexit 0\n");
+                File.SetUnixFileMode(script, UnixFileMode.UserRead | UnixFileMode.UserWrite | UnixFileMode.UserExecute);
+                var job = new VoiSonaJob { cancel = Path.Combine(dir, "cancel"), result = Path.Combine(dir, "result"), output = Path.Combine(dir, "audio.wav") };
+                await Assert.ThrowsAsync<InvalidOperationException>(() => VoiSonaRenderer.RunHelper(script, job, dir, CancellationToken.None));
+                Assert.False(File.Exists(job.output));
+            } finally { Directory.Delete(dir, true); }
+        }
+        [MacFact]
         public async Task HelperTimeoutAndCancellationAreBounded() {
             string dir = Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString()); Directory.CreateDirectory(dir);
             try {
@@ -122,6 +134,8 @@ namespace OpenUtau.Core {
             Assert.Equal(5500, phrase.durationMs, 5);
             var score = VoiSonaState.FromPhrase(phrase, Singer);
             Assert.Equal(6500, score.DurationMs, 5);
+            var (_, updated) = NativePhrase(new VoiSonaSinger("ja_JP", "2.2.0", "/unused"));
+            Assert.NotEqual(phrase.hash, updated.hash);
         }
         [InstalledVoiSonaFact]
         public async Task ActualNativePhraseRendersAndCachesWithTempoChange() {

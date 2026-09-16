@@ -644,7 +644,7 @@ namespace OpenUtau.App.Views {
         async void OnMenuInstallVoiSona(object sender, RoutedEventArgs args) {
             try {
                 Core.VoiSona.VoiSonaSingerLoader.Register();
-                DocManager.Inst.ExecuteCmd(new SingersChangedNotification());
+                RefreshVoiSonaSingers();
                 var singers = Core.VoiSona.VoiSonaSingerLoader.Discover(Core.VoiSona.VoiSonaSingerLoader.VoiceRoot);
                 string message = singers.Count == 0
                     ? "VoiSona is registered. Use Sign in / Manage voices to install Chis-A, then Refresh voices."
@@ -662,13 +662,23 @@ namespace OpenUtau.App.Views {
                 voisonaSetup = Core.VoiSona.VoiSonaRenderer.OpenSetup();
                 await voisonaSetup.WaitForExitAsync();
                 if (voisonaSetup.ExitCode != 0) throw new InvalidOperationException("VoiSona setup failed. Check that the VoiSona Song Audio Unit is installed.");
-                DocManager.Inst.ExecuteCmd(new SingersChangedNotification());
+                RefreshVoiSonaSingers();
             } catch (Exception e) { await MessageBox.ShowError(this, e); }
             finally { voisonaSetup?.Dispose(); voisonaSetup = null; }
         }
 
         void OnMenuRefreshVoiSona(object sender, RoutedEventArgs args) {
+            RefreshVoiSonaSingers();
+        }
+
+        private static void RefreshVoiSonaSingers() {
             DocManager.Inst.ExecuteCmd(new SingersChangedNotification());
+            foreach (var track in DocManager.Inst.Project.tracks) {
+                if (track.Singer is Core.VoiSona.VoiSonaSinger singer && SingerManager.Inst.Singers.TryGetValue(singer.Id, out var updated))
+                    track.Singer = updated;
+            }
+            TrackHeaderViewModel.InvalidateSingerMenuCache();
+            DocManager.Inst.ExecuteCmd(new SingersRefreshedNotification());
         }
 
         async void OnMenuInstallSinger(object sender, RoutedEventArgs args) {

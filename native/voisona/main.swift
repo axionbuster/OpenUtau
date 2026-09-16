@@ -85,7 +85,7 @@ final class Host: NSObject, NSApplicationDelegate, NSWindowDelegate {
     func windowWillClose(_ notification: Notification) { finish(nil) }
     func check() throws {
         if let j = job, FileManager.default.fileExists(atPath: j.cancel) { throw HostError("Render canceled.") }
-        if Date().timeIntervalSince(started) > 150 { throw HostError("VoiSona timed out. Open Sign in / Manage voices and check the selected voice is available.") }
+        if Date().timeIntervalSince(started) > max(150, (job?.durationMs ?? 0) / 1000 * 2 + 30) { throw HostError("VoiSona timed out. Open Sign in / Manage voices and check the selected voice is available.") }
     }
     func warm(_ seconds: Double, _ buffer: AVAudioPCMBuffer) throws {
         moving = false; position = 0

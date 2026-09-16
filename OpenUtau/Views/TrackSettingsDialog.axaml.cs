@@ -14,6 +14,7 @@ namespace OpenUtau.App.Views {
         public TrackSettingsDialog(UTrack track) {
             InitializeComponent();
             DataContext = viewModel = new TrackSettingsViewModel(track);
+            if (viewModel.IsVoiSona) { Width = 500; Height = 530; }
         }
 
         public void OnOkClicked(object sender, RoutedEventArgs e) {

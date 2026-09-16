@@ -30,7 +30,31 @@
         <Button Grid.Column="2" Content="{DynamicResource dialogs.tracksettings.setasdefault}"
                 HorizontalAlignment="Stretch" Command="{Binding SetDefaultWavtool}"/>
       </Grid>
-      <Button Grid.Column="2" Content="{DynamicResource button.ok}"
+      <StackPanel IsVisible="{Binding IsVoiSona}" Spacing="8" Margin="4">
+        <TextBlock Text="VoiSona native parameters" FontWeight="Bold"/>
+        <CheckBox Name="NativePitch" Content="Use VoiSona-generated pitch" IsChecked="{Binding NativePitch}"/>
+        <TextBlock Text="Native pitch uses rounded 12-TET notes and replaces OpenUtau pitch curves and vibrato. Leave off to preserve exact 31-TET tuning."
+                   TextWrapping="Wrap" FontSize="12"/>
+        <Grid ColumnDefinitions="*,120" RowDefinitions="Auto,Auto,Auto,Auto,Auto" Margin="0,4">
+          <TextBlock Grid.Row="0" Text="TUNE · Pitch accuracy" VerticalAlignment="Center"/>
+          <NumericUpDown Name="PitchAccuracy" Grid.Row="0" Grid.Column="1" Minimum="-1" Maximum="1" Increment="0.05" FormatString="0.00"
+                         Value="{Binding VoiSona.PitchAccuracy}" IsEnabled="{Binding NativePitch}"/>
+          <TextBlock Grid.Row="1" Text="VIA · Vibrato amplitude" VerticalAlignment="Center"/>
+          <NumericUpDown Name="VibratoAmplitude" Grid.Row="1" Grid.Column="1" Minimum="0" Maximum="10" Increment="0.1" FormatString="0.00" Value="{Binding VoiSona.VibratoAmplitude}"/>
+          <TextBlock Grid.Row="2" Text="VIF · Vibrato frequency" VerticalAlignment="Center"/>
+          <NumericUpDown Name="VibratoFrequency" Grid.Row="2" Grid.Column="1" Minimum="0" Maximum="2" Increment="0.05" FormatString="0.00" Value="{Binding VoiSona.VibratoFrequency}"/>
+          <TextBlock Grid.Row="3" Text="ALP · Age" VerticalAlignment="Center"/>
+          <NumericUpDown Name="Age" Grid.Row="3" Grid.Column="1" Minimum="-1" Maximum="1" Increment="0.05" FormatString="0.00" Value="{Binding VoiSona.Age}"/>
+          <TextBlock Grid.Row="4" Text="HUS · Huskiness" VerticalAlignment="Center"/>
+          <NumericUpDown Name="Huskiness" Grid.Row="4" Grid.Column="1" Minimum="-10" Maximum="10" Increment="0.1" FormatString="0.00" Value="{Binding VoiSona.Huskiness}"/>
+        </Grid>
+        <TextBlock Text="VIA = 0 disables native vibrato. Positive VIA adds VoiSona vibrato; VIF scales its rate."
+                   TextWrapping="Wrap" FontSize="12"/>
+        <TextBlock Text="{Binding VoiSonaStyles}" TextWrapping="Wrap" FontSize="12"/>
+        <TextBlock Text="For local edits, use Expressions → Get suggestions for ALP and HUS curves (100 = 1 native unit). Volume uses DYN; pitch and vibrato use the piano roll."
+                   TextWrapping="Wrap" FontSize="12"/>
+      </StackPanel>
+      <Button Name="ConfirmSettings" Grid.Column="2" Content="{DynamicResource button.ok}"
               HorizontalAlignment="Stretch" Click="OnOkClicked"/>
     </StackPanel>
   </Border>

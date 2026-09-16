@@ -54,7 +54,7 @@ namespace OpenUtau.Core.VoiSona {
     internal sealed record VoiSonaScore(byte[] State, double DurationMs);
 
     internal static class VoiSonaState {
-        public const int Schema = 2;
+        public const int Schema = 3;
         public const double HeadMs = 500;
         public const double TailMs = 500;
         public static double LogF0(double tone) => Math.Log(440) + (tone - 69) * Math.Log(2) / 12;
@@ -63,14 +63,20 @@ namespace OpenUtau.Core.VoiSona {
                 .Select(n => new VoiSonaNote(n.positionMs - phrase.positionMs + HeadMs, n.durationMs,
                     n.adjustedTone, Lyric(n))).ToArray();
             double length = Math.Max(phrase.durationMs + HeadMs + TailMs, notes.Max(n => n.StartMs + n.DurationMs) + TailMs);
-            return Build(singer, notes, length, ms => {
-                double tick = phrase.timeAxis.MsPosToTickPos(ms - HeadMs + phrase.positionMs);
-                double index = (tick - phrase.position + phrase.leading) / 5;
-                int left = Math.Clamp((int)Math.Floor(index), 0, phrase.pitches.Length - 1);
-                int right = Math.Min(left + 1, phrase.pitches.Length - 1);
-                double fraction = Math.Clamp(index - left, 0, 1);
-                return (phrase.pitches[left] * (1 - fraction) + phrase.pitches[right] * fraction) / 100;
-            });
+            var age = phrase.curves.FirstOrDefault(c => c.Item1 == "alp")?.Item2;
+            var husky = phrase.curves.FirstOrDefault(c => c.Item1 == "hus")?.Item2;
+            return Build(singer, notes, length, ms => Sample(phrase, phrase.pitches, ms) / 100,
+                phrase.VoiSonaSettings,
+                age == null || age.All(v => v == 0) ? null : ms => Sample(phrase, age, ms) / 100,
+                husky == null || husky.All(v => v == 0) ? null : ms => Sample(phrase, husky, ms) / 100);
+        }
+        internal static double Sample(RenderPhrase phrase, float[] values, double ms) {
+            double tick = phrase.timeAxis.MsPosToTickPos(ms - HeadMs + phrase.positionMs);
+            double index = (tick - phrase.position + phrase.leading) / 5;
+            int left = Math.Clamp((int)Math.Floor(index), 0, values.Length - 1);
+            int right = Math.Min(left + 1, values.Length - 1);
+            double fraction = Math.Clamp(index - left, 0, 1);
+            return values[left] * (1 - fraction) + values[right] * fraction;
         }
         internal static string Lyric(RenderNote note) {
             if (note.lyric.StartsWith('+')) return note.lyric;
@@ -94,7 +100,9 @@ namespace OpenUtau.Core.VoiSona {
             return merged;
         }
         public static VoiSonaScore Build(VoiSonaSinger singer, IReadOnlyList<VoiSonaNote> notes,
-                double lengthMs, Func<double, double> pitch) {
+                double lengthMs, Func<double, double> pitch, VoiSonaSettings? settings = null,
+                Func<double, double>? age = null, Func<double, double>? husky = null) {
+            settings = settings?.ValidatedCopy() ?? new VoiSonaSettings();
             if (notes.Count == 0 || !double.IsFinite(lengthMs) || lengthMs <= 0 || lengthMs > 600_000)
                 throw new ArgumentException("VoiSona phrases must contain notes and be at most ten minutes long.");
             var score = new VoiSonaTree("Score", ("PhonemeSeparatedBySyllable", true));
@@ -120,19 +128,34 @@ namespace OpenUtau.Core.VoiSona {
                 if (!double.IsFinite(value)) throw new ArgumentException("VoiSona pitch must be finite.");
                 f0.Add(new VoiSonaTree("Data", ("Index", i), ("Repeat", 1), ("Value", value)));
             }
+            var parameters = new VoiSonaTree("Parameter");
+            if (!settings.NativePitch) parameters.Add(f0);
+            if (settings.VibratoAmplitude == 0) parameters.Add(new VoiSonaTree("VibAmp", ("Length", frames)).Add(
+                new VoiSonaTree("Data", ("Index", 0), ("Repeat", frames), ("Value", 0.0))));
+            AddCurve("Alpha", age, -1, 1);
+            AddCurve("Husky", husky, -10, 10);
+            void AddCurve(string name, Func<double, double>? sample, double min, double max) {
+                if (sample == null) return;
+                var curve = new VoiSonaTree(name, ("Length", frames));
+                for (int i = 0; i < frames; i++) {
+                    double value = sample(i * 5);
+                    if (!double.IsFinite(value)) throw new ArgumentException($"VoiSona {name} must be finite.");
+                    curve.Add(new VoiSonaTree("Data", ("Index", i), ("Repeat", 1), ("Value", Math.Clamp(value, min, max))));
+                }
+                parameters.Add(curve);
+            }
             var state = new VoiSonaTree("StateInformation", ("TempoSync", false)).Add(
                 new VoiSonaTree("VoiceInformation", ("CharacterName", "Chis-A"),
                     ("VoiceFileName", singer.VoiceFileName), ("Language", singer.Language),
                     ("VoiceVersion", singer.Version)).Add(new VoiSonaTree("EmotionList").Add(
                         new VoiSonaTree("Emotion", ("Label", "Normal"), ("Ratio", 1.0)))),
-                new VoiSonaTree("GlobalParameters", ("GlobalTune", 1.0), ("GlobalVibAmp", 0.0),
-                    ("GlobalVibFrq", 1.0), ("GlobalAlpha", 0.0), ("GlobalHusky", 0.0)),
+                new VoiSonaTree("GlobalParameters", ("GlobalTune", settings.PitchAccuracy), ("GlobalVibAmp", settings.VibratoAmplitude),
+                    ("GlobalVibFrq", settings.VibratoFrequency), ("GlobalAlpha", settings.Age), ("GlobalHusky", settings.Huskiness)),
                 new VoiSonaTree("Song").Add(
                     new VoiSonaTree("Tempo").Add(new VoiSonaTree("Sound", ("Clock", 0), ("Tempo", 120.0))),
                     new VoiSonaTree("Beat").Add(new VoiSonaTree("Time", ("Clock", 0), ("Beats", 4), ("BeatType", 4))), score),
                 new VoiSonaTree("SignerConfig", ("RomajiMode", false), ("DefaultNoteLanguage", singer.NoteLanguage)),
-                new VoiSonaTree("Parameter").Add(f0, new VoiSonaTree("VibAmp", ("Length", frames)).Add(
-                    new VoiSonaTree("Data", ("Index", 0), ("Repeat", frames), ("Value", 0.0)))));
+                parameters);
             return new VoiSonaScore(state.Encode(), lengthMs);
         }
     }

@@ -15,11 +15,31 @@ Both Chis-A versions appear independently when installed. The Japanese entry use
 
 USTx and USTx31 use the same renderer. Notes retain their exact sounding pitch, including 31-TET positions, note tuning, pitch points, vibrato and pitch deviation curves. Pitch is resampled from OpenUtau's tick-based curve into VoiSona's 5 ms absolute LogF0 curve. Note onset and duration follow the project tempo map; the adapter expresses those times at a fixed native tempo, so VoiSona's host tempo sync stays off.
 
-OpenUtau applies dynamics to the completed audio. The renderer uses one phonemized lyric per note. UTAU phonemizers that emit multiple sample aliases per note are rejected; use DEFAULT or KO to JA. Unconverted Hangul is rejected before synthesis, rather than accepting the Japanese engine's near-silent output. The renderer does not advertise support for other voice expressions, sample-level phoneme timing, rendered-pitch extraction, or VoiSona's expressive controls. Consecutive `+` and `+~` notes extend the preceding syllable while retaining the pitch curve; their different reattack behavior is not reproduced. An extension without a preceding lyric or across a rest is rejected. Overlapping notes and individual native render jobs longer than ten minutes are rejected with an error.
+OpenUtau applies dynamics to the completed audio. The renderer uses one phonemized lyric per note. UTAU phonemizers that emit multiple sample aliases per note are rejected; use DEFAULT or KO to JA. Unconverted Hangul is rejected before synthesis, rather than accepting the Japanese engine's near-silent output. Native voice controls are described below. The renderer does not advertise sample-level phoneme timing or rendered-pitch extraction. Consecutive `+` and `+~` notes extend the preceding syllable while retaining the pitch curve; their different reattack behavior is not reproduced. An extension without a preceding lyric or across a rest is rejected. Overlapping notes and individual native render jobs longer than ten minutes are rejected with an error.
 
 Long phrases are divided into chunks targeting 12 seconds of owned audio, at adjacent fresh-lyric boundaries. A syllable and its `+` chain stay together, so the target is not a hard maximum. Short rests stay inside the existing phrase and are never artificial cut points. Each chunk synthesizes a complete neighboring syllable on either side for context, with 500 ms native padding, at 44.1 kHz. OpenUtau applies the existing pitch and dynamics processing to that context, then retains only the chunk's owned timeline interval plus a complementary 20 ms crossfade at each internal seam. Original phrase head/tail padding and timeline rests remain intact. Playback and export use the same chunk audio and placement.
 
 This reduces the work needed before every track has initial audio. Playback still waits for all tracks needed at the current position; it never starts an incomplete mix. Playback prioritizes chunks at the playhead, and unfocused background preparation warms chunks in timeline order across tracks. Native jobs remain serial to avoid competing engine instances. A long sustained syllable or a phrase made entirely of separated notes can exceed the target. Extra plugin launches and repeated context can increase total cold-render work, and independent synthesis can change pronunciation/timbre at chunk boundaries despite the context and crossfade; the audio is not promised to equal a single whole-phrase render.
+
+## Native voice parameters
+
+Open **Track Settings** on a VoiSona track for all five native global parameters:
+
+| Control | Native range | Effect |
+| --- | --- | --- |
+| TUNE | -1 to 1 | Pitch accuracy; enabled with VoiSona-generated pitch |
+| VIA | 0 to 10 | Native vibrato amplitude multiplier; 0 disables native vibrato |
+| VIF | 0 to 2 | Native vibrato frequency multiplier |
+| ALP | -1 to 1 | Age: lower is more childlike, higher is more mature |
+| HUS | -10 to 10 | Huskiness: higher is huskier |
+
+Settings belong to the track, persist in USTx/USTx31, support undo, and invalidate both in-memory audio and native render caches. Closing the dialog without OK discards its edits. These ranges were checked against the installed VoiSona editor; the [vendor parameter manual](https://manual.voisona.com/en/song/pc/2b6e9bc7efb1807bb8dacbf63048ba39) describes their meaning.
+
+By default OpenUtau supplies exact pitch, including 31-TET, pitch curves and note vibrato, and disables native vibrato. Raising VIA adds native vibrato. **Use VoiSona-generated pitch** instead lets the native engine generate pitch and makes TUNE effective; it replaces OpenUtau pitch curves and note vibrato and uses rounded 12-TET note anchors. It is explicitly opt-in and does not change stored notes. Keep it off for exact 31-TET tuning.
+
+For local age/huskiness edits, open **Expressions → Get suggestions**, accept, and choose **ALP** or **HUS** in a piano-roll expression lane. Integer lane values are hundredths of native units: ALP -100…100, HUS -1000…1000. Curves are sent as native Alpha/Husky data on the same 5 ms timeline as pitch, including tempo changes and chunk context. An untouched/zero lane leaves native generated values alone; a nonzero lane supplies a curve across that phrase. Native global values remain active alongside these curves.
+
+Volume remains available through **DYN**, applied to the synthesized audio; detailed pitch and vibrato remain available through OpenUtau's piano-roll controls. Native phoneme timing and native volume/vibrato curve editors are not bridged. Both currently supported Chis-A variants provide only the Normal singing style, so there are no style proportions to blend. Other voices and style discovery remain outside this adapter's current singer support.
 
 ## Startup, cancellation and failures
 

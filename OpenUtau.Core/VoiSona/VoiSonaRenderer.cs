@@ -19,7 +19,8 @@ namespace OpenUtau.Core.VoiSona {
         public static string HelperPath => Path.Combine(AppContext.BaseDirectory, "openutau-voisona-host");
         public USingerType SingerType => USingerType.VoiSona;
         public bool SupportsRenderPitch => false;
-        public bool SupportsExpression(UExpressionDescriptor descriptor) => descriptor.abbr is Format.Ustx.DYN or Format.Ustx.PITD;
+        public bool SupportsExpression(UExpressionDescriptor descriptor) => descriptor.abbr is Format.Ustx.DYN or Format.Ustx.PITD
+            || (descriptor.type == UExpressionType.Curve && descriptor.abbr is "alp" or "hus");
         public override string ToString() => Renderers.VOISONA;
         public (double HeadMs, double TailMs) PhrasePadding(USinger singer, IEnumerable<UPhoneme> phonemes)
             => (VoiSonaState.HeadMs, VoiSonaState.TailMs);
@@ -30,7 +31,10 @@ namespace OpenUtau.Core.VoiSona {
             estimatedLengthMs = phrase.durationMs + VoiSonaState.HeadMs + VoiSonaState.TailMs,
         };
         public RenderPitchResult LoadRenderedPitch(RenderPhrase phrase) => null!;
-        public UExpressionDescriptor[] GetSuggestedExpressions(USinger singer, URenderSettings settings) => Array.Empty<UExpressionDescriptor>();
+        public UExpressionDescriptor[] GetSuggestedExpressions(USinger singer, URenderSettings settings) => new[] {
+            new UExpressionDescriptor("VoiSona age", "alp", -100, 100, 0) { type = UExpressionType.Curve },
+            new UExpressionDescriptor("VoiSona huskiness", "hus", -1000, 1000, 0) { type = UExpressionType.Curve },
+        };
 
         public async Task<RenderResult> Render(RenderPhrase phrase, Progress progress, int trackNo,
                 CancellationTokenSource cancellation, bool isPreRender = false, RenderPhraseEvents? renderEvents = null) {

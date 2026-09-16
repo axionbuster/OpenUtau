@@ -198,6 +198,7 @@ namespace OpenUtau.Core.Render {
 
         internal readonly IRenderer renderer;
         public readonly string wavtool;
+        public readonly VoiSona.VoiSonaSettings VoiSonaSettings;
 
         /// <summary>
         /// The [startMs, endMs) range (absolute ms) of the rendered phrase
@@ -246,6 +247,7 @@ namespace OpenUtau.Core.Render {
             singer = source.Singer;
             renderer = source.Renderer;
             wavtool = source.Wavtool;
+            VoiSonaSettings = source.VoiSonaSettings.Clone();
             timeAxis = source.Axis;
 
             position = source.PartPosition + phrasePhonemes.First().Position;
@@ -535,6 +537,7 @@ namespace OpenUtau.Core.Render {
                     }
                     writer.Write(renderer?.ToString() ?? "");
                     writer.Write(wavtool ?? "");
+                    if (singer is VoiSona.VoiSonaSinger) VoiSonaSettings.WriteHash(writer);
                     writer.Write(timeAxis.Timestamp);
                     foreach (var phone in phones) {
                         writer.Write(phone.hash);

@@ -11,7 +11,7 @@ using ReactiveUI.Primitives;
 using ReactiveUI.SourceGenerators;
 
 namespace OpenUtau.App.ViewModels {
-    partial class TrackSettingsViewModel : ViewModelBase {
+    public partial class TrackSettingsViewModel : ViewModelBase {
         public UTrack Track { get; private set; }
         public ObservableCollectionExtended<IResampler> Resamplers => resamplers;
         [Reactive] public partial IResampler? Resampler { get; set; }
@@ -20,6 +20,10 @@ namespace OpenUtau.App.ViewModels {
         [Reactive] public partial IWavtool? Wavtool { get; set; }
         [Reactive] public partial bool NeedsWavtool { get; set; }
         [Reactive] public partial bool IsNotClassic { get; set; }
+        public bool IsVoiSona { get; }
+        [Reactive] public partial bool NativePitch { get; set; }
+        public Core.VoiSona.VoiSonaSettings VoiSona { get; }
+        public string VoiSonaStyles => "Singing style: Normal (the installed Chis-A voices have one style).";
 
         ObservableCollectionExtended<IResampler> resamplers =
             new ObservableCollectionExtended<IResampler>();
@@ -29,6 +33,9 @@ namespace OpenUtau.App.ViewModels {
         public TrackSettingsViewModel(UTrack track) {
             ToolsManager.Inst.Initialize();
             Track = track;
+            IsVoiSona = track.RendererSettings.renderer == Renderers.VOISONA;
+            VoiSona = track.RendererSettings.voisona?.ValidatedCopy() ?? new Core.VoiSona.VoiSonaSettings();
+            NativePitch = VoiSona.NativePitch;
             if (!string.IsNullOrEmpty(Track.RendererSettings.renderer)) {
                 var renderer = Track.RendererSettings.renderer;
                 resamplers.AddRange(ToolsManager.Inst.Resamplers);
@@ -49,7 +56,7 @@ namespace OpenUtau.App.ViewModels {
                 Wavtool = ToolsManager.Inst.GetWavtool(wavtoolName);
                 NeedsResampler = Renderers.CLASSIC == renderer;
                 NeedsWavtool = Renderers.CLASSIC == renderer;
-                IsNotClassic = Renderers.CLASSIC != renderer;
+                IsNotClassic = Renderers.CLASSIC != renderer && !IsVoiSona;
             }
             this.WhenAnyValue(x => x.Resampler)
                 .OfType<IResampler>()
@@ -94,13 +101,19 @@ namespace OpenUtau.App.ViewModels {
         }
 
         public void Finish() {
-            if (Renderers.CLASSIC != Track.RendererSettings.renderer) {
+            if (Renderers.CLASSIC != Track.RendererSettings.renderer && !IsVoiSona) {
                 return;
             }
             DocManager.Inst.StartUndoGroup("command.track.setting");
             var settings = Track.RendererSettings.Clone();
-            settings.resampler = Resampler?.ToString() ?? string.Empty;
-            settings.wavtool = Wavtool?.ToString() ?? string.Empty;
+            if (IsVoiSona) {
+                VoiSona.NativePitch = NativePitch;
+                settings.voisona = VoiSona.ValidatedCopy();
+            }
+            else {
+                settings.resampler = Resampler?.ToString() ?? string.Empty;
+                settings.wavtool = Wavtool?.ToString() ?? string.Empty;
+            }
             DocManager.Inst.ExecuteCmd(new TrackChangeRenderSettingCommand(DocManager.Inst.Project, Track, settings));
             DocManager.Inst.EndUndoGroup();
         }

@@ -12,6 +12,7 @@ namespace OpenUtau.Core.Ustx {
         public string renderer;
         public string resampler;
         public string wavtool;
+        public VoiSona.VoiSonaSettings voisona;
 
         [YamlIgnore] public IRenderer Renderer { get; set; }
         [YamlIgnore] public IResampler Resampler { get; set; }
@@ -63,6 +64,7 @@ namespace OpenUtau.Core.Ustx {
                 renderer = renderer,
                 resampler = resampler,
                 wavtool = wavtool,
+                voisona = voisona?.Clone(),
             };
         }
     }

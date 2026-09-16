@@ -322,6 +322,7 @@ namespace OpenUtau.Core.Pipeline {
         public readonly IRenderer Renderer;
         public readonly string Resampler;
         public readonly string Wavtool;
+        public readonly VoiSona.VoiSonaSettings VoiSonaSettings;
         public readonly ClassicSinger ClassicSinger;
         public readonly bool ModpSupported;
 
@@ -348,6 +349,7 @@ namespace OpenUtau.Core.Pipeline {
             Renderer = track.RendererSettings.Renderer;
             Resampler = track.RendererSettings.resampler;
             Wavtool = track.RendererSettings.wavtool;
+            VoiSonaSettings = track.RendererSettings.voisona?.ValidatedCopy() ?? new VoiSona.VoiSonaSettings();
             ClassicSinger = Singer as ClassicSinger;
             ModpSupported = track.TryGetExpDescriptor(project, Format.Ustx.MODP, out var modp)
                 && Renderer.SupportsExpression(modp);

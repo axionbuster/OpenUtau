@@ -8,6 +8,7 @@ namespace OpenUtau.Core.VoiSona {
     public sealed class VoiSonaSinger : USinger {
         public string VoiceFileName { get; }
         public string Language { get; }
+        public string CacheStamp { get; }
         public int NoteLanguage => Language == "ja_JP" ? 1 : 2;
         public override string Id => "voisona:" + Path.GetFileNameWithoutExtension(VoiceFileName);
         public override string Name => Language == "ja_JP" ? "Chis-A (VoiSona Japanese)" : "Chis-A (VoiSona English / Cross-Lingual)";
@@ -24,7 +25,19 @@ namespace OpenUtau.Core.VoiSona {
         public VoiSonaSinger(string language, string version, string location) {
             Language = language; Version = version; Location = location;
             VoiceFileName = $"nitech-jp_{language}_f008_svss.tsnvoice";
+            // Freeze the engine revision with the singer snapshot. Refresh voices creates a new
+            // snapshot, invalidating in-memory audio even for a same-version replacement.
+            string? plugin = VoiSonaSingerLoader.PluginPath;
+            CacheStamp = Version + "|" + FileStamp(Path.Combine(location, VoiceFileName))
+                + "|" + FileStamp(plugin == null ? "" : Path.Combine(plugin, "Contents/Info.plist"))
+                + "|" + FileStamp(plugin == null ? "" : Path.Combine(plugin, "Contents/MacOS/VoiSona Song"))
+                + "|" + FileStamp(VoiSonaRenderer.HelperPath);
             found = loaded = true;
+        }
+        static string FileStamp(string path) {
+            if (string.IsNullOrEmpty(path)) return "missing";
+            var file = new FileInfo(path);
+            return file.Exists ? file.Length + ":" + file.LastWriteTimeUtc.Ticks : "missing";
         }
         public override bool TryGetOto(string phoneme, out UOto oto) {
             oto = UOto.OfDummy(phoneme); return true;

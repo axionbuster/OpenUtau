@@ -59,6 +59,21 @@ namespace OpenUtau.Core {
             } finally { Directory.Delete(root, true); }
         }
         [Fact]
+        public void SameVersionReplacementInvalidatesInMemoryPhraseCache() {
+            string dir = Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString()); Directory.CreateDirectory(dir);
+            try {
+                string model = Path.Combine(dir, "nitech-jp_ja_JP_f008_svss.tsnvoice");
+                File.WriteAllText(model, "old fixture");
+                var first = new VoiSonaSinger("ja_JP", "2.1.0", dir);
+                var (_, before) = NativePhrase(first);
+                File.WriteAllText(model, "replacement fixture with the same version label");
+                var refreshed = new VoiSonaSinger("ja_JP", "2.1.0", dir);
+                var (_, after) = NativePhrase(refreshed);
+                Assert.NotEqual(first.CacheStamp, refreshed.CacheStamp);
+                Assert.NotEqual(before.hash, after.hash);
+            } finally { Directory.Delete(dir, true); }
+        }
+        [Fact]
         public void InvalidOrSilentAudioCannotBecomeCacheHit() {
             string path = Path.GetTempFileName();
             try {

@@ -11,6 +11,7 @@ using Serilog;
 namespace OpenUtau.Core.Render {
     public class RenderNote {
         public readonly string lyric;
+        public readonly string[] phonemes;
         public readonly int tone;
         public readonly int tuning;
         public readonly float adjustedTone;
@@ -23,8 +24,9 @@ namespace OpenUtau.Core.Render {
         public readonly double durationMs;
         public readonly double endMs;
 
-        public RenderNote(Pipeline.NoteSource note, TimeAxis axis, int partPosition, int phrasePosition) {
+        public RenderNote(Pipeline.NoteSource note, TimeAxis axis, int partPosition, int phrasePosition, string[] phonemes = null) {
             lyric = note.Lyric;
+            this.phonemes = phonemes ?? Array.Empty<string>();
             tone = note.Tone;
             tuning = note.Tuning;
             adjustedTone = note.AdjustedTone;
@@ -249,7 +251,9 @@ namespace OpenUtau.Core.Render {
             duration = end - position;
 
             notes = uNotes
-                .Select(n => new RenderNote(notesOf[n], timeAxis, source.PartPosition, position))
+                .Select(n => new RenderNote(notesOf[n], timeAxis, source.PartPosition, position,
+                    source.Singer is VoiSona.VoiSonaSinger
+                        ? source.Phonemes.Where(p => p.NoteIndex == n).Select(p => p.Phoneme).ToArray() : null))
                 .ToArray();
             phones = phrasePhonemes
                 .Select(p => new RenderPhone(source, p, position))

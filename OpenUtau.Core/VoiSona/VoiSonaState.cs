@@ -54,14 +54,14 @@ namespace OpenUtau.Core.VoiSona {
     internal sealed record VoiSonaScore(byte[] State, double DurationMs);
 
     internal static class VoiSonaState {
-        public const int Schema = 1;
+        public const int Schema = 2;
         public const double HeadMs = 500;
         public const double TailMs = 500;
         public static double LogF0(double tone) => Math.Log(440) + (tone - 69) * Math.Log(2) / 12;
         public static VoiSonaScore FromPhrase(RenderPhrase phrase, VoiSonaSinger singer) {
             var notes = phrase.notes.Where(n => n.endMs > phrase.positionMs && n.positionMs < phrase.endMs)
                 .Select(n => new VoiSonaNote(n.positionMs - phrase.positionMs + HeadMs, n.durationMs,
-                    n.adjustedTone, n.lyric)).ToArray();
+                    n.adjustedTone, Lyric(n))).ToArray();
             double length = Math.Max(phrase.durationMs + HeadMs + TailMs, notes.Max(n => n.StartMs + n.DurationMs) + TailMs);
             return Build(singer, notes, length, ms => {
                 double tick = phrase.timeAxis.MsPosToTickPos(ms - HeadMs + phrase.positionMs);
@@ -71,6 +71,15 @@ namespace OpenUtau.Core.VoiSona {
                 double fraction = Math.Clamp(index - left, 0, 1);
                 return (phrase.pitches[left] * (1 - fraction) + phrase.pitches[right] * fraction) / 100;
             });
+        }
+        internal static string Lyric(RenderNote note) {
+            if (note.lyric.StartsWith('+')) return note.lyric;
+            if (note.phonemes.Length != 1)
+                throw new ArgumentException("VoiSona requires one lyric per note. Use DEFAULT for Japanese/English lyrics or KO to JA for Korean lyrics with the Japanese voice.");
+            string lyric = note.phonemes[0];
+            if (lyric.Any(c => c >= '\uac00' && c <= '\ud7a3'))
+                throw new ArgumentException("VoiSona cannot sing Hangul directly. Select KO to JA with the Japanese voice to convert Korean lyrics.");
+            return lyric;
         }
         internal static IReadOnlyList<VoiSonaNote> MergeExtensions(IReadOnlyList<VoiSonaNote> notes) {
             var merged = new List<VoiSonaNote>();

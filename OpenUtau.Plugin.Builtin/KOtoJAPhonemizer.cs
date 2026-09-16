@@ -505,6 +505,18 @@ namespace OpenUtau.Plugin.Builtin {
             } else currIMF = GetIMFFromHint(note.phoneticHint);
             // Convert current note to phoneme
             currPhoneme = $"{currIMF[0]}{currIMF[1]}";
+            if (singer is OpenUtau.Core.VoiSona.VoiSonaSinger nativeSinger) {
+                if (nativeSinger.NoteLanguage != 1)
+                    throw new ArgumentException("KO to JA requires the VoiSona Japanese voice.");
+                // VoiSona consumes lyric syllables, not UTAU VCV/CVVC sample aliases.
+                // Keep the existing Korean sound variation and hint parsing above.
+                string cv = ToHiragana(AltCv.TryGetValue(currPhoneme, out var mapped) ? mapped : currPhoneme);
+                string coda = currIMF[2] switch {
+                    "n" => "ん", "m" => "む", "r" => "る",
+                    "k" => "く", "t" => "と", "p" => "ぷ", _ => "",
+                };
+                return new Result { phonemes = new[] { new Phoneme { phoneme = cv + coda } } };
+            }
             // Adjust current phoneme based on previous neighbor
             if (prevNeighbour != null && prevNeighbour?.lyric != "bre" && singer.TryGetMappedOto(prevNeighbour.Value.lyric, note.tone + shift, color, out _)) {
                 // Apply alt CV

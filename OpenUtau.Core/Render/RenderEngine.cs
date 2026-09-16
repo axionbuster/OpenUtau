@@ -189,9 +189,9 @@ namespace OpenUtau.Core.Render {
                     : (ISignalSource)fader;
                 trackOutputs.Add(trackOut);
             }
-            var task = Task.Run(() => {
+            var task = RenderTask.Run(() => {
                 RenderRequests(requests, newCancellation, playing: !wait, planner, exporting: wait);
-            });
+            }, newCancellation.Token);
             task.ContinueWith(task => {
                 if (task.IsFaulted && !wait) {
                     Log.Error(task.Exception.Flatten(), "Failed to render.");

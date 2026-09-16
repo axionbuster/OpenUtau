@@ -113,7 +113,7 @@ namespace OpenUtau.App.Controls {
                 if (ViewModel != null) {
                     await ViewModel.RefreshSingersAsync();
                 }
-                SingersMenu.Open();
+                SingersMenu.Open((Control)sender);
             } else {
                 DocManager.Inst.ExecuteCmd(new ErrorMessageNotification("There is no singer."));
             }

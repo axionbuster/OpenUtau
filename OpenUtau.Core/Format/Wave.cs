@@ -2,7 +2,6 @@
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
-using NAudio.Flac;
 using NAudio.Vorbis;
 using NAudio.Wave;
 using NAudio.Wave.SampleProviders;
@@ -17,7 +16,7 @@ namespace OpenUtau.Core.Format {
             var ext = Path.GetExtension(filepath);
             byte[] buffer = new byte[128];
             string tag = "";
-            using (var stream = File.Open(filepath, FileMode.Open, FileAccess.Read, FileShare.Read)) {
+            using (var stream = File.Open(filepath, FileMode.Open, FileAccess.Read, FileShare.Read | FileShare.Delete)) {
                 if (stream.CanSeek) {
                     stream.Read(buffer, 0, 128);
                     tag = System.Text.Encoding.UTF8.GetString(buffer.AsSpan(0, 4));
@@ -42,7 +41,11 @@ namespace OpenUtau.Core.Format {
                 }
             }
             if (tag == "fLaC") {
-                return new FlacReader(filepath);
+                var flac = new FlacWaveStream(filepath);
+                if (flac.Length > 0) return flac;
+                flac.Dispose();
+                // Imported streaming FLAC can omit the total sample count; retain the scanner for it.
+                return new NAudio.Flac.FlacReader(filepath);
             }
             if (ext == ".aiff" || ext == ".aif" || ext == ".aifc") {
                 return new AiffFileReader(filepath);
@@ -104,6 +107,50 @@ namespace OpenUtau.Core.Format {
                 if (File.Exists(tempPath)) {
                     File.Delete(tempPath);
                 }
+            }
+        }
+
+        /// <summary>Reuse an older WAV cache without another synthesis pass.</summary>
+        public static void MigrateCache(string flacPath) {
+            string wavPath = Path.ChangeExtension(flacPath, ".wav");
+            if (!File.Exists(flacPath) && File.Exists(wavPath)) {
+                try { ConvertCacheFile(wavPath, flacPath); }
+                catch (Exception e) { Serilog.Log.Warning(e, "Could not migrate render cache {Path}", wavPath); }
+            }
+        }
+
+        public static void ConvertCacheFile(string wavPath, string flacPath) {
+            string temp = flacPath + "." + Guid.NewGuid().ToString("N") + ".tmp";
+            try {
+                using (var reader = OpenFile(wavPath)) {
+                    int bits = reader.WaveFormat.BitsPerSample <= 16 ? 16 : 24;
+                    AudioExport.WriteFlac(temp, reader.ToSampleProvider(), bits, preservePcm: true);
+                }
+                File.Move(temp, flacPath, overwrite: true);
+                File.Delete(wavPath);
+            } finally { File.Delete(temp); }
+        }
+
+        /// <summary>Atomically publish compressed mono render audio.</summary>
+        public static void WriteMonoCache(string path, float[] samples, int bits = 16) {
+            ArgumentNullException.ThrowIfNull(samples);
+            string temp = path + "." + Guid.NewGuid().ToString("N") + ".tmp";
+            try {
+                AudioExport.WriteFlac(temp, new ArraySamples(samples), bits);
+                File.Move(temp, path, overwrite: true);
+            } finally { File.Delete(temp); }
+        }
+
+        sealed class ArraySamples : ISampleProvider {
+            readonly float[] samples;
+            int position;
+            public ArraySamples(float[] samples) => this.samples = samples;
+            public WaveFormat WaveFormat { get; } = WaveFormat.CreateIeeeFloatWaveFormat(44100, 1);
+            public int Read(float[] buffer, int offset, int count) {
+                count = Math.Min(count, samples.Length - position);
+                Array.Copy(samples, position, buffer, offset, count);
+                position += count;
+                return count;
             }
         }
 

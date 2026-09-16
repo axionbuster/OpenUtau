@@ -125,7 +125,7 @@ namespace OpenUtau.Core {
             if (DocManager.Inst.Project.tracks.Count(t => t.TrackName == track.TrackName) > 1) {
                 trackName += $"_{track.TrackNo:D2}";
             }
-            return Path.Combine(dir, $"{filename}_{trackName}.wav");
+            return Path.Combine(dir, $"{filename}_{trackName}{Path.GetExtension(exportPath)}");
         }
 
         public void ClearCache() {

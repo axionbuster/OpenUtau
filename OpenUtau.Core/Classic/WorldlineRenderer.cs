@@ -73,8 +73,9 @@ namespace OpenUtau.Classic {
             var task = Task.Run(() => {
                 var result = Layout(phrase);
                 // r2 discards phrase tails rendered with undersized native control curves.
-                var wavPath = Path.Join(PathManager.Inst.CachePath, $"wdl-v{version}-r2-{phrase.hash:x16}.wav");
+                var wavPath = Path.Join(PathManager.Inst.CachePath, $"wdl-v{version}-r2-{phrase.hash:x16}.flac");
                 phrase.AddCacheFile(wavPath);
+                Wave.MigrateCache(wavPath);
                 string progressInfo = $"Track {trackNo + 1}: {this} {string.Join(" ", phrase.phones.Select(p => p.phoneme))}";
                 progress.Complete(0, progressInfo);
                 result.samples = Wave.ReadMonoCache(wavPath);
@@ -179,7 +180,7 @@ namespace OpenUtau.Classic {
                         var samplesCopy = (float[])result.samples.Clone();
                         Task.Run(() => {
                             try {
-                                Wave.WriteMono16Wav(wavPath, samplesCopy);
+                                Wave.WriteMonoCache(wavPath, samplesCopy);
                             } catch (Exception e) {
                                 Serilog.Log.Error(e, $"Failed to write cache file: {wavPath}");
                             }

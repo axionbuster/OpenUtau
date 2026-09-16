@@ -49,6 +49,10 @@ namespace OpenUtau.App {
         public static FilePickerFileType WAV { get; } = new("WAV") {
             Patterns = new[] { "*.wav" },
         };
+        public static FilePickerFileType FLAC { get; } = new("FLAC (lossless)") { Patterns = new[] { "*.flac" } };
+        public static FilePickerFileType M4A { get; } = new("M4A (AAC)") { Patterns = new[] { "*.m4a" } };
+        public static FilePickerFileType[] AudioExports => OperatingSystem.IsMacOS()
+            ? new[] { WAV, FLAC, M4A } : new[] { WAV, FLAC };
         public static FilePickerFileType ArchiveFiles { get; } = new("Archive File") {
             Patterns = new[] { "*.zip", "*.rar", "*.uar", "*.vogeon", "*.oudep" },
         };

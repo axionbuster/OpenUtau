@@ -60,8 +60,9 @@ namespace OpenUtau.Core.Vogen {
                         return new RenderResult();
                     }
                     var result = Layout(phrase);
-                    var wavPath = Path.Join(PathManager.Inst.CachePath, $"vog-{phrase.hash:x16}.wav");
+                    var wavPath = Path.Join(PathManager.Inst.CachePath, $"vog-{phrase.hash:x16}.flac");
                     phrase.AddCacheFile(wavPath);
+                    Wave.MigrateCache(wavPath);
                     string progressInfo = $"Track {trackNo + 1}: {this} \"{string.Join(" ", phrase.phones.Select(p => p.phoneme))}\"";
                     progress.Complete(0, progressInfo);
                     if (File.Exists(wavPath)) {
@@ -75,7 +76,7 @@ namespace OpenUtau.Core.Vogen {
                     }
                     if (result.samples == null) {
                         result.samples = InvokeVogen(phrase);
-                        Wave.WriteMono16Wav(wavPath, result.samples);
+                        Wave.WriteMonoCache(wavPath, result.samples);
                     }
                     if (result.samples != null) {
                         Renderers.ApplyDynamics(phrase, result);

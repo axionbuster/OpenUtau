@@ -88,13 +88,15 @@ namespace OpenUtau.Core.Enunu {
                     var wavPath = Path.Join(PathManager.Inst.CachePath, $"enu-{(phrase.hash + hash):x16}.wav");
                     var voicebankNameHash = $"{(phrase.singer as EnunuSinger).voicebankNameHash:x16}";
                     phrase.AddCacheFile(tmpPath);
-                    phrase.AddCacheFile(wavPath);
+                    var cachePath = Path.ChangeExtension(wavPath, ".flac");
+                    phrase.AddCacheFile(cachePath);
+                    Wave.MigrateCache(cachePath);
                     var config = EnunuConfig.Load(phrase.singer);
                     if (port == null) {
                         port = EnunuUtils.SetPortNum();
                     }
                     var result = Layout(phrase);
-                    if (!File.Exists(wavPath)) {
+                    if (!File.Exists(cachePath)) {
                         if (config.extensions.wav_synthesizer.Contains("synthe") || config.feature_type.Equals("melf0")) {
                             var f0Path = Path.Join(enutmpPath, "f0.npy");
                             var editorf0Path = Path.Join(enutmpPath, "editorf0.npy");
@@ -173,12 +175,13 @@ namespace OpenUtau.Core.Enunu {
                                 signal = NWaves.Operations.Operation.Resample(signal, 44100);
                                 result.samples = signal.Samples;
                             }
-                            Wave.WriteMono16Wav(wavPath, result.samples);
+                            Wave.WriteMonoCache(cachePath, result.samples);
                         }
                     }
+                    if (File.Exists(wavPath)) Wave.ConvertCacheFile(wavPath, cachePath);
                     progress.Complete(phrase.phones.Length, progressInfo);
-                    if (File.Exists(wavPath)) {
-                        using (var waveStream = Wave.OpenFile(wavPath)) {
+                    if (File.Exists(cachePath)) {
+                        using (var waveStream = Wave.OpenFile(cachePath)) {
                             result.samples = Wave.GetSamples(waveStream.ToSampleProvider().ToMono(1, 0));
                         }
                         if (result.samples != null) {

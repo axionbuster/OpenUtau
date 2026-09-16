@@ -72,9 +72,11 @@ namespace OpenUtau.Core.Voicevox {
                     progress.Complete(0, progressInfo);
                     ulong toneHash = HashPhraseGroups(phrase);
                     var wavPath = Path.Join(PathManager.Inst.CachePath, $"vv-{phrase.hash:x16}_{toneHash:x16}.wav");
-                    phrase.AddCacheFile(wavPath);
+                    var cachePath = Path.ChangeExtension(wavPath, ".flac");
+                    phrase.AddCacheFile(cachePath);
+                    Wave.MigrateCache(cachePath);
                     var result = Layout(phrase);
-                    if (!File.Exists(wavPath)) {
+                    if (!File.Exists(cachePath)) {
                         var singer = phrase.singer as VoicevoxSinger;
                         if (singer != null) {
                             if (VoicevoxUtils.dic == null) {
@@ -139,6 +141,7 @@ namespace OpenUtau.Core.Voicevox {
                                 }
                                 if (bytes != null) {
                                     File.WriteAllBytes(wavPath, bytes);
+                                    Wave.ConvertCacheFile(wavPath, cachePath);
                                 }
                             } catch (MessageCustomizableException) {
                                 //BuildVNotes has already built a message for the user.
@@ -154,8 +157,8 @@ namespace OpenUtau.Core.Voicevox {
                         }
                     }
                     progress.Complete(phrase.phones.Length, progressInfo);
-                    if (File.Exists(wavPath)) {
-                        using (var waveStream = new WaveFileReader(wavPath)) {
+                    if (File.Exists(cachePath)) {
+                        using (var waveStream = Wave.OpenFile(cachePath)) {
 
                             result.samples = Wave.GetSamples(waveStream.ToSampleProvider().ToMono(1, 0));
                         }

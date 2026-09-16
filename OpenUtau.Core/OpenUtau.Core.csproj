@@ -9,6 +9,12 @@
     <LangVersion>12</LangVersion>
   </PropertyGroup>
   <ItemGroup>
+    <PackageReference Include="org.sndfile.runtime.osx-arm64" Version="1.2.2" />
+    <PackageReference Include="org.sndfile.runtime.osx-x64" Version="1.2.2" />
+    <PackageReference Include="org.sndfile.runtime.linux-x64" Version="1.2.2" />
+    <PackageReference Include="org.sndfile.runtime.linux-arm64" Version="1.2.2" />
+    <PackageReference Include="org.sndfile.runtime.win-x64" Version="1.2.2" />
+    <PackageReference Include="org.sndfile.runtime.win-arm64" Version="1.2.2" />
     <PackageReference Include="BunLabs.NAudio.Flac" Version="2.0.1" />
     <PackageReference Include="Concentus.OggFile" Version="1.0.6" />
     <PackageReference Include="csharp-kana" Version="1.0.2" />

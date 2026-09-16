@@ -66,22 +66,24 @@ namespace OpenUtau.Classic {
                 Parallel.ForEach(source: resamplerItems, parallelOptions: new ParallelOptions() {
                     MaxDegreeOfParallelism = Preferences.Default.NumRenderThreads
                 }, body: item => {
-                    if (!cancellation.IsCancellationRequested && !File.Exists(item.outputFile)) {
-                        if (!(item.resampler is WorldlineResampler)) {
-                            VoicebankFiles.Inst.CopySourceTemp(item.inputFile, item.inputTemp);
-                        }
-                        if(!item.phone.direct){
-                            lock (Renderers.GetCacheLock(item.outputFile)) {
+                    if (!cancellation.IsCancellationRequested && !item.phone.direct) {
+                        string cachePath = Path.ChangeExtension(item.outputFile, ".flac");
+                        lock (Renderers.GetCacheLock(item.outputFile)) {
+                            Wave.MigrateCache(cachePath);
+                            if (!File.Exists(cachePath)) {
+                                if (item.resampler is not WorldlineResampler)
+                                    VoicebankFiles.Inst.CopySourceTemp(item.inputFile, item.inputTemp);
                                 item.resampler.DoResamplerReturnsFile(item, Log.Logger);
-                            }
-                            if (!File.Exists(item.outputFile)) {
-                                DocManager.Inst.Project.timeAxis.TickPosToBarBeat(item.phrase.position + item.phone.position, out int bar, out int beat, out int tick);
-                                throw new InvalidDataException($"{item.resampler} failed to resample \"{item.phone.phoneme}\" at {bar}:{beat}.{string.Format("{0:000}", tick)}");
+                                if (!File.Exists(item.outputFile)) {
+                                    DocManager.Inst.Project.timeAxis.TickPosToBarBeat(item.phrase.position + item.phone.position, out int bar, out int beat, out int tick);
+                                    throw new InvalidDataException($"{item.resampler} failed to resample \"{item.phone.phoneme}\" at {bar}:{beat}.{tick:000}");
+                                }
+                                Wave.ConvertCacheFile(item.outputFile, cachePath);
+                                if (item.resampler is not WorldlineResampler)
+                                    VoicebankFiles.Inst.CopyBackMetaFiles(item.inputFile, item.inputTemp);
                             }
                         }
-                        if (!(item.resampler is WorldlineResampler)) {
-                            VoicebankFiles.Inst.CopyBackMetaFiles(item.inputFile, item.inputTemp);
-                        }
+                        item.outputFile = cachePath;
                     }
                     progress.Complete(1, $"Track {trackNo + 1}: {item.resampler} \"{item.phone.phoneme}\"");
                 });
@@ -105,11 +107,13 @@ namespace OpenUtau.Classic {
                 string progressInfo = $"Track {trackNo + 1} : {phrase.wavtool} \"{string.Join(" ", phrase.phones.Select(p => p.phoneme))}\"";
                 progress.Complete(0, progressInfo);
                 var wavPath = Path.Join(PathManager.Inst.CachePath, $"cat-{phrase.hash:x16}.wav");
-                phrase.AddCacheFile(wavPath);
+                var cachePath = Path.ChangeExtension(wavPath, ".flac");
+                    phrase.AddCacheFile(cachePath);
+                    Wave.MigrateCache(cachePath);
                 var result = Layout(phrase);
-                if (File.Exists(wavPath)) {
+                if (File.Exists(cachePath)) {
                     try {
-                        using (var waveStream = Wave.OpenFile(wavPath)) {
+                        using (var waveStream = Wave.OpenFile(cachePath)) {
                             result.samples = Wave.GetSamples(waveStream.ToSampleProvider().ToMono(1, 0));
                         }
                     } catch (Exception e) {
@@ -122,6 +126,7 @@ namespace OpenUtau.Classic {
                     }
                     var wavtool = ToolsManager.Inst.GetWavtool(phrase.wavtool);
                     result.samples = wavtool.Concatenate(resamplerItems, wavPath, cancellation);
+                    if (File.Exists(wavPath)) Wave.ConvertCacheFile(wavPath, cachePath);
                     foreach (var item in resamplerItems) {
                         VoicebankFiles.Inst.CopyBackMetaFiles(item.inputFile, item.inputTemp);
                     }

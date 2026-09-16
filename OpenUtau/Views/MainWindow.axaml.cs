@@ -442,7 +442,7 @@ namespace OpenUtau.App.Views {
         async void OnMenuExportMixdown(object sender, RoutedEventArgs args) {
             var project = DocManager.Inst.Project;
             var file = await FilePicker.SaveFileAboutProject(
-                this, "menu.file.exportmixdown", FilePicker.WAV);
+                this, "menu.file.exportmixdown", FilePicker.AudioExports);
             if (!string.IsNullOrEmpty(file)) {
                 await PlaybackManager.Inst.RenderMixdown(project, file);
             }
@@ -461,7 +461,7 @@ namespace OpenUtau.App.Views {
         async void OnMenuExportWavTo(object sender, RoutedEventArgs args) {
             var project = DocManager.Inst.Project;
             var file = await FilePicker.SaveFileAboutProject(
-                this, "menu.file.exportwavto", FilePicker.WAV);
+                this, "menu.file.exportwavto", FilePicker.AudioExports);
             if (!string.IsNullOrEmpty(file)) {
                 await PlaybackManager.Inst.RenderToFiles(project, file);
             }
@@ -475,7 +475,7 @@ namespace OpenUtau.App.Views {
                     part.renderPhrases.All(phrase => {
                         var hashStr = $"{phrase.hash:x16}";
                         return Directory.EnumerateFiles(
-                            PathManager.Inst.CachePath, $"*{hashStr}*.wav").Any();
+                            PathManager.Inst.CachePath, $"*{hashStr}*").Any(p => Path.GetExtension(p) is ".wav" or ".flac");
                     }));
             if (!allRendered) {
                 await MessageBox.Show(

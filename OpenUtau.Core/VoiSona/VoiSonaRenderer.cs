@@ -52,11 +52,17 @@ namespace OpenUtau.Core.VoiSona {
                 progress.Complete(0, info);
                 var score = VoiSonaState.FromPhrase(phrase, singer);
                 string key = CacheKey(score.State, EngineIdentity(singer), score.DurationMs);
-                string cache = Path.Combine(PathManager.Inst.CachePath, $"voisona-{key}.wav");
+                string cache = Path.Combine(PathManager.Inst.CachePath, $"voisona-{key}.flac");
                 Directory.CreateDirectory(PathManager.Inst.CachePath);
                 phrase.AddCacheFile(cache);
                 int frames = (int)Math.Ceiling(score.DurationMs * 44.1);
                 float[]? samples = TryReadAudio(cache, frames);
+                string legacy = Path.ChangeExtension(cache, ".wav");
+                if (samples == null && TryReadAudio(legacy, frames) is { } previous) {
+                    Format.Wave.WriteMonoCache(cache, previous, 24);
+                    samples = TryReadAudio(cache, frames);
+                    if (samples != null) File.Delete(legacy);
+                }
                 if (samples == null) {
                     if (File.Exists(cache)) File.Delete(cache);
                     string directory = Path.Combine(PathManager.Inst.CachePath, "voisona-job-" + Guid.NewGuid().ToString("N"));
@@ -73,7 +79,8 @@ namespace OpenUtau.Core.VoiSona {
                         await RunHelper(HelperPath, job, directory, token, message => progress.Complete(0, $"Track {trackNo + 1}: {message}"));
                         samples = TryReadAudio(job.output, frames) ?? throw new InvalidOperationException("VoiSona returned invalid or silent audio. No audio was cached.");
                         token.ThrowIfCancellationRequested();
-                        File.Move(job.output, cache, true);
+                        Format.Wave.WriteMonoCache(cache, samples, 24);
+                        samples = TryReadAudio(cache, frames) ?? throw new IOException("Could not read the completed VoiSona cache.");
                     } finally {
                         try { Directory.Delete(directory, true); } catch (IOException) { }
                     }
@@ -107,12 +114,13 @@ namespace OpenUtau.Core.VoiSona {
         internal static float[]? TryReadAudio(string path, int frames) {
             if (!File.Exists(path)) return null;
             try {
-                using var reader = new WaveFileReader(path);
-                if (reader.WaveFormat.SampleRate != 44100 || reader.SampleCount != frames || reader.WaveFormat.Channels != 2) return null;
-                var samples = Format.Wave.GetSamples(reader.ToSampleProvider().ToMono(0.5f, 0.5f));
+                using var reader = Format.Wave.OpenFile(path);
+                if (reader.WaveFormat.SampleRate != 44100 || reader.Length / reader.WaveFormat.BlockAlign != frames || reader.WaveFormat.Channels is not (1 or 2)) return null;
+                var provider = reader.ToSampleProvider();
+                var samples = Format.Wave.GetSamples(reader.WaveFormat.Channels == 1 ? provider : provider.ToMono(0.5f, 0.5f));
                 if (samples.Length != frames || samples.Any(v => !float.IsFinite(v)) || !samples.Any(v => Math.Abs(v) > 0.000001f)) return null;
                 return samples;
-            } catch (Exception e) when (e is IOException or FormatException or ArgumentException) { return null; }
+            } catch (Exception) { return null; }
         }
         internal static async Task RunHelper(string helper, VoiSonaJob job, string directory, CancellationToken token,
                 Action<string>? report = null, TimeSpan? timeout = null) {

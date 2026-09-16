@@ -109,9 +109,10 @@ namespace OpenUtau.Core.DiffSinger {
                     } else {
                         depth = 1.0;
                     }
-                    var wavName = $"ds-{phrase.hash:x16}-depth{depth:f2}-steps{steps}.wav";
+                    var wavName = $"ds-{phrase.hash:x16}-depth{depth:f2}-steps{steps}.flac";
                     var wavPath = Path.Join(PathManager.Inst.CachePath, wavName);
                     phrase.AddCacheFile(wavPath);
+                    Wave.MigrateCache(wavPath);
                     string progressInfo = $"Track {trackNo + 1}: {this} depth={depth:f2} steps={steps} \"{string.Join(" ", phrase.phones.Select(p => p.phoneme))}\"";
                     if (File.Exists(wavPath)) {
                         try {
@@ -125,7 +126,7 @@ namespace OpenUtau.Core.DiffSinger {
                     if (result.samples == null) {
                         result.samples = InvokeDiffsinger(phrase, depth, steps, cancellation, renderEvents);
                         if (result.samples != null) {
-                            Wave.WriteMono16Wav(wavPath, result.samples);
+                            Wave.WriteMonoCache(wavPath, result.samples);
                         }
                     }
                     if (result.samples != null) {

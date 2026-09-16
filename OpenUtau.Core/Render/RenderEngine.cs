@@ -190,7 +190,7 @@ namespace OpenUtau.Core.Render {
                 trackOutputs.Add(trackOut);
             }
             var task = Task.Run(() => {
-                RenderRequests(requests, newCancellation, playing: !wait, planner);
+                RenderRequests(requests, newCancellation, playing: !wait, planner, exporting: wait);
             });
             task.ContinueWith(task => {
                 if (task.IsFaulted && !wait) {
@@ -244,6 +244,7 @@ namespace OpenUtau.Core.Render {
                 }
             }
             planner.BeginSession(specs);
+            RenderRequests(requests, newCancellation, false, planner, exporting: true);
             Enumerable.Range(0, requests.Max(req => req.trackNo) + 1)
                 .Select(trackNo => requests.Where(req => req.trackNo == trackNo).ToArray())
                 .ToList()
@@ -251,7 +252,6 @@ namespace OpenUtau.Core.Render {
                     if (trackRequests.Length == 0) {
                         trackMixes.Add(null);
                     } else {
-                        RenderRequests(trackRequests, newCancellation, false, planner);
                         trackMixes.Add(planner.GetTrackSource(trackRequests[0].trackNo));
                     }
                 });
@@ -324,7 +324,7 @@ namespace OpenUtau.Core.Render {
             RenderPartRequest[] requests,
             CancellationTokenSource cancellation,
             bool playing,
-            MixPlanner planner) {
+            MixPlanner planner, bool exporting = false) {
             if (requests.Length == 0 || cancellation.IsCancellationRequested) {
                 return;
             }
@@ -353,7 +353,15 @@ namespace OpenUtau.Core.Render {
             var coverageRanges = maintainCoverage
                 ? new Dictionary<UVoicePart, List<(int start, int end)>>()
                 : null;
-            foreach (var tuple in tupleArray) {
+            // Admit in playhead/timeline order; publish completed VoiSona jobs immediately.
+            // Other renderers retain their sequential rendering path below.
+            var scheduled = BoundedRenderQueue.Run(tupleArray,
+                VoiSona.VoiSonaRenderer.Concurrency(exporting, Environment.ProcessorCount),
+                (tuple, passCancellation) => tuple.phrase.renderer is VoiSona.VoiSonaRenderer
+                    && !(tuple.phrase.xsy?.Any(x => x > 0) ?? false)
+                    ? tuple.phrase.renderer.Render(tuple.phrase, progress, tuple.request.trackNo, passCancellation, true)
+                    : Task.FromResult<RenderResult>(null), cancellation.Token);
+            foreach (var (tuple, prepared) in scheduled) {
                 if (cancellation.IsCancellationRequested) {
                     break;
                 }
@@ -367,7 +375,8 @@ namespace OpenUtau.Core.Render {
                     : null;
                 bool useXsy = phrase.xsy != null && phrase.xsy.Any(x => x > 0);
                 if (!useXsy) {
-                    var task = phrase.renderer.Render(phrase, progress, request.trackNo, cancellation, true, renderEvents);
+                    var task = prepared != null ? Task.FromResult(prepared)
+                        : phrase.renderer.Render(phrase, progress, request.trackNo, cancellation, true, renderEvents);
                     task.Wait();
                     if (cancellation.IsCancellationRequested) {
                         break;

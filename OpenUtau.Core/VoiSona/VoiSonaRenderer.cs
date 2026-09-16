@@ -15,7 +15,11 @@ using OpenUtau.Core.Ustx;
 
 namespace OpenUtau.Core.VoiSona {
     public sealed class VoiSonaRenderer : IRenderer {
-        static readonly SemaphoreSlim Gate = new(1);
+        // Bound memory-heavy native instances across overlapping render passes.
+        static readonly SemaphoreSlim Gate = new(4);
+        static readonly SemaphoreSlim[] CacheGates = Enumerable.Range(0, 256).Select(_ => new SemaphoreSlim(1)).ToArray();
+        internal static int Concurrency(bool exporting, int processors)
+            => Math.Clamp(processors / 2, 1, exporting ? 4 : 2);
         public static string HelperPath => Path.Combine(AppContext.BaseDirectory, "openutau-voisona-host");
         public USingerType SingerType => USingerType.VoiSona;
         public bool SupportsRenderPitch => false;
@@ -39,6 +43,7 @@ namespace OpenUtau.Core.VoiSona {
         public async Task<RenderResult> Render(RenderPhrase phrase, Progress progress, int trackNo,
                 CancellationTokenSource cancellation, bool isPreRender = false, RenderPhraseEvents? renderEvents = null) {
             var token = cancellation.Token;
+            SemaphoreSlim? cacheGate = null;
             await Gate.WaitAsync(token);
             try {
                 token.ThrowIfCancellationRequested();
@@ -52,6 +57,11 @@ namespace OpenUtau.Core.VoiSona {
                 progress.Complete(0, info);
                 var score = VoiSonaState.FromPhrase(phrase, singer);
                 string key = CacheKey(score.State, EngineIdentity(singer), score.DurationMs);
+                // Same-state phrases and overlapping playback/export must not write one
+                // cache concurrently. Fixed stripes avoid retaining a lock per song edit.
+                var keyGate = CacheGates[Convert.ToByte(key[..2], 16)];
+                await keyGate.WaitAsync(token);
+                cacheGate = keyGate;
                 string cache = Path.Combine(PathManager.Inst.CachePath, $"voisona-{key}.flac");
                 Directory.CreateDirectory(PathManager.Inst.CachePath);
                 phrase.AddCacheFile(cache);
@@ -92,7 +102,7 @@ namespace OpenUtau.Core.VoiSona {
                 if (phrase.VoiSonaChunk is { } chunk) result = chunk.Crop(result);
                 progress.Complete(phrase.phones.Length, $"Track {trackNo + 1}: VoiSona");
                 return result;
-            } finally { Gate.Release(); }
+            } finally { cacheGate?.Release(); Gate.Release(); }
         }
         internal static string CacheKey(byte[] state, string identity, double durationMs) {
             using var stream = new MemoryStream();

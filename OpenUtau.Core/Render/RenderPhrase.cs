@@ -205,6 +205,7 @@ namespace OpenUtau.Core.Render {
         /// matching the slot layout used by the mix.
         /// </summary>
         public readonly PhraseLayout Layout;
+        internal readonly VoiSona.VoiSonaChunk? VoiSonaChunk;
 
         private List<string> cacheFiles = new List<string>();
 
@@ -212,7 +213,8 @@ namespace OpenUtau.Core.Render {
         /// The heavy phrase build over an immutable snapshot; pure over the
         /// snapshot, safe off the UI thread.
         /// </summary>
-        internal RenderPhrase(Pipeline.PhraseSource source, int phraseStart, int phraseEnd) {
+        internal RenderPhrase(Pipeline.PhraseSource source, int phraseStart, int phraseEnd, VoiSona.VoiSonaChunk? voisonaChunk = null) {
+            VoiSonaChunk = voisonaChunk;
             var phrasePhonemes = source.Phonemes
                 .Skip(phraseStart)
                 .Take(phraseEnd - phraseStart)
@@ -524,7 +526,13 @@ namespace OpenUtau.Core.Render {
             using (var stream = new MemoryStream()) {
                 using (var writer = new BinaryWriter(stream)) {
                     writer.Write(singer.Id);
-                    if (singer is VoiSona.VoiSonaSinger voisona) writer.Write(voisona.CacheStamp);
+                    if (singer is VoiSona.VoiSonaSinger voisona) {
+                        writer.Write(voisona.CacheStamp);
+                        if (VoiSonaChunk is { } chunk) {
+                            writer.Write(chunk.StartFrame); writer.Write(chunk.EndFrame);
+                            writer.Write(chunk.FadeIn); writer.Write(chunk.FadeOut);
+                        }
+                    }
                     writer.Write(renderer?.ToString() ?? "");
                     writer.Write(wavtool ?? "");
                     writer.Write(timeAxis.Timestamp);

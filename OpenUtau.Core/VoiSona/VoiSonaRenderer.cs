@@ -23,7 +23,8 @@ namespace OpenUtau.Core.VoiSona {
         public override string ToString() => Renderers.VOISONA;
         public (double HeadMs, double TailMs) PhrasePadding(USinger singer, IEnumerable<UPhoneme> phonemes)
             => (VoiSonaState.HeadMs, VoiSonaState.TailMs);
-        public RenderResult Layout(RenderPhrase phrase) => new() {
+        public RenderResult Layout(RenderPhrase phrase) => phrase.VoiSonaChunk?.Layout() ?? FullLayout(phrase);
+        internal static RenderResult FullLayout(RenderPhrase phrase) => new() {
             leadingMs = VoiSonaState.HeadMs,
             positionMs = phrase.positionMs,
             estimatedLengthMs = phrase.durationMs + VoiSonaState.HeadMs + VoiSonaState.TailMs,
@@ -74,9 +75,10 @@ namespace OpenUtau.Core.VoiSona {
                     }
                 }
                 token.ThrowIfCancellationRequested();
-                var result = Layout(phrase);
+                var result = FullLayout(phrase);
                 result.samples = samples;
                 Renderers.ApplyDynamics(phrase, result);
+                if (phrase.VoiSonaChunk is { } chunk) result = chunk.Crop(result);
                 progress.Complete(phrase.phones.Length, $"Track {trackNo + 1}: VoiSona");
                 return result;
             } finally { Gate.Release(); }

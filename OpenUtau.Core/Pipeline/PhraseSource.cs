@@ -419,11 +419,15 @@ namespace OpenUtau.Core.Pipeline {
         }
 
         public RenderPhrase[] BuildPhrases() {
-            var phrases = new RenderPhrase[PhraseGroups.Length];
-            for (int i = 0; i < PhraseGroups.Length; ++i) {
-                phrases[i] = new RenderPhrase(this, PhraseGroups[i].Start, PhraseGroups[i].End);
+            var phrases = new List<RenderPhrase>();
+            foreach (var group in PhraseGroups) {
+                if (Renderer is VoiSona.VoiSonaRenderer) {
+                    phrases.AddRange(VoiSona.VoiSonaChunk.Build(this, group.Start, group.End));
+                } else {
+                    phrases.Add(new RenderPhrase(this, group.Start, group.End));
+                }
             }
-            return phrases;
+            return phrases.ToArray();
         }
     }
 }

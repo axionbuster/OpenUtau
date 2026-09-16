@@ -342,6 +342,9 @@ namespace OpenUtau.Core.Render {
                 tupleArray = OrderForPlayback(tupleArray);
             } else if (focusPart != null || focusTick >= 0) {
                 tupleArray = OrderForPreRender(tupleArray);
+            } else {
+                // Warm the beginning of every track before later chunks of one track.
+                tupleArray = tupleArray.OrderBy(t => t.offsetMs).ToArray();
             }
             var progress = new Progress(tupleArray.Sum(t => t.phrase.phones.Length));
             // Only full-project passes (pre-render / export) maintain the real-curve coverage

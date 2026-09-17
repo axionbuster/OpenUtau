@@ -52,6 +52,10 @@ namespace OpenUtau.App.Controls {
 
         public PianoRoll(PianoRollViewModel model) {
             InitializeComponent();
+            foreach (string name in new[] { "MajorScaleToggle", "MinorScaleToggle" }) {
+                this.FindControl<CheckBox>(name)!.AddHandler(PointerReleasedEvent,
+                    OnScaleTogglePointerReleased, RoutingStrategies.Bubble, handledEventsToo: true);
+            }
             DataContext = ViewModel = model;
             ValueTip.IsVisible = false;
             SetPenToolIcon();
@@ -1486,7 +1490,14 @@ namespace OpenUtau.App.Controls {
 
         #endregion
 
+        // Mouse interaction returns Space to playback; Tab navigation keeps the checkboxes operable.
+        void OnScaleTogglePointerReleased(object? sender, PointerReleasedEventArgs args) => Focus();
+
         void OnKeyDown(object? sender, KeyEventArgs args) {
+            if (RootWindow.FocusManager?.GetFocusedElement() is CheckBox scale &&
+                (scale.Name == "MajorScaleToggle" || scale.Name == "MinorScaleToggle")) {
+                return;
+            }
             var notesVm = ViewModel.NotesViewModel;
             if (notesVm.Part == null) {
                 args.Handled = false;

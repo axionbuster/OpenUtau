@@ -37,11 +37,16 @@ namespace OpenUtau.Core.Util {
             int octave = (step - Naturals[letter] - accidental * 2) / 31 - 1;
             return FifthName(fifths) + octave;
         }
-        // Fixed D-centered spelling supplies five color families. Respelling never changes them.
-        public static int ColorFamily(int step) {
-            int fifths = FifthsForStep(step, 2);
-            int letter = Mod(fifths + 1, 7);
-            return (fifths + 1 - letter) / 7 + 2;
+        public static bool IsMajorDegree(int relativeStep) => relativeStep is 0 or 5 or 10 or 13 or 18 or 23 or 28;
+        public static bool IsMinorDegree(int relativeStep) => relativeStep is 0 or 5 or 8 or 13 or 18 or 21 or 26;
+        static readonly int[] ScaleSteps = { 0, 5, 8, 10, 13, 18, 21, 23, 26, 28 };
+        static readonly string[] ScaleLabels = { "1", "2", "♭3", "3", "4", "5", "♭6", "6", "♭7", "7" };
+        public static int ScaleColorIndex(int step, int tonicFifths) =>
+            Mod(step - tonicFifths * 18, 31);
+        public static string ScaleDegreeLabel(int step, int tonicFifths) {
+            int relativeStep = ScaleColorIndex(step, tonicFifths);
+            int index = Array.IndexOf(ScaleSteps, relativeStep);
+            return index < 0 ? $"+{relativeStep}" : ScaleLabels[index];
         }
     }
 }

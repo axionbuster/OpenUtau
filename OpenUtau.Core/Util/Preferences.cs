@@ -156,7 +156,9 @@ namespace OpenUtau.Core.Util {
         [Serializable]
         public class SerializablePreferences {
             public int PreferredKey31Fifths = 2;
-            public bool FoldDiatonic31 = false;
+            public bool FoldDiatonic31 = false; // Legacy setting, used only to migrate older preferences.
+            public bool? FoldMajor31;
+            public bool? FoldMinor31;
             public WindowSize MainWindowSize = new WindowSize();
             public WindowSize PianorollWindowSize = new WindowSize();
             public int UndoLimit = 100;

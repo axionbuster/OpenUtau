@@ -45,7 +45,8 @@ namespace OpenUtau.App.ViewModels {
         // Display rows are independent of the document's exact pitch steps.
         public int[]? DisplayRows { get; private set; }
         public int DisplayTrackCount => DisplayRows?.Length ?? TrackCount;
-        [Reactive] public partial bool FoldDiatonic31 { get; set; }
+        [Reactive] public partial bool FoldMajor31 { get; set; }
+        [Reactive] public partial bool FoldMinor31 { get; set; }
         public double StepToDisplayRow(double step) {
             if (DisplayRows == null) { return step; }
             int index = Array.BinarySearch(DisplayRows, (int)Math.Floor(step));
@@ -60,10 +61,11 @@ namespace OpenUtau.App.ViewModels {
         }
         private void RebuildDisplayRows(bool retainRows = false) {
             double center = DisplayRowToStep(DisplayTrackCount - 1 - TrackOffset - ViewportTracks / 2);
-            if (Is31Edo && FoldDiatonic31) {
+            if (Is31Edo && (FoldMajor31 || FoldMinor31)) {
                 int tonic = ((Preferences.Default.PreferredKey31Fifths * 18) % 31 + 31) % 31;
-                // Major and natural minor share the preferred tonic.
-                var scale = new[] { 0, 5, 8, 10, 13, 18, 21, 23, 26, 28 };
+                var scale = Enumerable.Range(0, 31).Where(step =>
+                    (FoldMajor31 && Edo31.IsMajorDegree(step)) ||
+                    (FoldMinor31 && Edo31.IsMinorDegree(step))).ToArray();
                 var rows = new SortedSet<int>(Enumerable.Range(0, TrackCount)
                     .Where(step => scale.Contains((step - tonic + 31) % 31)));
                 if (retainRows && DisplayRows != null) { rows.UnionWith(DisplayRows); }
@@ -169,9 +171,11 @@ namespace OpenUtau.App.ViewModels {
                 UpdateSnapDiv();
             });
 
-            FoldDiatonic31 = Preferences.Default.FoldDiatonic31;
-            this.WhenAnyValue(x => x.FoldDiatonic31).Skip(1).Subscribe(value => {
-                Preferences.Default.FoldDiatonic31 = value;
+            FoldMajor31 = Preferences.Default.FoldMajor31 ?? Preferences.Default.FoldDiatonic31;
+            FoldMinor31 = Preferences.Default.FoldMinor31 ?? Preferences.Default.FoldDiatonic31;
+            this.WhenAnyValue(x => x.FoldMajor31, x => x.FoldMinor31).Skip(1).Subscribe(value => {
+                Preferences.Default.FoldMajor31 = value.Item1;
+                Preferences.Default.FoldMinor31 = value.Item2;
                 Preferences.Save();
                 RebuildDisplayRows();
             });
@@ -435,7 +439,7 @@ namespace OpenUtau.App.ViewModels {
             this.RaisePropertyChanged(nameof(VScrollBarMax));
             if (Is31Edo) {
                 Key = Preferences.Default.PreferredKey31Fifths;
-                KeyText = "Spelling: " + Edo31.FifthName(Key);
+                KeyText = "Tonic: " + Edo31.FifthName(Key);
                 return;
             }
             Key = userKey;

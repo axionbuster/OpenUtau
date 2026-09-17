@@ -24,16 +24,20 @@ namespace OpenUtau.Core.Ustx {
             finally { project.AfterSave(); }
         }
         [Fact]
-        public void AllSpellingsRoundTripAndColorsStayFixed() {
+        public void AllSpellingsRoundTripAndColorsFollowTonic() {
             Assert.Equal(2, new Preferences.SerializablePreferences().PreferredKey31Fifths);
             for (int key = -15; key <= 15; key++) {
                 Assert.Equal(31, Enumerable.Range(0, 31).Select(s => Edo31.FifthsForStep(s, key)).Distinct().Count());
                 for (int step = 0; step < Edo31.MaxStep; step++) {
                     Assert.Equal(step, Edo31.ParseName(Edo31.Name(step, key)));
-                    Assert.InRange(Edo31.ColorFamily(step), 0, 4);
+                    Assert.InRange(Edo31.ScaleColorIndex(step, key), 0, 30);
+                    Assert.Equal(Edo31.ScaleColorIndex(step, 0), Edo31.ScaleColorIndex(step + key * 18, key));
                 }
             }
-            Assert.Equal(5, Enumerable.Range(0, 31).Select(Edo31.ColorFamily).Distinct().Count());
+            Assert.Equal(31, Enumerable.Range(0, 31).Select(s => Edo31.ScaleColorIndex(s, 0)).Distinct().Count());
+            Assert.Equal("1", Edo31.ScaleDegreeLabel(36, 2));
+            Assert.Equal("+1", Edo31.ScaleDegreeLabel(6, 2));
+            Assert.Equal("♭3", Edo31.ScaleDegreeLabel(13, 2));
             Assert.Equal("C4", Edo31.Name(155, 2));
             Assert.NotEqual(Edo31.ParseName("C#4"), Edo31.ParseName("Db4"));
         }

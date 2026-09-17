@@ -29,13 +29,15 @@ namespace OpenUtau.App {
             var previousSink = DocManager.Inst.CommandSink;
             var previousOutput = PlaybackManager.Inst.AudioOutput;
             bool previousPlay = Preferences.Default.PlayTone;
-            bool previousFold = Preferences.Default.FoldDiatonic31;
+            bool? previousFold = Preferences.Default.FoldMajor31;
+            bool? previousMinor = Preferences.Default.FoldMinor31;
             try {
                 DocManager.Inst.CommandSink = _ => { };
                 PlaybackManager.Inst.AudioOutput = new OpenUtau.Audio.DummyAudioOutput();
                 PlaybackManager.Inst.EndAllTones();
                 Preferences.Default.PlayTone = true;
-                Preferences.Default.FoldDiatonic31 = false;
+                Preferences.Default.FoldMajor31 = false;
+                Preferences.Default.FoldMinor31 = false;
                 DocManager.Inst.SearchAllLegacyPlugins();
                 var vm = new PianoRollViewModel();
                 var editor = new PianoRoll(vm);
@@ -67,7 +69,8 @@ namespace OpenUtau.App {
                 PlaybackManager.Inst.EndAllTones();
                 PlaybackManager.Inst.AudioOutput = previousOutput;
                 Preferences.Default.PlayTone = previousPlay;
-                Preferences.Default.FoldDiatonic31 = previousFold;
+                Preferences.Default.FoldMajor31 = previousFold;
+                Preferences.Default.FoldMinor31 = previousMinor;
                 DocManager.Inst.CommandSink = previousSink;
                 DocManager.Inst.TakeProjectForTest(previous);
             }

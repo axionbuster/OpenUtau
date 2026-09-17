@@ -6,21 +6,28 @@ The New dialog also offers **12-TET** and **Cancel**. Ordinary `.ustx`
 projects keep their existing keyboard, key control, and pitch editing behavior.
 
 The native keyboard has 31 equal steps per octave. Draw and drag notes by one
-step; octave transposition moves 31 steps. The five fixed keyboard colors identify
-double flats, flats, naturals, sharps, and double sharps in the D-centered reference
-spelling. Changing displayed names does not change these colors or sounding pitches.
+step; octave transposition moves 31 steps. Colors identify intervals from the selected
+tonic: the tonic is always blue, regardless of its note name. All 31 pitches use one
+continuous OKLCH hue circle at equal lightness (0.82) and chroma (0.075), with 360/31
+degrees between steps. Major and minor show subsets of that same palette. Printed
+scale degrees (1, 2, ♭3, 3, 4, 5, ♭6, 6, ♭7, 7), step offsets for intervening pitches
+(+1 means one 31-TET step above the tonic), and a double line at the tonic provide cues
+independent of color. Adjacent colors are deliberately gradual; use labels for exact identity. Black keyboard text has at least
+11:1 contrast against every row color. The roll uses subdued tints in either theme.
 
-The **Spelling** menu selects the preferred key for note names. It is an application
+The **Tonic** menu selects the reference for colors, scale degrees, and note names. It is an application
 preference, persists across launches, and defaults to **D** when unset. Changing it
 does not mark the project modified. No preferred-key information is saved in the
 project. This is a spelling center, not a major/minor key declaration.
 
-The **Diatonic** checkbox at the start of the piano-roll toolbar collapses empty
-non-scale rows. It uses the combined major and natural minor collections rooted at the same
-preferred spelling key (ten pitches per octave). Existing pitches anywhere in the project remain visible, including
+The independent **Major** and **Minor** checkboxes at the start of the piano-roll toolbar
+collapse empty non-scale rows. Minor means natural minor. Both can be enabled together
+for their combined collection (ten pitches per octave), rooted at the preferred spelling key. Existing pitches anywhere in the project remain visible, including
 out-of-scale notes. Rows revealed during editing stay available until the view is
 expanded and collapsed again, so deleting a note does not shift the grid beneath
-the pointer. Uncheck it to restore all 31 steps per octave.
+the pointer. Turn both off to restore all 31 steps per octave. Tab to either checkbox and press Space
+to toggle it; after a mouse click, Space continues to control playback. Existing Diatonic
+preferences migrate to both checkboxes.
 
 This application preference persists across launches and is available only for
 31-TET documents. It does not change notes, tuning, undo history, or project files.
@@ -60,10 +67,10 @@ The optional Liquid Glass icon is not required for the standard icon to work.
 
 ## Fork version
 
-The local fork identifies itself as `0.1.570-tet31.13 [31-TET]`, based on the
+The local fork identifies itself as `0.1.570-tet31.19 [31-TET]`, based on the
 upstream 0.1.570 development line. The application title uses the informational
 version, preserving the fork suffix without the assembly's trailing zero. macOS
-uses numeric bundle version `0.1.570.13` and short version `0.1.570`. These build
+uses numeric bundle version `0.1.570.19` and short version `0.1.570`. These build
 versions are independent of the native project format revision.
 
 ## Image-scaling regression check

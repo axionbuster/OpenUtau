@@ -15,10 +15,41 @@ namespace OpenUtau.App.Controls {
         public bool Is31Edo { get => GetValue(Is31EdoProperty); set => SetValue(Is31EdoProperty, value); }
         public static readonly StyledProperty<int[]?> DisplayRowsProperty = AvaloniaProperty.Register<TrackBackground, int[]?>(nameof(DisplayRows));
         public int[]? DisplayRows { get => GetValue(DisplayRowsProperty); set => SetValue(DisplayRowsProperty, value); }
+        // One continuous tonic-relative hue circle for all 31 pitches, including folded views.
+        // Equal OKLCH lightness/chroma (0.82/0.075), hues spaced 360/31 degrees apart.
+        // Degree/step labels and tonic boundaries carry meaning independently of hue.
         static readonly IBrush[] MicrotoneBrushes = {
-            new SolidColorBrush(Color.Parse("#9BC9E8")), new SolidColorBrush(Color.Parse("#BACB9C")),
-            new SolidColorBrush(Color.Parse("#F2EAD7")), new SolidColorBrush(Color.Parse("#E5BA85")),
-            new SolidColorBrush(Color.Parse("#CBB2DD")),
+            new SolidColorBrush(Color.Parse("#A0C8F4")),
+            new SolidColorBrush(Color.Parse("#A9C5F6")),
+            new SolidColorBrush(Color.Parse("#B4C1F6")),
+            new SolidColorBrush(Color.Parse("#BEBEF4")),
+            new SolidColorBrush(Color.Parse("#C8BBF0")),
+            new SolidColorBrush(Color.Parse("#D2B8EA")),
+            new SolidColorBrush(Color.Parse("#DAB5E3")),
+            new SolidColorBrush(Color.Parse("#E1B3DB")),
+            new SolidColorBrush(Color.Parse("#E7B1D1")),
+            new SolidColorBrush(Color.Parse("#ECB0C7")),
+            new SolidColorBrush(Color.Parse("#EFB0BC")),
+            new SolidColorBrush(Color.Parse("#F1B1B2")),
+            new SolidColorBrush(Color.Parse("#F1B2A8")),
+            new SolidColorBrush(Color.Parse("#EFB49F")),
+            new SolidColorBrush(Color.Parse("#ECB797")),
+            new SolidColorBrush(Color.Parse("#E7BA91")),
+            new SolidColorBrush(Color.Parse("#E1BE8D")),
+            new SolidColorBrush(Color.Parse("#D9C28C")),
+            new SolidColorBrush(Color.Parse("#D0C68D")),
+            new SolidColorBrush(Color.Parse("#C6C991")),
+            new SolidColorBrush(Color.Parse("#BBCC96")),
+            new SolidColorBrush(Color.Parse("#B1CF9E")),
+            new SolidColorBrush(Color.Parse("#A6D2A7")),
+            new SolidColorBrush(Color.Parse("#9CD3B1")),
+            new SolidColorBrush(Color.Parse("#93D4BB")),
+            new SolidColorBrush(Color.Parse("#8DD5C6")),
+            new SolidColorBrush(Color.Parse("#89D4D0")),
+            new SolidColorBrush(Color.Parse("#88D3DA")),
+            new SolidColorBrush(Color.Parse("#8AD1E3")),
+            new SolidColorBrush(Color.Parse("#8FCFEA")),
+            new SolidColorBrush(Color.Parse("#97CCF0")),
         };
         public static readonly DirectProperty<TrackBackground, double> TrackHeightProperty =
             AvaloniaProperty.RegisterDirect<TrackBackground, double>(
@@ -117,7 +148,8 @@ namespace OpenUtau.App.Controls {
                     int row = (DisplayRows?.Length ?? Edo31.MaxStep) - 1 - track;
                     if (row < 0 || row >= (DisplayRows?.Length ?? Edo31.MaxStep)) { break; }
                     int step = DisplayRows == null ? row : DisplayRows[row];
-                    var color = MicrotoneBrushes[Edo31.ColorFamily(step)];
+                    int colorIndex = Edo31.ScaleColorIndex(step, Preferences.Default.PreferredKey31Fifths);
+                    var color = MicrotoneBrushes[colorIndex];
                     context.DrawRectangle(IsKeyboard ? color : Background, null, new Rect(0, (int)top, Bounds.Width, TrackHeight));
                     if (!IsKeyboard) {
                         using (context.PushOpacity(0.12)) {
@@ -125,7 +157,15 @@ namespace OpenUtau.App.Controls {
                         }
                     }
                     context.DrawLine(new Pen(Brushes.Gray, 0.5), new Point(0, (int)top), new Point(Bounds.Width, (int)top));
+                    if (colorIndex == 0) {
+                        // A double boundary identifies the tonic even without hue perception.
+                        var tonicPen = new Pen(IsKeyboard ? Brushes.Black : Foreground, 1);
+                        context.DrawLine(tonicPen, new Point(0, top + 1), new Point(Bounds.Width, top + 1));
+                        context.DrawLine(tonicPen, new Point(0, top + 3), new Point(Bounds.Width, top + 3));
+                    }
                     if (IsKeyboard && TrackHeight >= 12) {
+                        var degree = TextLayoutCache.Get(Edo31.ScaleDegreeLabel(step, Preferences.Default.PreferredKey31Fifths), Brushes.Black, 12);
+                        degree.Draw(context, new Point(4, top + (TrackHeight - degree.Height) / 2));
                         var label = TextLayoutCache.Get(Edo31.Name(step, Preferences.Default.PreferredKey31Fifths), Brushes.Black, 12);
                         label.Draw(context, new Point(Bounds.Width - 4 - label.Width, top + (TrackHeight - label.Height) / 2));
                     }

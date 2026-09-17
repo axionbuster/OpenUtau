@@ -12,22 +12,27 @@ continuous OKLCH hue circle at equal lightness (0.82) and chroma (0.075), with 3
 degrees between steps. Major and minor show subsets of that same palette. Printed
 scale degrees (1, 2, ♭3, 3, 4, 5, ♭6, 6, ♭7, 7), step offsets for intervening pitches
 (+1 means one 31-TET step above the tonic), and a double line at the tonic provide cues
-independent of color. Adjacent colors are deliberately gradual; use labels for exact identity. Black keyboard text has at least
-11:1 contrast against every row color. The roll uses subdued tints in either theme, with a permanent stronger tint and thin
+independent of color. Intervening chromatic step labels use smaller, dark gray type
+with at least 5:1 contrast; scale-degree labels and note names remain black. The tonic
+degree and note name are bold. Adjacent colors are deliberately gradual; use labels
+for exact identity. Black keyboard text has at least 11:1 contrast against every row
+color. The roll uses subdued tints in either theme, with a permanent stronger tint and thin
 contrasting boundary on tonic rows. This remains visible at minimum vertical zoom,
 independently of selection and playback.
 
-The **Tonic** menu selects the reference for colors, scale degrees, and note names. It is an application
-preference, persists across launches, and defaults to **D** when unset. Changing it
+The **Tonic** menu selects the reference for colors, scale degrees, and note names.
+It is an application preference, persists across launches, and defaults to **D** when unset. Changing it
 does not mark the project modified. No preferred-key information is saved in the
 project. This is a spelling center, not a major/minor key declaration.
 
 The independent **Major** and **Minor** checkboxes at the start of the piano-roll toolbar
 collapse empty non-scale rows. Minor means natural minor. Both can be enabled together
-for their combined collection (ten pitches per octave), rooted at the preferred spelling key. Existing pitches anywhere in the project remain visible, including
+for their combined collection (ten pitches per octave), rooted at the preferred spelling
+key. Existing pitches anywhere in the project remain visible, including
 out-of-scale notes. Rows revealed during editing stay available until the view is
 expanded and collapsed again, so deleting a note does not shift the grid beneath
-the pointer. Turn both off to restore all 31 steps per octave. Tab to either checkbox and press Space
+the pointer. Turn both off to restore all 31 steps per octave.
+Tab to either checkbox and press Space
 to toggle it; after a mouse click, Space continues to control playback. Existing Diatonic
 preferences migrate to both checkboxes.
 

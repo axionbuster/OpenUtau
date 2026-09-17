@@ -18,6 +18,7 @@ namespace OpenUtau.App.Controls {
         // One continuous tonic-relative hue circle for all 31 pitches, including folded views.
         // Equal OKLCH lightness/chroma (0.82/0.075), hues spaced 360/31 degrees apart.
         // Degree/step labels and tonic boundaries carry meaning independently of hue.
+        static readonly IBrush ChromaticDegreeBrush = new SolidColorBrush(Color.Parse("#484848"));
         static readonly IBrush[] MicrotoneBrushes = {
             new SolidColorBrush(Color.Parse("#A0C8F4")),
             new SolidColorBrush(Color.Parse("#A9C5F6")),
@@ -175,9 +176,12 @@ namespace OpenUtau.App.Controls {
                         }
                     }
                     if (IsKeyboard && TrackHeight >= 12) {
-                        var degree = TextLayoutCache.Get(Edo31.ScaleDegreeLabel(step, Preferences.Default.PreferredKey31Fifths), Brushes.Black, 12);
+                        bool isScaleDegree = Edo31.IsMajorDegree(colorIndex) || Edo31.IsMinorDegree(colorIndex);
+                        var degree = TextLayoutCache.Get(
+                            Edo31.ScaleDegreeLabel(step, Preferences.Default.PreferredKey31Fifths),
+                            isScaleDegree ? Brushes.Black : ChromaticDegreeBrush, isScaleDegree ? 12 : 10, bold: colorIndex == 0);
                         degree.Draw(context, new Point(4, top + (TrackHeight - degree.Height) / 2));
-                        var label = TextLayoutCache.Get(Edo31.Name(step, Preferences.Default.PreferredKey31Fifths), Brushes.Black, 12);
+                        var label = TextLayoutCache.Get(Edo31.Name(step, Preferences.Default.PreferredKey31Fifths), Brushes.Black, 12, bold: colorIndex == 0);
                         label.Draw(context, new Point(Bounds.Width - 4 - label.Width, top + (TrackHeight - label.Height) / 2));
                     }
                     track++;

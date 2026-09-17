@@ -64,15 +64,14 @@ namespace OpenUtau.Core.Ustx {
         public override int Duration { get => duration; set => duration = value; }
 
         public override int GetMinDurTick(UProject project) {
-            int endTicks = position + (notes.LastOrDefault()?.End ?? 1);
-            project.timeAxis.TickPosToBarBeat(endTicks, out int bar, out int beat, out int remainingTicks);
-            return project.timeAxis.BarBeatToTickPos(bar, beat + 1) - position;
+            return GetMinDurTickForNoteEdit(project, notes.Select(note => note.End).DefaultIfEmpty(1).Max());
         }
         public int GetMinDurTickForNoteEdit(UProject project, int noteEnd) {
-            project.timeAxis.TickPosToBarBeat(position + noteEnd - 1, out int bar, out int beat, out int remainingTicks);
-            return project.timeAxis.BarBeatToTickPos(bar + 2, 0) - position;
+            // Round up to the containing beat, without reserving an extra bar.
+            project.timeAxis.TickPosToBarBeat(position + Math.Max(1, noteEnd) - 1, out int bar, out int beat, out int remainingTicks);
+            return project.timeAxis.BarBeatToTickPos(bar, beat + 1) - position;
         }
-        
+
         public override int GetMaxPosiTick(UProject project) {
             int maxStartTick = position + (notes.FirstOrDefault()?.position ?? Duration);
             project.timeAxis.TickPosToBarBeat(maxStartTick, out int bar, out int beat, out int remainingTicks);

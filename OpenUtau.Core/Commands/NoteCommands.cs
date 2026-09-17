@@ -23,33 +23,15 @@ namespace OpenUtau.Core {
     }
 
     public class AddNoteCommand : NoteCommand {
-        readonly int NewPartDuration;
-        readonly int OldPartDuration;
         public AddNoteCommand(UVoicePart part, UNote note) : base(part, note) {
-            OldPartDuration = part.Duration;
-            int minDurTick = part.GetMinDurTickForNoteEdit(DocManager.Inst.Project, note.End);
-            if (part.Duration < minDurTick) {
-                NewPartDuration = minDurTick;
-            }
         }
         public AddNoteCommand(UVoicePart part, List<UNote> notes) : base(part, notes) {
-            OldPartDuration = part.Duration;
-            var note = notes.LastOrDefault();
-            if (note != null) {
-                int minDurTick = part.GetMinDurTickForNoteEdit(DocManager.Inst.Project, note.End);
-                if (part.Duration < minDurTick) {
-                    NewPartDuration = minDurTick;
-                }
-            }
         }
         public override string ToString() { return "Add note"; }
         public override void Execute() {
             lock (Part) {
                 foreach (var note in Notes) {
                     Part.notes.Add(note);
-                }
-                if (NewPartDuration > 0) {
-                    Part.Duration = NewPartDuration;
                 }
             }
         }
@@ -58,7 +40,6 @@ namespace OpenUtau.Core {
                 foreach (var note in Notes) {
                     Part.notes.Remove(note);
                 }
-                Part.Duration = OldPartDuration;
             }
         }
     }
@@ -85,28 +66,13 @@ namespace OpenUtau.Core {
 
     public class MoveNoteCommand : NoteCommand {
         readonly int DeltaPos, DeltaNoteNum;
-        readonly int NewPartDuration;
-        readonly int OldPartDuration;
         public MoveNoteCommand(UVoicePart part, UNote note, int deltaPos, int deltaNoteNum) : base(part, note) {
             DeltaPos = deltaPos;
             DeltaNoteNum = deltaNoteNum;
-            OldPartDuration = part.Duration;
-            int minDurTick = part.GetMinDurTickForNoteEdit(DocManager.Inst.Project, note.End + deltaPos);
-            if (part.Duration < minDurTick) {
-                NewPartDuration = minDurTick;
-            }
         }
         public MoveNoteCommand(UVoicePart part, List<UNote> notes, int deltaPos, int deltaNoteNum) : base(part, notes) {
             DeltaPos = deltaPos;
             DeltaNoteNum = deltaNoteNum;
-            OldPartDuration = part.Duration;
-            var note = notes.LastOrDefault();
-            if (note != null) {
-                int minDurTick = part.GetMinDurTickForNoteEdit(DocManager.Inst.Project, note.End + deltaPos);
-                if (part.Duration < minDurTick) {
-                    NewPartDuration = minDurTick;
-                }
-            }
         }
         private void CheckNativeRange(int delta) {
             if (Notes.Any(n => n.tone31.HasValue && ((long)n.GridTone + delta < 0 || (long)n.GridTone + delta >= Util.Edo31.MaxStep))) {
@@ -123,9 +89,6 @@ namespace OpenUtau.Core {
                     note.SetGridTone(note.GridTone + DeltaNoteNum);
                     Part.notes.Add(note);
                 }
-                if (NewPartDuration > 0) {
-                    Part.Duration = NewPartDuration;
-                }
             }
         }
         public override void Unexecute() {
@@ -137,42 +100,23 @@ namespace OpenUtau.Core {
                     note.SetGridTone(note.GridTone - DeltaNoteNum);
                     Part.notes.Add(note);
                 }
-                Part.Duration = OldPartDuration;
             }
         }
     }
 
     public class ResizeNoteCommand : NoteCommand {
-        readonly int NewPartDuration;
-        readonly int OldPartDuration;
         readonly int DeltaDur;
         public ResizeNoteCommand(UVoicePart part, UNote note, int deltaDur) : base(part, note) {
             DeltaDur = deltaDur;
-            OldPartDuration = part.Duration;
-            int minDurTick = part.GetMinDurTickForNoteEdit(DocManager.Inst.Project, note.End + deltaDur);
-            if (part.Duration < minDurTick) {
-                NewPartDuration = minDurTick;
-            }
         }
         public ResizeNoteCommand(UVoicePart part, List<UNote> notes, int deltaDur) : base(part, notes) {
             DeltaDur = deltaDur;
-            OldPartDuration = part.Duration;
-            var note = notes.LastOrDefault();
-            if (note != null) {
-                int minDurTick = part.GetMinDurTickForNoteEdit(DocManager.Inst.Project, note.End + deltaDur);
-                if (part.Duration < minDurTick) {
-                    NewPartDuration = minDurTick;
-                }
-            }
         }
         public override string ToString() { return $"Change {Notes.Count()} notes duration"; }
         public override void Execute() {
             lock (Part) {
                 foreach (var note in Notes) {
                     note.duration += DeltaDur;
-                }
-                if (NewPartDuration > 0) {
-                    Part.Duration = NewPartDuration;
                 }
             }
         }
@@ -181,7 +125,6 @@ namespace OpenUtau.Core {
                 foreach (var note in Notes) {
                     note.duration -= DeltaDur;
                 }
-                Part.Duration = OldPartDuration;
             }
         }
     }

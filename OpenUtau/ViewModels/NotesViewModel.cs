@@ -37,7 +37,19 @@ namespace OpenUtau.App.ViewModels {
 
     public partial class NotesViewModel : ViewModelBase, ICmdSubscriber {
         [Reactive] public partial Rect Bounds { get; set; }
-        public int TickCount => Part?.Duration ?? 480 * 4;
+        private int editorTickCount;
+        public int TickCount => Math.Max(editorTickCount, Part?.Duration ?? 480 * 4);
+
+        private void ExtendEditorTimeline() {
+            // Browsing space belongs to the editor, never to the saved part.
+            int contentEnd = Math.Max(Part?.Duration ?? 0,
+                Part?.notes.Select(note => note.End).DefaultIfEmpty(0).Max() ?? 0);
+            int visibleEnd = (int)Math.Ceiling(TickOffset + ViewportTicks);
+            int padding = Project.resolution * 4 * 2;
+            editorTickCount = Math.Max(editorTickCount, Math.Max(contentEnd, visibleEnd) + padding);
+            this.RaisePropertyChanged(nameof(TickCount));
+            this.RaisePropertyChanged(nameof(HScrollBarMax));
+        }
         public bool Is31Edo => Project.Is31Edo;
         public int TrackCount => Is31Edo ? Edo31.MaxStep : ViewConstants.MaxTone;
         public double PitchStep => Is31Edo ? Edo31.StepTone : 1;
@@ -221,6 +233,7 @@ namespace OpenUtau.App.ViewModels {
                 });
             this.WhenAnyValue(x => x.TickOffset)
                 .Subscribe(tickOffset => {
+                    ExtendEditorTimeline();
                     SetPlayPos(DocManager.Inst.playPosTick, false);
                 });
             this.WhenAnyValue(x => x.ExpBounds, x => x.PrimaryKey)
@@ -563,6 +576,7 @@ namespace OpenUtau.App.ViewModels {
             }
             UnloadPart();
             Part = part as UVoicePart;
+            editorTickCount = 0;
             OnPartModified();
             RebuildPlaybackNoteIndex();
             LoadPortrait(part, project);
@@ -693,6 +707,7 @@ namespace OpenUtau.App.ViewModels {
                 return;
             }
             TickOrigin = Part.position;
+            ExtendEditorTimeline();
             UpdateIsDiffSinger();
             Notify();
         }
@@ -990,10 +1005,6 @@ namespace OpenUtau.App.ViewModels {
                 notes.ForEach(note => note.position += offset);
                 DocManager.Inst.StartUndoGroup("command.note.paste");
                 DocManager.Inst.ExecuteCmd(new AddNoteCommand(Part, notes));
-                int minDurTick = Part.GetMinDurTick(Project);
-                if (Part.Duration < minDurTick) {
-                    DocManager.Inst.ExecuteCmd(new ResizeVoicePartCommand(Project, Part, minDurTick - Part.Duration, false));
-                }
                 DocManager.Inst.EndUndoGroup();
                 Selection.Select(notes);
                 MessageBus.Current.SendMessage(new NotesSelectionEvent(Selection));
@@ -1035,10 +1046,6 @@ namespace OpenUtau.App.ViewModels {
                 notes.ForEach(note => note.position += offset);
                 DocManager.Inst.StartUndoGroup("command.note.paste");
                 DocManager.Inst.ExecuteCmd(new AddNoteCommand(Part, notes));
-                int minDurTick = Part.GetMinDurTick(Project);
-                if (Part.Duration < minDurTick) {
-                    DocManager.Inst.ExecuteCmd(new ResizeVoicePartCommand(Project, Part, minDurTick - Part.Duration, false));
-                }
                 DocManager.Inst.EndUndoGroup();
                 Selection.Select(notes);
                 MessageBus.Current.SendMessage(new NotesSelectionEvent(Selection));
@@ -1317,6 +1324,7 @@ namespace OpenUtau.App.ViewModels {
             } else if (cmd is NoteCommand noteCommand) {
                 CleanupSelectedNotes();
                 if (noteCommand.Part == Part) {
+                    ExtendEditorTimeline();
                     RebuildDisplayRows(retainRows: true);
                     RebuildPlaybackNoteIndex();
                     MessageBus.Current.SendMessage(new NotesRefreshEvent());

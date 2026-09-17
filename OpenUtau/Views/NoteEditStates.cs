@@ -194,15 +194,12 @@ namespace OpenUtau.App.Views {
             }
             int deltaTick = newPos - note.position;
             int minDeltaTick;
-            int maxDeltaTick;
             if (selectedNotes.Count > 0) {
                 minDeltaTick = -selectedNotes.Select(n => n.position).Min();
-                maxDeltaTick = part.Duration - selectedNotes.Select(n => n.End).Max();
             } else {
                 minDeltaTick = -note.position;
-                maxDeltaTick = part.Duration - note.End;
             }
-            deltaTick = Math.Clamp(deltaTick, minDeltaTick, maxDeltaTick);
+            deltaTick = Math.Max(deltaTick, minDeltaTick);
 
             if (deltaTone == 0 && deltaTick == 0) {
                 return;

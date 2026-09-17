@@ -152,16 +152,27 @@ namespace OpenUtau.App.Controls {
                     var color = MicrotoneBrushes[colorIndex];
                     context.DrawRectangle(IsKeyboard ? color : Background, null, new Rect(0, (int)top, Bounds.Width, TrackHeight));
                     if (!IsKeyboard) {
-                        using (context.PushOpacity(0.12)) {
+                        // Tonic emphasis is permanent and survives the minimum eight-pixel row height.
+                        using (context.PushOpacity(colorIndex == 0 ? 0.28 : 0.12)) {
                             context.DrawRectangle(color, null, new Rect(0, (int)top, Bounds.Width, TrackHeight));
                         }
                     }
                     context.DrawLine(new Pen(Brushes.Gray, 0.5), new Point(0, (int)top), new Point(Bounds.Width, (int)top));
                     if (colorIndex == 0) {
                         // A double boundary identifies the tonic even without hue perception.
-                        var tonicPen = new Pen(IsKeyboard ? Brushes.Black : Foreground, 1);
-                        context.DrawLine(tonicPen, new Point(0, top + 1), new Point(Bounds.Width, top + 1));
-                        context.DrawLine(tonicPen, new Point(0, top + 3), new Point(Bounds.Width, top + 3));
+                        var contrast = ThemeManager.IsDarkMode ? Brushes.White : Brushes.Black;
+                        if (!IsKeyboard) {
+                            using (context.PushOpacity(0.07)) {
+                                context.DrawRectangle(contrast, null, new Rect(0, (int)top, Bounds.Width, TrackHeight));
+                            }
+                        }
+                        using (context.PushOpacity(IsKeyboard ? 1 : 0.35)) {
+                            var tonicPen = new Pen(IsKeyboard ? Brushes.Black : contrast, 1);
+                            context.DrawLine(tonicPen, new Point(0, top + 1), new Point(Bounds.Width, top + 1));
+                            if (IsKeyboard) {
+                                context.DrawLine(tonicPen, new Point(0, top + 3), new Point(Bounds.Width, top + 3));
+                            }
+                        }
                     }
                     if (IsKeyboard && TrackHeight >= 12) {
                         var degree = TextLayoutCache.Get(Edo31.ScaleDegreeLabel(step, Preferences.Default.PreferredKey31Fifths), Brushes.Black, 12);

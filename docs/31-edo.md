@@ -13,7 +13,9 @@ degrees between steps. Major and minor show subsets of that same palette. Printe
 scale degrees (1, 2, ♭3, 3, 4, 5, ♭6, 6, ♭7, 7), step offsets for intervening pitches
 (+1 means one 31-TET step above the tonic), and a double line at the tonic provide cues
 independent of color. Adjacent colors are deliberately gradual; use labels for exact identity. Black keyboard text has at least
-11:1 contrast against every row color. The roll uses subdued tints in either theme.
+11:1 contrast against every row color. The roll uses subdued tints in either theme, with a permanent stronger tint and thin
+contrasting boundary on tonic rows. This remains visible at minimum vertical zoom,
+independently of selection and playback.
 
 The **Tonic** menu selects the reference for colors, scale degrees, and note names. It is an application
 preference, persists across launches, and defaults to **D** when unset. Changing it

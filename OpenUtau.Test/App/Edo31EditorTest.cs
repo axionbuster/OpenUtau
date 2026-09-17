@@ -35,15 +35,22 @@ namespace OpenUtau.App {
             int oldKey = Preferences.Default.PreferredKey31Fifths;
             bool? oldFold = Preferences.Default.FoldMajor31;
             bool? oldMinor = Preferences.Default.FoldMinor31;
+            bool oldLegacyFold = Preferences.Default.FoldDiatonic31;
+            string oldTheme = Preferences.Default.ThemeName;
             string prefsPath = PathManager.Inst.PrefsFilePath;
             byte[]? prefs = File.Exists(prefsPath) ? File.ReadAllBytes(prefsPath) : null;
             Window? window = null;
             try {
                 Preferences.Default.PreferredKey31Fifths = 2;
-                Preferences.Default.FoldMajor31 = false;
-                Preferences.Default.FoldMinor31 = false;
+                Preferences.Default.FoldDiatonic31 = true;
+                Preferences.Default.FoldMajor31 = null;
+                Preferences.Default.FoldMinor31 = null;
                 DocManager.Inst.SearchAllLegacyPlugins();
                 var vm = new PianoRollViewModel();
+                Assert.True(vm.NotesViewModel.FoldMajor31);
+                Assert.True(vm.NotesViewModel.FoldMinor31);
+                vm.NotesViewModel.FoldMajor31 = false;
+                vm.NotesViewModel.FoldMinor31 = false;
                 var editor = new PianoRoll(vm);
                 window = new Window { Width = 1100, Height = 900, Content = editor };
                 window.Show();
@@ -137,9 +144,20 @@ namespace OpenUtau.App {
                 project.AfterSave();
                 notes.TrackOffset = notes.DisplayTrackCount - 1 - notes.StepToDisplayRow(193);
                 Capture(window, "keyboard-31edo-diatonic.png");
-                window.RequestedThemeVariant = Avalonia.Styling.ThemeVariant.Dark;
-                Capture(window, "keyboard-31edo-dark.png");
-                window.RequestedThemeVariant = Avalonia.Styling.ThemeVariant.Light;
+                foreach (string theme in new[] { "Light", "Dark" }) {
+                    Preferences.Default.ThemeName = theme;
+                    App.SetTheme();
+                    Dispatcher.UIThread.RunJobs();
+                    Capture(window, $"keyboard-31edo-{theme}.png");
+                    notes.TrackHeight = notes.TrackHeightMin;
+                    Capture(window, $"keyboard-31edo-{theme}-zoomed-out.png");
+                    notes.FoldMajor31 = false;
+                    notes.FoldMinor31 = false;
+                    Capture(window, $"keyboard-31edo-{theme}-chromatic-zoomed-out.png");
+                    notes.FoldMajor31 = true;
+                    notes.FoldMinor31 = true;
+                    notes.TrackHeight = 18;
+                }
                 notes.SetKeyCommand.Execute(0).Subscribe();
                 Assert.Contains(155, notes.DisplayRows!);
                 Assert.DoesNotContain(157, notes.DisplayRows!);
@@ -169,6 +187,9 @@ namespace OpenUtau.App {
                 Preferences.Default.PreferredKey31Fifths = oldKey;
                 Preferences.Default.FoldMajor31 = oldFold;
                 Preferences.Default.FoldMinor31 = oldMinor;
+                Preferences.Default.FoldDiatonic31 = oldLegacyFold;
+                Preferences.Default.ThemeName = oldTheme;
+                App.SetTheme();
                 if (prefs != null) { File.WriteAllBytes(prefsPath, prefs); }
                 else if (File.Exists(prefsPath)) { File.Delete(prefsPath); }
                 DocManager.Inst.CommandSink = previousSink;

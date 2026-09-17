@@ -6,7 +6,6 @@ using OpenUtau.Core.Ustx;
 using System.Linq;
 using System.IO;
 using Serilog;
-using System.Threading.Tasks;
 using static OpenUtau.Api.Phonemizer;
 using System.Collections;
 
@@ -418,8 +417,11 @@ namespace OpenUtau.Plugin.Builtin {
             }
         }
 
+        private bool singerInitialized;
+
         public override void SetSinger(USinger singer) {
-            if (this.singer != singer) {
+            if (this.singer != singer || !singerInitialized) {
+                singerInitialized = false;
                 this.singer = singer;
                 dictionaries.Clear();
 
@@ -445,7 +447,8 @@ namespace OpenUtau.Plugin.Builtin {
                     } else {
                         Init();
                     }
-                    return; 
+                    singerInitialized = true;
+                    return;
                 }
 
                 // file paths
@@ -704,6 +707,7 @@ namespace OpenUtau.Plugin.Builtin {
                 } else {
                     Init();
                 }
+                singerInitialized = true;
             }
         }
 
@@ -1849,18 +1853,11 @@ namespace OpenUtau.Plugin.Builtin {
             if (dictionaryName == null) {
                 return;
             }
-            dictionaries[GetType()] = null;
-            if (Testing) {
-                ReadDictionary(dictionaryName);
-                Init();
-                return;
-            }
-            OnAsyncInitStarted();
-            Task.Run(() => {
-                ReadDictionary(dictionaryName);
-                Init();
-                OnAsyncInitFinished();
-            });
+            // SetSinger runs on the phonemizer worker. Finish initialization here
+            // before SetUp/Process can observe a half-built dictionary or a singer
+            // switch can overwrite the state being initialized by another task.
+            ReadDictionary(dictionaryName);
+            Init();
         }
 
         private void ReadDictionary(string dictionaryName) {
@@ -1888,6 +1885,8 @@ namespace OpenUtau.Plugin.Builtin {
 
             } catch (Exception ex) {
                 Log.Error(ex, $"Failed to read dictionary {dictionaryName}");
+                dictionaries.Remove(GetType());
+                throw;
             }
         }
 

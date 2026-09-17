@@ -108,3 +108,17 @@ The macOS fork can register both installed Chis-A variants as singers and render
 through the VoiSona Song Audio Unit without a per-render editor window. Native
 31-TET pitches and OpenUtau pitch curves are preserved. See [VoiSona setup and
 limitations](voisona.md).
+
+## Note-edit part boundaries
+
+The piano roll keeps its browsing extent separately from the saved voice part.
+Drawing, moving, or resizing notes can cross the right edge. The part grows only
+when the edit group commits, to the first beat boundary containing the farthest
+note end. A drag out and back does not enlarge the part; moving notes earlier or
+deleting them does not shrink it. Undo and redo include any automatic growth in
+the same step as the notes. Explicit part resizing remains available.
+
+Syllable-based phonemizers, including English X-SAMPA, initialize their dictionary
+on the existing phonemizer worker before processing the first notes. Initialization
+failures remain visible as phonemizer errors and can retry on the next validation;
+they no longer leave a background dictionary load permanently pending.

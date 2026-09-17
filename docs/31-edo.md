@@ -18,7 +18,9 @@ degree and note name are bold. Adjacent colors are deliberately gradual; use lab
 for exact identity. Black keyboard text has at least 11:1 contrast against every row
 color. The roll uses subdued tints in either theme, with a permanent stronger tint and thin
 contrasting lower boundary on tonic rows. This remains visible at minimum vertical zoom,
-independently of selection and playback.
+independently of selection and playback. When rows are too short for ordinary text,
+large bold 1, 4, and 5 labels identify the tonic, perfect fourth, and perfect fifth.
+They occupy separate columns so they remain legible even on adjacent folded rows.
 
 The **Tonic** menu beside the Major/Minor checkboxes selects the reference for colors, scale degrees, and note names.
 It is an application preference, persists across launches, and defaults to **D** when unset. Changing it
@@ -78,10 +80,10 @@ The optional Liquid Glass icon is not required for the standard icon to work.
 
 ## Fork version
 
-The local fork identifies itself as `0.1.570-tet31.22 [31-TET]`, based on the
+The local fork identifies itself as `0.1.570-tet31.23 [31-TET]`, based on the
 upstream 0.1.570 development line. The application title uses the informational
 version, preserving the fork suffix without the assembly's trailing zero. macOS
-uses numeric bundle version `0.1.570.22` and short version `0.1.570`. These build
+uses numeric bundle version `0.1.570.23` and short version `0.1.570`. These build
 versions are independent of the native project format revision.
 
 ## Image-scaling regression check

@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Linq;
+using System.Collections.Generic;
 using System.Reactive.Linq;
 using Avalonia;
 using Avalonia.Controls.Primitives;
@@ -132,6 +133,9 @@ namespace OpenUtau.App.Controls {
             }
             int track = (int)TrackOffset;
             double top = TrackHeight * (track - TrackOffset);
+            // Draw oversized labels after all row fills so neighboring rows cannot erase them.
+            var perfectLabels = IsPianoRoll && Is31Edo && IsKeyboard && TrackHeight < 12
+                ? new List<(int Degree, double CenterY)>() : null;
             string[] degreeNames;
             switch(Preferences.Default.DegreeStyle){
                 case 1:
@@ -174,6 +178,9 @@ namespace OpenUtau.App.Controls {
                                 context.DrawLine(tonicPen, new Point(0, top + TrackHeight - 3), new Point(Bounds.Width, top + TrackHeight - 3));
                             }
                         }
+                    }
+                    if (perfectLabels != null && colorIndex is 0 or 13 or 18) {
+                        perfectLabels.Add((colorIndex, top + TrackHeight / 2));
                     }
                     if (IsKeyboard && TrackHeight >= 12) {
                         bool isScaleDegree = Edo31.IsMajorDegree(colorIndex) || Edo31.IsMinorDegree(colorIndex) ||
@@ -220,6 +227,18 @@ namespace OpenUtau.App.Controls {
                 }
                 track++;
                 top += TrackHeight;
+            }
+            if (perfectLabels != null) {
+                using (context.PushClip(new Rect(Bounds.Size))) {
+                    foreach (var (degree, centerY) in perfectLabels) {
+                        string text = degree == 0 ? "1" : degree == 13 ? "4" : "5";
+                        var label = TextLayoutCache.Get(text, Brushes.Black, 18, bold: true);
+                        // Separate columns keep adjacent fourth/fifth rows readable in folded views.
+                        double x = degree == 0 ? 8 : degree == 13 ? (Bounds.Width - label.Width) / 2
+                            : Bounds.Width - 8 - label.Width;
+                        label.Draw(context, new Point(x, centerY - label.Height / 2));
+                    }
+                }
             }
         }
 

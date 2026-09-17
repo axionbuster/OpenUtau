@@ -78,10 +78,10 @@ The optional Liquid Glass icon is not required for the standard icon to work.
 
 ## Fork version
 
-The local fork identifies itself as `0.1.570-tet31.21 [31-TET]`, based on the
+The local fork identifies itself as `0.1.570-tet31.22 [31-TET]`, based on the
 upstream 0.1.570 development line. The application title uses the informational
 version, preserving the fork suffix without the assembly's trailing zero. macOS
-uses numeric bundle version `0.1.570.21` and short version `0.1.570`. These build
+uses numeric bundle version `0.1.570.22` and short version `0.1.570`. These build
 versions are independent of the native project format revision.
 
 ## Image-scaling regression check

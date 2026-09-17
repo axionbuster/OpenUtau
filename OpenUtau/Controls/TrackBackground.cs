@@ -176,7 +176,8 @@ namespace OpenUtau.App.Controls {
                         }
                     }
                     if (IsKeyboard && TrackHeight >= 12) {
-                        bool isScaleDegree = Edo31.IsMajorDegree(colorIndex) || Edo31.IsMinorDegree(colorIndex);
+                        bool isScaleDegree = Edo31.IsMajorDegree(colorIndex) || Edo31.IsMinorDegree(colorIndex) ||
+                            colorIndex == Edo31.HarmonicSeventh;
                         var degree = TextLayoutCache.Get(
                             Edo31.ScaleDegreeLabel(step, Preferences.Default.PreferredKey31Fifths),
                             isScaleDegree ? Brushes.Black : ChromaticDegreeBrush, isScaleDegree ? 12 : 10, bold: colorIndex == 0);

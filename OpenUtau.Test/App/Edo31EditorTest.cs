@@ -106,14 +106,16 @@ namespace OpenUtau.App {
                 Dispatcher.UIThread.RunJobs();
                 Assert.True(notes.FoldMajor31);
                 Assert.True(Preferences.Default.FoldMajor31);
+                Assert.Contains(185, notes.DisplayRows!); // D harmonic seventh (B-sharp).
                 Assert.DoesNotContain(181, notes.DisplayRows!); // D major omits B-flat.
                 Assert.Contains(155, notes.DisplayRows!); // Existing C remains visible.
                 notes.FoldMajor31 = false;
                 notes.FoldMinor31 = true;
                 Assert.Contains(181, notes.DisplayRows!);
+                Assert.Contains(185, notes.DisplayRows!); // H7 also remains in minor-only mode.
                 Assert.DoesNotContain(170, notes.DisplayRows!); // D minor omits F-sharp.
                 notes.FoldMajor31 = true;
-                Assert.Equal(110, notes.DisplayTrackCount);
+                Assert.Equal(121, notes.DisplayTrackCount);
                 // D major and D natural minor, with both forms of degrees 3, 6, and 7.
                 foreach (int step in new[] { 160, 165, 168, 170, 173, 178, 181, 183, 186, 188 }) {
                     Assert.Contains(step, notes.DisplayRows!);
@@ -161,6 +163,7 @@ namespace OpenUtau.App {
                 notes.SetKeyCommand.Execute(0).Subscribe();
                 Assert.Contains(155, notes.DisplayRows!);
                 Assert.DoesNotContain(157, notes.DisplayRows!);
+                Assert.Contains(180, notes.DisplayRows!); // C harmonic seventh (A-sharp).
                 foreach (int step in new[] { 155, 160, 163, 165, 168, 173, 176, 178, 181, 183 }) {
                     Assert.Contains(step, notes.DisplayRows!);
                 }

@@ -287,10 +287,6 @@
               </MenuItem>
             </MenuItem>
 
-            <MenuItem Name="SpellingMenu" Header="{Binding NotesViewModel.KeyText}"
-                      IsVisible="{Binding NotesViewModel.Is31Edo}"
-                      ItemsSource="{Binding NotesViewModel.Keys}" Classes="MenuItemWithSubMenu"
-                      ToolTip.Tip="Tonic for scale colors, degree labels, and note spelling. Display only; does not modify the project."/>
             <MenuItem Header="{DynamicResource menu.view}">
               <MenuItem Header="{DynamicResource prefs.appearance.showportrait}" Click="OnMenuShowPortrait">
                 <MenuItem.Icon>
@@ -385,20 +381,26 @@
 
         <Border Grid.Column="2">
           <StackPanel Orientation="Horizontal">
+            <Menu IsVisible="{Binding NotesViewModel.Is31Edo}">
+              <MenuItem Name="SpellingMenu" Header="{Binding NotesViewModel.KeyText}"
+                        IsVisible="{Binding NotesViewModel.Is31Edo}"
+                        ItemsSource="{Binding NotesViewModel.Keys}" Classes="MenuItemWithSubMenu"
+                        ToolTip.Tip="Tonic for scale colors, degree labels, and note spelling. H7 marks its harmonic seventh. Display only; does not modify the project."/>
+            </Menu>
             <TextBlock Text="Major" VerticalAlignment="Center" Margin="4,0,4,0"
                        IsVisible="{Binding NotesViewModel.Is31Edo}"/>
             <CheckBox Name="MajorScaleToggle" Margin="0,0,8,0"
                       AutomationProperties.Name="Major scale rows"
                       IsVisible="{Binding NotesViewModel.Is31Edo}"
                       IsChecked="{Binding NotesViewModel.FoldMajor31, Mode=TwoWay}"
-                      ToolTip.Tip="Show major scale rows. Combine with Minor; turn both off for all 31 steps. Existing notes stay visible. Display only."/>
+                      ToolTip.Tip="Show major scale rows plus the harmonic seventh (H7). Combine with Minor; turn both off for all 31 steps. Existing notes stay visible. Display only."/>
             <TextBlock Text="Minor" VerticalAlignment="Center" Margin="0,0,4,0"
                        IsVisible="{Binding NotesViewModel.Is31Edo}"/>
             <CheckBox Name="MinorScaleToggle" Margin="0,0,8,0"
                       AutomationProperties.Name="Natural minor scale rows"
                       IsVisible="{Binding NotesViewModel.Is31Edo}"
                       IsChecked="{Binding NotesViewModel.FoldMinor31, Mode=TwoWay}"
-                      ToolTip.Tip="Show natural minor scale rows. Combine with Major; turn both off for all 31 steps. Existing notes stay visible. Display only."/>
+                      ToolTip.Tip="Show natural minor scale rows plus the harmonic seventh (H7). Combine with Major; turn both off for all 31 steps. Existing notes stay visible. Display only."/>
             <ToggleButton Classes="toolbar" Margin="0" Padding="1" Height="20" Width="20" IsChecked="{Binding NotesViewModel.ShowTips}"
                           ToolTip.Tip="{DynamicResource pianoroll.toggle.tips}">
               <Grid Width="18" Height="18">

@@ -64,6 +64,7 @@ namespace OpenUtau.App.ViewModels {
             if (Is31Edo && (FoldMajor31 || FoldMinor31)) {
                 int tonic = ((Preferences.Default.PreferredKey31Fifths * 18) % 31 + 31) % 31;
                 var scale = Enumerable.Range(0, 31).Where(step =>
+                    step == Edo31.HarmonicSeventh ||
                     (FoldMajor31 && Edo31.IsMajorDegree(step)) ||
                     (FoldMinor31 && Edo31.IsMinorDegree(step))).ToArray();
                 var rows = new SortedSet<int>(Enumerable.Range(0, TrackCount)

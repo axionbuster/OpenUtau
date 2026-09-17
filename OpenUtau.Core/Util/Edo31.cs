@@ -37,10 +37,12 @@ namespace OpenUtau.Core.Util {
             int octave = (step - Naturals[letter] - accidental * 2) / 31 - 1;
             return FifthName(fifths) + octave;
         }
+        // Nearest 31-TET step to the 7:4 harmonic interval (about 968.8 cents).
+        public const int HarmonicSeventh = 25;
         public static bool IsMajorDegree(int relativeStep) => relativeStep is 0 or 5 or 10 or 13 or 18 or 23 or 28;
         public static bool IsMinorDegree(int relativeStep) => relativeStep is 0 or 5 or 8 or 13 or 18 or 21 or 26;
-        static readonly int[] ScaleSteps = { 0, 5, 8, 10, 13, 18, 21, 23, 26, 28 };
-        static readonly string[] ScaleLabels = { "1", "2", "♭3", "3", "4", "5", "♭6", "6", "♭7", "7" };
+        static readonly int[] ScaleSteps = { 0, 5, 8, 10, 13, 18, 21, 23, HarmonicSeventh, 26, 28 };
+        static readonly string[] ScaleLabels = { "1", "2", "♭3", "3", "4", "5", "♭6", "6", "H7", "♭7", "7" };
         public static int ScaleColorIndex(int step, int tonicFifths) =>
             Mod(step - tonicFifths * 18, 31);
         public static string ScaleDegreeLabel(int step, int tonicFifths) {

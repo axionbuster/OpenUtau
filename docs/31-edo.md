@@ -11,13 +11,13 @@ tonic: the tonic is always blue, regardless of its note name. All 31 pitches use
 continuous OKLCH hue circle at equal lightness (0.82) and chroma (0.075), with 360/31
 degrees between steps. Major and minor show subsets of that same palette. Printed
 scale degrees (1, 2, ♭3, 3, 4, 5, ♭6, 6, ♭7, 7), step offsets for intervening pitches
-(+1 means one 31-TET step above the tonic), and a double line at the tonic provide cues
+(+1 means one 31-TET step above the tonic), and a double underline at the tonic provide cues
 independent of color. Intervening chromatic step labels use smaller, dark gray type
 with at least 5:1 contrast; scale-degree labels and note names remain black. The tonic
 degree and note name are bold. Adjacent colors are deliberately gradual; use labels
 for exact identity. Black keyboard text has at least 11:1 contrast against every row
 color. The roll uses subdued tints in either theme, with a permanent stronger tint and thin
-contrasting boundary on tonic rows. This remains visible at minimum vertical zoom,
+contrasting lower boundary on tonic rows. This remains visible at minimum vertical zoom,
 independently of selection and playback.
 
 The **Tonic** menu selects the reference for colors, scale degrees, and note names.
@@ -74,10 +74,10 @@ The optional Liquid Glass icon is not required for the standard icon to work.
 
 ## Fork version
 
-The local fork identifies itself as `0.1.570-tet31.19 [31-TET]`, based on the
+The local fork identifies itself as `0.1.570-tet31.20 [31-TET]`, based on the
 upstream 0.1.570 development line. The application title uses the informational
 version, preserving the fork suffix without the assembly's trailing zero. macOS
-uses numeric bundle version `0.1.570.19` and short version `0.1.570`. These build
+uses numeric bundle version `0.1.570.20` and short version `0.1.570`. These build
 versions are independent of the native project format revision.
 
 ## Image-scaling regression check

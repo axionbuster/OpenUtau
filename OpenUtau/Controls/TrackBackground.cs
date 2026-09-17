@@ -160,7 +160,7 @@ namespace OpenUtau.App.Controls {
                     }
                     context.DrawLine(new Pen(Brushes.Gray, 0.5), new Point(0, (int)top), new Point(Bounds.Width, (int)top));
                     if (colorIndex == 0) {
-                        // A double boundary identifies the tonic even without hue perception.
+                        // Underline the tonic row, including when labels disappear at minimum zoom.
                         var contrast = ThemeManager.IsDarkMode ? Brushes.White : Brushes.Black;
                         if (!IsKeyboard) {
                             using (context.PushOpacity(0.07)) {
@@ -169,9 +169,9 @@ namespace OpenUtau.App.Controls {
                         }
                         using (context.PushOpacity(IsKeyboard ? 1 : 0.35)) {
                             var tonicPen = new Pen(IsKeyboard ? Brushes.Black : contrast, 1);
-                            context.DrawLine(tonicPen, new Point(0, top + 1), new Point(Bounds.Width, top + 1));
+                            context.DrawLine(tonicPen, new Point(0, top + TrackHeight - 1), new Point(Bounds.Width, top + TrackHeight - 1));
                             if (IsKeyboard) {
-                                context.DrawLine(tonicPen, new Point(0, top + 3), new Point(Bounds.Width, top + 3));
+                                context.DrawLine(tonicPen, new Point(0, top + TrackHeight - 3), new Point(Bounds.Width, top + TrackHeight - 3));
                             }
                         }
                     }

@@ -158,8 +158,14 @@ namespace OpenUtau.App.Controls {
                     context.DrawRectangle(IsKeyboard ? color : Background, null, new Rect(0, (int)top, Bounds.Width, TrackHeight));
                     if (!IsKeyboard) {
                         // Tonic emphasis is permanent and survives the minimum eight-pixel row height.
-                        using (context.PushOpacity(colorIndex == 0 ? 0.28 : 0.12)) {
+                        using (context.PushOpacity(colorIndex == 0 ? 0.28 : colorIndex is 13 or 18 ? 0.20 : 0.12)) {
                             context.DrawRectangle(color, null, new Rect(0, (int)top, Bounds.Width, TrackHeight));
+                        }
+                        if (colorIndex is 13 or 18) {
+                            using (context.PushOpacity(0.03)) {
+                                context.DrawRectangle(ThemeManager.IsDarkMode ? Brushes.White : Brushes.Black,
+                                    null, new Rect(0, (int)top, Bounds.Width, TrackHeight));
+                            }
                         }
                     }
                     context.DrawLine(new Pen(Brushes.Gray, 0.5), new Point(0, (int)top), new Point(Bounds.Width, (int)top));

@@ -23,7 +23,10 @@ namespace OpenUtau.Core.Util {
         public static string FifthName(int fifths) {
             int letter = Mod(fifths + 1, 7);
             int accidental = (fifths + 1 - letter) / 7;
-            return Letters[letter] + (accidental < 0 ? new string('♭', -accidental) : new string('#', accidental).Replace("##", "𝄪").Replace("#", "♯"));
+            string accidentalName = accidental < 0
+                ? new string('b', -accidental).Replace("bb", "𝄫").Replace("b", "♭")
+                : new string('#', accidental).Replace("##", "𝄪").Replace("#", "♯");
+            return Letters[letter] + accidentalName;
         }
         public static int FifthsForStep(int step, int preferredFifths) {
             int lower = preferredFifths - 15;

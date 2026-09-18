@@ -83,6 +83,11 @@ namespace OpenUtau.App {
                 project.AfterSave();
                 notes.SetKeyCommand.Execute(2).Subscribe();
                 Capture(window, "keyboard-31edo.png");
+                notes.SetKeyCommand.Execute(-15).Subscribe();
+                Assert.Equal("Tonic: F𝄫", notes.KeyText);
+                Dispatcher.UIThread.RunJobs();
+                Capture(window, "keyboard-31edo-f-double-flat.png");
+                notes.SetKeyCommand.Execute(2).Subscribe();
                 Assert.Contains("[31-TET]", new MainWindowViewModel().AppVersion);
                 Assert.Contains("0.1.570-tet31.", new MainWindowViewModel().AppVersion);
                 var toggle = editor.FindControl<CheckBox>("MajorScaleToggle");

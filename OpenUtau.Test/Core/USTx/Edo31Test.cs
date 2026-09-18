@@ -61,6 +61,17 @@ namespace OpenUtau.Core.Ustx {
             Assert.Equal("C4", Edo31.Name(155, 2));
             Assert.NotEqual(Edo31.ParseName("C#4"), Edo31.ParseName("Db4"));
         }
+        [Theory]
+        [InlineData(-8, "F♭")]
+        [InlineData(-15, "F𝄫")]
+        [InlineData(-22, "F𝄫♭")]
+        [InlineData(-29, "F𝄫𝄫")]
+        [InlineData(-30, "B𝄫𝄫♭")]
+        [InlineData(13, "F𝄪")]
+        [InlineData(20, "F𝄪♯")]
+        public void FifthNamesUseCompactDoubleAccidentalGlyphs(int fifths, string expected) {
+            Assert.Equal(expected, Edo31.FifthName(fifths));
+        }
         [Fact]
         public void NativeRoundTripPreservesExactStepAndCentsWithoutPreferredKey() {
             var text = SaveText(Fixture(true));

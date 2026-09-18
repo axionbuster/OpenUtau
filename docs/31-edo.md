@@ -62,8 +62,9 @@ Nyquist are omitted so high notes do not acquire aliased pitches.
 Names come from a chain of 31 consecutive fifths: fifteen below the preferred key
 through fifteen above it. A fifth is 18 steps; a sharp raises a letter by two
 steps. Flats and sharps are distinct where appropriate. Octave numbers follow the
-written letter, including spellings that cross C. Double sharps use 𝄪; repeated flats and combined symbols represent more remote
-alterations.
+written letter, including spellings that cross C. Double accidentals use 𝄪 and 𝄫;
+combined symbols represent more remote alterations (for example, five flats are
+shown compactly as 𝄫𝄫♭).
 
 **File → Convert a copy between 12-TET and 31-TET** creates a separate unsaved
 document. Conversion to 31-TET rounds note targets to the nearest step; conversion
@@ -93,10 +94,10 @@ The optional Liquid Glass icon is not required for the standard icon to work.
 
 ## Fork version
 
-The local fork identifies itself as `0.1.570-tet31.28 [31-TET]`, based on the
+The local fork identifies itself as `0.1.570-tet31.29 [31-TET]`, based on the
 upstream 0.1.570 development line. The application title uses the informational
 version, preserving the fork suffix without the assembly's trailing zero. macOS
-uses numeric bundle version `0.1.570.28` and short version `0.1.570`. These build
+uses numeric bundle version `0.1.570.29` and short version `0.1.570`. These build
 versions are independent of the native project format revision.
 
 ## Image-scaling regression check

@@ -7,6 +7,8 @@ using Avalonia.Controls;
 using Avalonia.Headless;
 using Avalonia.Headless.XUnit;
 using Avalonia.Input;
+using Avalonia.Media;
+using Avalonia.Media.TextFormatting;
 using Avalonia.Threading;
 using OpenUtau.App.Controls;
 using OpenUtau.App.ViewModels;
@@ -207,6 +209,25 @@ namespace OpenUtau.App {
             using var frame = window.CaptureRenderedFrame();
             Assert.NotNull(frame);
             frame.Save(Path.Combine(output, name));
+        }
+
+        [AvaloniaFact]
+        public void TextLayoutCacheKeepsItalicNoteNamesDistinct() {
+            ThreadGuard.SetUiThread(System.Threading.Thread.CurrentThread);
+            try {
+                var cacheType = typeof(PianoRoll).Assembly.GetType("OpenUtau.App.Controls.TextLayoutCache")!;
+                var get = cacheType.GetMethod("Get", System.Reflection.BindingFlags.Public |
+                    System.Reflection.BindingFlags.Static)!;
+                var upright = (TextLayout)get.Invoke(null, new object[] {
+                    "B♯4", Brushes.Black, 12d, false, false })!;
+                var italic = (TextLayout)get.Invoke(null, new object[] {
+                    "B♯4", Brushes.Black, 12d, false, true })!;
+                Assert.NotSame(upright, italic);
+                Assert.Equal(FontStyle.Normal, upright.TextLines.Single().TextRuns.First().Properties!.Typeface.Style);
+                Assert.Equal(FontStyle.Italic, italic.TextLines.Single().TextRuns.First().Properties!.Typeface.Style);
+            } finally {
+                ThreadGuard.SetUiThread(null);
+            }
         }
     }
 }

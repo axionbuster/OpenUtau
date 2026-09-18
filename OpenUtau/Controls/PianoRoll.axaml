@@ -57,6 +57,8 @@
                          DataContext="{Binding NotesViewModel}"
                          Is31Edo="{Binding Is31Edo}"
                          DisplayRows="{Binding DisplayRows}"
+                         FoldMajor31="{Binding FoldMajor31}"
+                         FoldMinor31="{Binding FoldMinor31}"
                          TrackHeight="{Binding TrackHeight}"
                          TrackOffset="{Binding TrackOffset}"
                          Key="{Binding Key}"

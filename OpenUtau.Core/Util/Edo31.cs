@@ -41,6 +41,8 @@ namespace OpenUtau.Core.Util {
         public const int HarmonicSeventh = 25;
         public static bool IsMajorDegree(int relativeStep) => relativeStep is 0 or 5 or 10 or 13 or 18 or 23 or 28;
         public static bool IsMinorDegree(int relativeStep) => relativeStep is 0 or 5 or 8 or 13 or 18 or 21 or 26;
+        public static bool IsDegreeInSelectedScales(int relativeStep, bool major, bool minor) =>
+            (major && IsMajorDegree(relativeStep)) || (minor && IsMinorDegree(relativeStep));
         static readonly int[] ScaleSteps = { 0, 5, 8, 10, 13, 18, 21, 23, HarmonicSeventh, 26, 28 };
         static readonly string[] ScaleLabels = { "1", "2", "♭3", "3", "4", "5", "♭6", "6", "H7", "♭7", "7" };
         public static int ScaleColorIndex(int step, int tonicFifths) =>

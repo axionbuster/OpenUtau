@@ -16,6 +16,10 @@ namespace OpenUtau.App.Controls {
         public bool Is31Edo { get => GetValue(Is31EdoProperty); set => SetValue(Is31EdoProperty, value); }
         public static readonly StyledProperty<int[]?> DisplayRowsProperty = AvaloniaProperty.Register<TrackBackground, int[]?>(nameof(DisplayRows));
         public int[]? DisplayRows { get => GetValue(DisplayRowsProperty); set => SetValue(DisplayRowsProperty, value); }
+        public static readonly StyledProperty<bool> FoldMajor31Property = AvaloniaProperty.Register<TrackBackground, bool>(nameof(FoldMajor31));
+        public bool FoldMajor31 { get => GetValue(FoldMajor31Property); set => SetValue(FoldMajor31Property, value); }
+        public static readonly StyledProperty<bool> FoldMinor31Property = AvaloniaProperty.Register<TrackBackground, bool>(nameof(FoldMinor31));
+        public bool FoldMinor31 { get => GetValue(FoldMinor31Property); set => SetValue(FoldMinor31Property, value); }
         // One continuous tonic-relative hue circle for all 31 pitches, including folded views.
         // Equal OKLCH lightness/chroma (0.82/0.075), hues spaced 360/31 degrees apart.
         // Degree/step labels and tonic boundaries carry meaning independently of hue.
@@ -115,6 +119,7 @@ namespace OpenUtau.App.Controls {
         protected override void OnPropertyChanged(AvaloniaPropertyChangedEventArgs change) {
             base.OnPropertyChanged(change);
             if (change.Property == DisplayRowsProperty || change.Property == Is31EdoProperty ||
+                change.Property == FoldMajor31Property || change.Property == FoldMinor31Property ||
                 change.Property == TrackHeightProperty ||
                 change.Property == TrackOffsetProperty ||
                 change.Property == ForegroundProperty ||
@@ -195,7 +200,12 @@ namespace OpenUtau.App.Controls {
                             Edo31.ScaleDegreeLabel(step, Preferences.Default.PreferredKey31Fifths),
                             isScaleDegree ? Brushes.Black : ChromaticDegreeBrush, isScaleDegree ? 12 : 10, bold: colorIndex == 0);
                         degree.Draw(context, new Point(4, top + (TrackHeight - degree.Height) / 2));
-                        var label = TextLayoutCache.Get(Edo31.Name(step, Preferences.Default.PreferredKey31Fifths), Brushes.Black, 12, bold: colorIndex == 0);
+                        bool isSelectedScaleDegree = Edo31.IsDegreeInSelectedScales(
+                            colorIndex, FoldMajor31, FoldMinor31);
+                        var label = TextLayoutCache.Get(
+                            Edo31.Name(step, Preferences.Default.PreferredKey31Fifths),
+                            Brushes.Black, 12, bold: colorIndex == 0,
+                            italic: (FoldMajor31 || FoldMinor31) && !isSelectedScaleDegree);
                         label.Draw(context, new Point(Bounds.Width - 4 - label.Width, top + (TrackHeight - label.Height) / 2));
                     }
                     track++;

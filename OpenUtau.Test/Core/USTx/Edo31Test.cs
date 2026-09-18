@@ -38,6 +38,13 @@ namespace OpenUtau.Core.Ustx {
             Assert.Equal("1", Edo31.ScaleDegreeLabel(36, 2));
             Assert.Equal("+1", Edo31.ScaleDegreeLabel(6, 2));
             Assert.Equal(Edo31.HarmonicSeventh, (int)Math.Round(31 * Math.Log2(7.0 / 4)));
+            Assert.True(Edo31.IsDegreeInSelectedScales(10, major: true, minor: false));
+            Assert.False(Edo31.IsDegreeInSelectedScales(10, major: false, minor: true));
+            Assert.True(Edo31.IsDegreeInSelectedScales(8, major: false, minor: true));
+            Assert.False(Edo31.IsDegreeInSelectedScales(8, major: true, minor: false));
+            Assert.True(Edo31.IsDegreeInSelectedScales(13, major: true, minor: true));
+            Assert.False(Edo31.IsDegreeInSelectedScales(Edo31.HarmonicSeventh, major: true, minor: true));
+            Assert.False(Edo31.IsDegreeInSelectedScales(0, major: false, minor: false));
             for (int key = -15; key <= 15; key++) {
                 Assert.Equal("H7", Edo31.ScaleDegreeLabel(key * 18 + Edo31.HarmonicSeventh, key));
             }

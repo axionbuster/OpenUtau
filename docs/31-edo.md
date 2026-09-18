@@ -17,39 +17,36 @@ step; octave transposition moves 31 steps. Colors identify intervals from the se
 tonic: the tonic is always blue, regardless of its note name. All 31 pitches use one
 continuous OKLCH hue circle at equal lightness (0.82) and chroma (0.075), with 360/31
 degrees between steps. Major and minor show subsets of that same palette. Printed
-scale degrees (1, 2, ♭3, 3, 4, 5, ♭6, 6, H7, ♭7, 7), step offsets for intervening pitches
-(+1 means one 31-TET step above the tonic), and a double underline at the tonic provide cues
-independent of color. Intervening chromatic step labels use smaller, dark gray type
-with at least 5:1 contrast; scale-degree labels and note names remain black. The tonic
-degree and note name are bold. Adjacent colors are deliberately gradual; use labels
-for exact identity. Black keyboard text has at least 11:1 contrast against every row
+septimal-meantone interval spellings (P1, M2, m3, M3, P4, P5, m6, M6, m7, M7
+for the combined Major/Minor collection), and a double underline at the tonic provide cues
+independent of color. Chromatic interval labels use smaller, dark gray type
+with at least 5:1 contrast; scale-interval labels and note names remain black. The tonic
+interval and note name are bold. Adjacent colors are deliberately gradual; use labels
+for exact identity. Hover a keyboard row to see its distance from the tonic in 31-TET steps.
+Black keyboard text has at least 11:1 contrast against every row
 color. The roll uses subdued tints in either theme, with a permanent stronger tint and thin
 contrasting lower boundary on tonic rows. This remains visible at minimum vertical zoom,
 independently of selection and playback. Perfect fourth and fifth rows have fainter
 permanent highlights in every scale view, while the tonic remains strongest. When rows are too short for ordinary text,
-large bold 1, 4, and 5 labels identify the tonic, perfect fourth, and perfect fifth.
+large bold P1, P4, and P5 labels identify the tonic, perfect fourth, and perfect fifth.
 They occupy separate columns so they remain legible even on adjacent folded rows.
 
-The **Tonic** menu beside the Major/Minor checkboxes selects the reference for colors, scale degrees, and note names.
+The **Tonic** menu beside the Major/Minor checkboxes selects the reference for colors, interval labels, and note names.
 It is an application preference, persists across launches, and defaults to **D** when unset. Changing it
 does not mark the project modified. No preferred-key information is saved in the
 project. This is a spelling center, not a major/minor key declaration.
 
 The independent **Major** and **Minor** checkboxes at the start of the piano-roll toolbar
 collapse empty non-scale rows. Minor means natural minor. Both can be enabled together
-for their combined collection, rooted at the preferred spelling key. Both modes also
-include **H7**, the harmonic seventh: 25 steps above the tonic, the 31-TET approximation
-to 7:4 (about 967.7 cents). It is distinct from the natural minor seventh at 26 steps.
-H7 uses the same full-size black interval label as the scale degrees and retains its
-color in the full chromatic view. While either scale view is active, note names outside
-the selected scale collection are italicized to make them less prominent. This includes
-H7, which remains visible but is not a major- or natural-minor-scale degree. When an
-existing note reveals a familiar chromatic degree such as **♭2**, **♯2**, or **𝄫7**, the
-interval column names that exception in italics instead of showing only its raw 31-TET
-step offset. These exceptions do not reveal unused rows or appear throughout every octave.
-Each mode
-shows eight pitches per octave; together
-they show eleven. Existing pitches anywhere in the project remain visible, including
+for their combined collection, rooted at the preferred spelling key. Each mode shows
+seven pitches per octave; together they show ten. The 25-step approximation to 7:4
+(about 967.7 cents) is spelled **A6**, the septimal-meantone augmented sixth, rather than
+as a harmonic or minor seventh. It is not part of the major or natural-minor collections,
+so folded views hide it unless an existing note reveals that row. The adjacent 24-, 25-,
+and 26-step intervals are labeled **d7**, **A6**, and **m7** respectively. All other rows
+likewise use their fifth-based septimal-meantone interval spellings; raw 31-TET step counts
+appear on hover. While either scale view is active, note names outside the selected scale
+collection are italicized to make them less prominent. Existing pitches anywhere in the project remain visible, including
 out-of-scale notes. Rows revealed during editing stay available until the view is
 expanded and collapsed again, so deleting a note does not shift the grid beneath
 the pointer. Turn both off to restore all 31 steps per octave.
@@ -101,10 +98,10 @@ The optional Liquid Glass icon is not required for the standard icon to work.
 
 ## Fork version
 
-The local fork identifies itself as `0.1.570-tet31.30 [31-TET]`, based on the
+The local fork identifies itself as `0.1.570-tet31.31 [31-TET]`, based on the
 upstream 0.1.570 development line. The application title uses the informational
 version, preserving the fork suffix without the assembly's trailing zero. macOS
-uses numeric bundle version `0.1.570.30` and short version `0.1.570`. These build
+uses numeric bundle version `0.1.570.31` and short version `0.1.570`. These build
 versions are independent of the native project format revision.
 
 ## Image-scaling regression check

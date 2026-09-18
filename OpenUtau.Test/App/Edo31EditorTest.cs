@@ -71,6 +71,12 @@ namespace OpenUtau.App {
                     Assert.Equal(step, notes.PointToTone(center));
                     Assert.InRange(Math.Abs(notes.PointToToneDouble(center) - notes.GridToTone(step)), 0, 1e-9);
                 }
+                var scaleKeyboard = editor.FindControl<Control>("ScaleKeyboard");
+                var augmentedSixth = notes.TickToneToPoint(0, notes.GridToTone(185));
+                var hoverPoint = scaleKeyboard.TranslatePoint(
+                    new Point(10, augmentedSixth.Y + notes.TrackHeight / 2), window)!.Value;
+                window.MouseMove(hoverPoint, RawInputModifiers.None);
+                Assert.Equal("A6 — 25 steps (31-TET)", ToolTip.GetTip(scaleKeyboard));
                 project.BeforeSave();
                 string before = Core.Format.Ustx31.Serialize(project);
                 project.AfterSave();
@@ -113,16 +119,16 @@ namespace OpenUtau.App {
                 Dispatcher.UIThread.RunJobs();
                 Assert.True(notes.FoldMajor31);
                 Assert.True(Preferences.Default.FoldMajor31);
-                Assert.Contains(185, notes.DisplayRows!); // D harmonic seventh (B-sharp).
+                Assert.DoesNotContain(185, notes.DisplayRows!); // D augmented sixth is not in major.
                 Assert.DoesNotContain(181, notes.DisplayRows!); // D major omits B-flat.
                 Assert.Contains(155, notes.DisplayRows!); // Existing C remains visible.
                 notes.FoldMajor31 = false;
                 notes.FoldMinor31 = true;
                 Assert.Contains(181, notes.DisplayRows!);
-                Assert.Contains(185, notes.DisplayRows!); // H7 also remains in minor-only mode.
+                Assert.DoesNotContain(185, notes.DisplayRows!); // Nor is it in natural minor.
                 Assert.DoesNotContain(170, notes.DisplayRows!); // D minor omits F-sharp.
                 notes.FoldMajor31 = true;
-                Assert.Equal(124, notes.DisplayTrackCount);
+                Assert.Equal(113, notes.DisplayTrackCount);
                 // D major and D natural minor, with both forms of degrees 3, 6, and 7.
                 foreach (int step in new[] { 160, 165, 168, 170, 173, 178, 181, 183, 186, 188 }) {
                     Assert.Contains(step, notes.DisplayRows!);
@@ -176,7 +182,7 @@ namespace OpenUtau.App {
                 notes.SetKeyCommand.Execute(0).Subscribe();
                 Assert.Contains(155, notes.DisplayRows!);
                 Assert.DoesNotContain(157, notes.DisplayRows!);
-                Assert.Contains(180, notes.DisplayRows!); // C harmonic seventh (A-sharp).
+                Assert.DoesNotContain(180, notes.DisplayRows!); // C augmented sixth is hidden by default.
                 foreach (int step in new[] { 155, 160, 163, 165, 168, 173, 176, 178, 181, 183 }) {
                     Assert.Contains(step, notes.DisplayRows!);
                 }

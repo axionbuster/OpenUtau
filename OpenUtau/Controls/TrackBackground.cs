@@ -3,7 +3,9 @@ using System.Linq;
 using System.Collections.Generic;
 using System.Reactive.Linq;
 using Avalonia;
+using Avalonia.Controls;
 using Avalonia.Controls.Primitives;
+using Avalonia.Input;
 using Avalonia.Media;
 using OpenUtau.Core;
 using OpenUtau.Core.Util;
@@ -22,7 +24,7 @@ namespace OpenUtau.App.Controls {
         public bool FoldMinor31 { get => GetValue(FoldMinor31Property); set => SetValue(FoldMinor31Property, value); }
         // One continuous tonic-relative hue circle for all 31 pitches, including folded views.
         // Equal OKLCH lightness/chroma (0.82/0.075), hues spaced 360/31 degrees apart.
-        // Degree/step labels and tonic boundaries carry meaning independently of hue.
+        // Interval labels and tonic boundaries carry meaning independently of hue.
         static readonly IBrush ChromaticDegreeBrush = new SolidColorBrush(Color.Parse("#484848"));
         static readonly IBrush[] MicrotoneBrushes = {
             new SolidColorBrush(Color.Parse("#A0C8F4")),
@@ -114,6 +116,37 @@ namespace OpenUtau.App.Controls {
             MessageBus.Current.Listen<OpenUtau.App.ViewModels.Spelling31ChangedEvent>().Subscribe(_ => InvalidateVisual());
             MessageBus.Current.Listen<ThemeChangedEvent>()
                 .Subscribe(e => InvalidateVisual());
+            ToolTip.SetShowDelay(this, 250);
+        }
+
+        protected override void OnPointerMoved(PointerEventArgs e) {
+            base.OnPointerMoved(e);
+            UpdateScaleToolTip(e.GetPosition(this).Y);
+        }
+
+        protected override void OnPointerExited(PointerEventArgs e) {
+            base.OnPointerExited(e);
+            ToolTip.SetIsOpen(this, false);
+            ToolTip.SetTip(this, null);
+        }
+
+        void UpdateScaleToolTip(double y) {
+            if (!IsPianoRoll || !IsKeyboard || !Is31Edo || TrackHeight <= 0) {
+                ToolTip.SetTip(this, null);
+                return;
+            }
+            int track = (int)Math.Floor(TrackOffset + y / TrackHeight);
+            int rowCount = DisplayRows?.Length ?? Edo31.MaxStep;
+            int row = rowCount - 1 - track;
+            if (row < 0 || row >= rowCount) {
+                ToolTip.SetTip(this, null);
+                return;
+            }
+            int step = DisplayRows == null ? row : DisplayRows[row];
+            int relativeStep = Edo31.ScaleColorIndex(step, Preferences.Default.PreferredKey31Fifths);
+            string interval = Edo31.MeantoneIntervalLabel(step, Preferences.Default.PreferredKey31Fifths);
+            string unit = relativeStep == 1 ? "step" : "steps";
+            ToolTip.SetTip(this, $"{interval} — {relativeStep} {unit} (31-TET)");
         }
 
         protected override void OnPropertyChanged(AvaloniaPropertyChangedEventArgs change) {
@@ -195,14 +228,11 @@ namespace OpenUtau.App.Controls {
                     }
                     if (IsKeyboard && TrackHeight >= 12) {
                         bool isFoldedScale = FoldMajor31 || FoldMinor31;
-                        bool isExceptionalDegree = isFoldedScale && Edo31.IsCommonChromaticDegree(colorIndex);
-                        bool isScaleDegree = Edo31.IsMajorDegree(colorIndex) || Edo31.IsMinorDegree(colorIndex) ||
-                            colorIndex == Edo31.HarmonicSeventh || isExceptionalDegree;
+                        bool isScaleDegree = Edo31.IsMajorDegree(colorIndex) || Edo31.IsMinorDegree(colorIndex);
                         var degree = TextLayoutCache.Get(
-                            Edo31.ScaleDegreeLabel(step, Preferences.Default.PreferredKey31Fifths,
-                                includeCommonChromatic: isExceptionalDegree),
+                            Edo31.MeantoneIntervalLabel(step, Preferences.Default.PreferredKey31Fifths),
                             isScaleDegree ? Brushes.Black : ChromaticDegreeBrush, isScaleDegree ? 12 : 10,
-                            bold: colorIndex == 0, italic: isExceptionalDegree);
+                            bold: colorIndex == 0);
                         degree.Draw(context, new Point(4, top + (TrackHeight - degree.Height) / 2));
                         bool isSelectedScaleDegree = Edo31.IsDegreeInSelectedScales(
                             colorIndex, FoldMajor31, FoldMinor31);
@@ -251,7 +281,7 @@ namespace OpenUtau.App.Controls {
             if (perfectLabels != null) {
                 using (context.PushClip(new Rect(Bounds.Size))) {
                     foreach (var (degree, centerY) in perfectLabels) {
-                        string text = degree == 0 ? "1" : degree == 13 ? "4" : "5";
+                        string text = degree == 0 ? "P1" : degree == 13 ? "P4" : "P5";
                         var label = TextLayoutCache.Get(text, Brushes.Black, 18, bold: true);
                         // Separate columns keep adjacent fourth/fifth rows readable in folded views.
                         double x = degree == 0 ? 8 : degree == 13 ? (Bounds.Width - label.Width) / 2

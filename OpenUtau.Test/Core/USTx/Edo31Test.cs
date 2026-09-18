@@ -36,29 +36,29 @@ namespace OpenUtau.Core.Ustx {
                 }
             }
             Assert.Equal(31, Enumerable.Range(0, 31).Select(s => Edo31.ScaleColorIndex(s, 0)).Distinct().Count());
-            Assert.Equal("1", Edo31.ScaleDegreeLabel(36, 2));
-            Assert.Equal("+1", Edo31.ScaleDegreeLabel(6, 2));
-            Assert.Equal("+3", Edo31.ScaleDegreeLabel(39, 2));
-            Assert.Equal("♭2", Edo31.ScaleDegreeLabel(39, 2, includeCommonChromatic: true));
-            Assert.Equal("♯2", Edo31.ScaleDegreeLabel(43, 2, includeCommonChromatic: true));
-            Assert.Equal("𝄫7", Edo31.ScaleDegreeLabel(60, 2, includeCommonChromatic: true));
-            Assert.True(Edo31.IsCommonChromaticDegree(3));
-            Assert.True(Edo31.IsCommonChromaticDegree(7));
-            Assert.True(Edo31.IsCommonChromaticDegree(24));
-            Assert.False(Edo31.IsCommonChromaticDegree(1));
-            Assert.False(Edo31.IsCommonChromaticDegree(5));
-            Assert.Equal(Edo31.HarmonicSeventh, (int)Math.Round(31 * Math.Log2(7.0 / 4)));
+            string[] intervalLabels = {
+                "P1", "d2", "A1", "m2", "AA1", "M2", "d3", "A2",
+                "m3", "dd4", "M3", "d4", "A3", "P4", "dd5", "A4",
+                "d5", "AA4", "P5", "d6", "A5", "m6", "AA5", "M6",
+                "d7", "A6", "m7", "dd8", "M7", "d8", "A7",
+            };
+            for (int step = 0; step < Edo31.Divisions; step++) {
+                Assert.Equal(intervalLabels[step], Edo31.MeantoneIntervalLabel(step, 0));
+                Assert.Equal(intervalLabels[step], Edo31.MeantoneIntervalLabel(step + 36, 2));
+            }
+            Assert.Equal(Edo31.SeptimalAugmentedSixth, (int)Math.Round(31 * Math.Log2(7.0 / 4)));
             Assert.True(Edo31.IsDegreeInSelectedScales(10, major: true, minor: false));
             Assert.False(Edo31.IsDegreeInSelectedScales(10, major: false, minor: true));
             Assert.True(Edo31.IsDegreeInSelectedScales(8, major: false, minor: true));
             Assert.False(Edo31.IsDegreeInSelectedScales(8, major: true, minor: false));
             Assert.True(Edo31.IsDegreeInSelectedScales(13, major: true, minor: true));
-            Assert.False(Edo31.IsDegreeInSelectedScales(Edo31.HarmonicSeventh, major: true, minor: true));
+            Assert.False(Edo31.IsDegreeInSelectedScales(Edo31.SeptimalAugmentedSixth, major: true, minor: true));
             Assert.False(Edo31.IsDegreeInSelectedScales(0, major: false, minor: false));
             for (int key = -15; key <= 15; key++) {
-                Assert.Equal("H7", Edo31.ScaleDegreeLabel(key * 18 + Edo31.HarmonicSeventh, key));
+                Assert.Equal("A6", Edo31.MeantoneIntervalLabel(
+                    key * 18 + Edo31.SeptimalAugmentedSixth, key));
             }
-            Assert.Equal("♭3", Edo31.ScaleDegreeLabel(13, 2));
+            Assert.Equal("m3", Edo31.MeantoneIntervalLabel(13, 2));
             Assert.Equal("C4", Edo31.Name(155, 2));
             Assert.NotEqual(Edo31.ParseName("C#4"), Edo31.ParseName("Db4"));
         }

@@ -111,31 +111,24 @@ namespace OpenUtau.Core.Util {
             int octave = (step - Naturals[letter] - accidental * 2) / 31 - 1;
             return FifthName(fifths) + octave;
         }
-        // Nearest 31-TET step to the 7:4 harmonic interval (about 968.8 cents).
-        public const int HarmonicSeventh = 25;
+        // Nearest 31-TET step to 7:4 (about 968.8 cents). In septimal meantone,
+        // this pitch is spelled as an augmented sixth rather than a seventh.
+        public const int SeptimalAugmentedSixth = 25;
         public static bool IsMajorDegree(int relativeStep) => relativeStep is 0 or 5 or 10 or 13 or 18 or 23 or 28;
         public static bool IsMinorDegree(int relativeStep) => relativeStep is 0 or 5 or 8 or 13 or 18 or 21 or 26;
         public static bool IsDegreeInSelectedScales(int relativeStep, bool major, bool minor) =>
             (major && IsMajorDegree(relativeStep)) || (minor && IsMinorDegree(relativeStep));
-        static readonly int[] ScaleSteps = { 0, 5, 8, 10, 13, 18, 21, 23, HarmonicSeventh, 26, 28 };
-        static readonly string[] ScaleLabels = { "1", "2", "♭3", "3", "4", "5", "♭6", "6", "H7", "♭7", "7" };
-        // Familiar chromatic degrees that can be useful when an out-of-scale note reveals their row.
-        // They are not part of either folded scale collection and must not make rows visible by themselves.
-        static readonly int[] CommonChromaticSteps = { 2, 3, 7, 11, 12, 15, 16, 20, 24, 30 };
-        static readonly string[] CommonChromaticLabels = { "♯1", "♭2", "♯2", "♭4", "♯3", "♯4", "♭5", "♯5", "𝄫7", "♯7" };
-        public static bool IsCommonChromaticDegree(int relativeStep) =>
-            Array.IndexOf(CommonChromaticSteps, Mod(relativeStep, Divisions)) >= 0;
+        // Fifth-based interval spellings for one octave of septimal meantone.
+        // Every entry agrees with the note spelling selected from the 31-note fifth chain.
+        static readonly string[] MeantoneIntervalLabels = {
+            "P1", "d2", "A1", "m2", "AA1", "M2", "d3", "A2",
+            "m3", "dd4", "M3", "d4", "A3", "P4", "dd5", "A4",
+            "d5", "AA4", "P5", "d6", "A5", "m6", "AA5", "M6",
+            "d7", "A6", "m7", "dd8", "M7", "d8", "A7",
+        };
         public static int ScaleColorIndex(int step, int tonicFifths) =>
             Mod(step - tonicFifths * 18, 31);
-        public static string ScaleDegreeLabel(int step, int tonicFifths, bool includeCommonChromatic = false) {
-            int relativeStep = ScaleColorIndex(step, tonicFifths);
-            int index = Array.IndexOf(ScaleSteps, relativeStep);
-            if (index >= 0) { return ScaleLabels[index]; }
-            if (includeCommonChromatic) {
-                index = Array.IndexOf(CommonChromaticSteps, relativeStep);
-                if (index >= 0) { return CommonChromaticLabels[index]; }
-            }
-            return $"+{relativeStep}";
-        }
+        public static string MeantoneIntervalLabel(int step, int tonicFifths) =>
+            MeantoneIntervalLabels[ScaleColorIndex(step, tonicFifths)];
     }
 }

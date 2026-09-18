@@ -112,6 +112,117 @@ namespace OpenUtau.Core.SignalChain {
         }
 
         [Fact]
+        public void ProgressiveGateWaitsForAudibleFocusedPart() {
+            var planner = new MixPlanner();
+            var focus = new UVoicePart { trackNo = 0 };
+            var accompaniment = new UVoicePart { trackNo = 1 };
+            planner.BeginSession(new[] {
+                new MixPlanner.SlotSpec(focus, 0, 1, 0, 100, 1),
+                new MixPlanner.SlotSpec(accompaniment, 1, 2, 0, 100, 1),
+            }, focus, _ => true);
+            planner.RegisterPcm(accompaniment, 2, 0, 100, 1, Enumerable.Repeat(1f, 4410).ToArray());
+
+            Assert.False(planner.PlaybackGate.CanStart(0, 100));
+            planner.RegisterPcm(focus, 1, 0, 100, 1, Enumerable.Repeat(1f, 4410).ToArray());
+            Assert.True(planner.PlaybackGate.CanStart(0, 100));
+        }
+
+        [Fact]
+        public void ProgressiveGateFallsBackForMutedFocusAndTimelineGaps() {
+            var planner = new MixPlanner();
+            var mutedFocus = new UVoicePart { trackNo = 0 };
+            var accompaniment = new UVoicePart { trackNo = 1 };
+            planner.BeginSession(new[] {
+                new MixPlanner.SlotSpec(mutedFocus, 0, 1, 0, 100, 1),
+                new MixPlanner.SlotSpec(accompaniment, 1, 2, 0, 100, 1),
+            }, mutedFocus, trackNo => trackNo == 1);
+            planner.RegisterPcm(accompaniment, 2, 0, 100, 1, Enumerable.Repeat(1f, 4410).ToArray());
+            Assert.True(planner.PlaybackGate.CanStart(0, 100));
+
+            var gapPlanner = new MixPlanner();
+            var focusWithGap = new UVoicePart { trackNo = 0 };
+            gapPlanner.BeginSession(new[] {
+                new MixPlanner.SlotSpec(focusWithGap, 0, 1, 500, 100, 1),
+            }, focusWithGap, _ => true);
+            Assert.True(gapPlanner.PlaybackGate.CanStart(0, 100));
+
+            var allMuted = new MixPlanner();
+            allMuted.BeginSession(new[] {
+                new MixPlanner.SlotSpec(mutedFocus, 0, 1, 0, 100, 1),
+            }, mutedFocus, _ => false);
+            Assert.True(allMuted.PlaybackGate.CanStart(0, 100));
+        }
+
+        [Fact]
+        public void ProgressiveAdapterLatchesAfterFirstUsefulBuffer() {
+            var planner = new MixPlanner();
+            var part = new UVoicePart { trackNo = 0 };
+            planner.BeginSession(new[] {
+                new MixPlanner.SlotSpec(part, 0, 1, 0, 100, 1),
+            }, part, _ => true);
+            var source = planner.GetTrackSource(0);
+            var adapter = new MasterAdapter(source) { ProgressiveStartGate = planner.PlaybackGate };
+            var buffer = new float[100];
+            Assert.Equal(100, adapter.Read(buffer, 0, buffer.Length));
+            Assert.True(adapter.IsWaiting);
+
+            planner.RegisterPcm(part, 1, 0, 100, 1, Enumerable.Repeat(1f, 4410).ToArray());
+            Assert.Equal(100, adapter.Read(buffer, 0, buffer.Length));
+            Assert.False(adapter.IsWaiting);
+            planner.EvictPart(part);
+            Array.Clear(buffer);
+            Assert.Equal(100, adapter.Read(buffer, 0, buffer.Length));
+            Assert.False(adapter.IsWaiting);
+            Assert.All(buffer, value => Assert.Equal(0, value));
+        }
+
+        [Fact]
+        public void PublicationFadeStartsAtCurrentTransportAndSurvivesRebuild() {
+            var planner = new MixPlanner();
+            var first = new UVoicePart { trackNo = 0 };
+            var second = new UVoicePart { trackNo = 0 };
+            planner.BeginSession(new[] {
+                new MixPlanner.SlotSpec(first, 0, 1, 0, 200, 1),
+                new MixPlanner.SlotSpec(second, 0, 2, 500, 200, 1),
+            });
+            var source = planner.GetTrackSource(0);
+            var pcm = Enumerable.Repeat(1f, 8820).ToArray();
+            var buffer = new float[882];
+
+            // Several callbacks have entered the slot before its render publishes.
+            source.Mix(0, buffer, 0, buffer.Length);
+            source.Mix(882, buffer, 0, buffer.Length);
+            source.Mix(1764, buffer, 0, buffer.Length);
+            planner.RegisterPcm(first, 1, 0, 200, 1, pcm);
+            Array.Clear(buffer);
+            source.Mix(2646, buffer, 0, buffer.Length);
+            Assert.Equal(0, buffer[0]);
+            Assert.InRange(buffer[^2], .49f, .51f);
+            Assert.All(pcm, value => Assert.Equal(1, value));
+
+            // An unrelated Pending -> Ready update rebuilds the track. The first
+            // slot keeps its original envelope instead of restarting or jumping.
+            planner.RegisterPcm(second, 2, 0, 200, 1, pcm.ToArray());
+            Array.Clear(buffer);
+            source.Mix(3528, buffer, 0, buffer.Length);
+            Assert.InRange(buffer[0], .49f, .51f);
+            Assert.InRange(buffer[^2], .99f, 1.01f);
+        }
+
+        [Fact]
+        public void PublicationBeforeFirstCallbackNeedsNoLateFade() {
+            var planner = new MixPlanner();
+            var part = new UVoicePart { trackNo = 0 };
+            planner.BeginSession(new[] {
+                new MixPlanner.SlotSpec(part, 0, 1, 0, 100, 1),
+            });
+            planner.RegisterPcm(part, 1, 0, 100, 1, Enumerable.Repeat(1f, 4410).ToArray());
+            var buffer = new float[100];
+            planner.GetTrackSource(0).Mix(0, buffer, 0, buffer.Length);
+            Assert.All(buffer, value => Assert.Equal(1, value));
+        }
+
+        [Fact]
         public void PlannerSessionPublishesSlots() {
             var scenario = MakeScenario();
             var planner = new MixPlanner();

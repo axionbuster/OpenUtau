@@ -67,10 +67,12 @@ namespace OpenUtau.Core {
         private sealed class PartSession {
             public readonly UPart part;
             public int trackNo;
+            public readonly bool audible;
 
-            public PartSession(UPart part, int trackNo) {
+            public PartSession(UPart part, int trackNo, bool audible) {
                 this.part = part;
                 this.trackNo = trackNo;
+                this.audible = audible;
             }
             // Parallel to <see cref="samples"/>: the placement of each slot.
             public readonly List<(ulong hash, double offsetMs, double estimatedLengthMs, int channels)> specs =
@@ -95,6 +97,7 @@ namespace OpenUtau.Core {
         // that completion covered. Content-keyed: edited phrases are no longer in the
         // set, so the part reads as unrendered again.
         private readonly Dictionary<UPart, HashSet<ulong>> completeParts = new Dictionary<UPart, HashSet<ulong>>();
+        public PlaybackReadinessGate PlaybackGate { get; private set; } = PlaybackReadinessGate.Empty;
 
         // ==================== session setup ====================
 
@@ -102,7 +105,10 @@ namespace OpenUtau.Core {
         /// Starts a playback session. Every spec becomes a slot: Ready with cached
         /// pcm when the cache holds the (part, hash) entry, Pending otherwise.
         /// </summary>
-        public void BeginSession(IReadOnlyList<SlotSpec> specs) {
+        public PlaybackReadinessGate BeginSession(
+                IReadOnlyList<SlotSpec> specs,
+                UPart focusPart = null,
+                Func<int, bool> isTrackAudible = null) {
             lock (lockObj) {
                 trackOrder.Clear();
                 tracks.Clear();
@@ -115,7 +121,10 @@ namespace OpenUtau.Core {
                         trackOrder.Add(track);
                     }
                     if (!partByRef.TryGetValue(spec.Part, out var part)) {
-                        part = new PartSession(spec.Part, spec.TrackNo);
+                        part = new PartSession(
+                            spec.Part,
+                            spec.TrackNo,
+                            isTrackAudible?.Invoke(spec.TrackNo) ?? true);
                         partByRef[spec.Part] = part;
                         sessionParts.Add(part);
                     }
@@ -129,7 +138,15 @@ namespace OpenUtau.Core {
                     }
                     part.samples.Add(slot);
                 }
+                PlaybackGate = new PlaybackReadinessGate(
+                    sessionParts.SelectMany(part => part.samples.Select(slot =>
+                        new PlaybackReadinessGate.Entry(
+                            part.part,
+                            part.audible,
+                            slot))).ToArray(),
+                    focusPart);
                 RebuildAll();
+                return PlaybackGate;
             }
         }
 
@@ -237,6 +254,7 @@ namespace OpenUtau.Core {
                 cache.Clear();
                 completeParts.Clear();
                 sessionParts = null;
+                PlaybackGate = PlaybackReadinessGate.Empty;
                 tracks.Clear();
                 trackOrder.Clear();
             }
@@ -381,6 +399,73 @@ namespace OpenUtau.Core {
                 }
                 track.Source.SetSlots(list.ToArray());
             }
+            PlaybackGate.Publish(
+                sessionParts.SelectMany(part => part.samples.Select(slot =>
+                    new PlaybackReadinessGate.Entry(
+                        part.part,
+                        part.audible,
+                        slot))).ToArray());
+        }
+    }
+
+    /// <summary>
+    /// Lock-free, playback-session-local start gate. It distinguishes an actual
+    /// timeline gap from audio that exists at the playhead but is still rendering.
+    /// </summary>
+    public sealed class PlaybackReadinessGate {
+        public readonly struct Entry {
+            public readonly UPart Part;
+            public readonly bool Audible;
+            public readonly SampleSlot Slot;
+
+            public Entry(UPart part, bool audible, SampleSlot slot) {
+                Part = part;
+                Audible = audible;
+                Slot = slot;
+            }
+        }
+
+        internal static readonly PlaybackReadinessGate Empty = new(Array.Empty<Entry>(), null);
+        private volatile Entry[] entries;
+        private readonly UPart focusPart;
+
+        internal PlaybackReadinessGate(Entry[] entries, UPart focusPart) {
+            this.entries = entries;
+            this.focusPart = focusPart;
+        }
+
+        internal void Publish(Entry[] next) => entries = next;
+
+        public bool CanStart(int position, int count) {
+            var snapshot = entries;
+            if (focusPart != null) {
+                bool focusPending = false;
+                bool focusOverlaps = false;
+                for (int i = 0; i < snapshot.Length; ++i) {
+                    ref readonly var entry = ref snapshot[i];
+                    if (!entry.Audible || !ReferenceEquals(entry.Part, focusPart)) continue;
+                    var state = entry.Slot.ReadinessAt(position, count, out bool overlaps);
+                    if (!overlaps) continue;
+                    focusOverlaps = true;
+                    if (state == SlotState.Ready) return true;
+                    if (state == SlotState.Pending) focusPending = true;
+                }
+                if (focusOverlaps && focusPending) return false;
+                // Failed-only focus is no longer eligible; another audible source
+                // may still make progressive audition useful.
+            }
+            bool pending = false;
+            for (int i = 0; i < snapshot.Length; ++i) {
+                ref readonly var entry = ref snapshot[i];
+                if (!entry.Audible) continue;
+                var state = entry.Slot.ReadinessAt(position, count, out bool overlaps);
+                if (!overlaps) continue;
+                if (state == SlotState.Ready) return true;
+                if (state == SlotState.Pending) pending = true;
+            }
+            // No dependency at this point is a real timeline gap; do not freeze
+            // the transport waiting for a phrase that starts later.
+            return !pending;
         }
     }
 }

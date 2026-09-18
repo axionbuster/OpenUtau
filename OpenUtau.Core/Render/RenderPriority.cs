@@ -19,6 +19,9 @@ namespace OpenUtau.Core.Render {
             return playbackStartMs - sourceEndMs;
         }
 
+        internal static int PlaybackFocusBucket(bool isFocusPart, bool isAudible, bool overlapsPlaybackStart)
+            => isFocusPart && isAudible && overlapsPlaybackStart ? 0 : 1;
+
         internal static int PreRenderBucket(
             bool isPriorityPart,
             bool overlapsPriority,

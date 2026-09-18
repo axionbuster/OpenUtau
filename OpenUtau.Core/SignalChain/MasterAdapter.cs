@@ -28,6 +28,8 @@ namespace OpenUtau.Core.SignalChain {
         /// next pass.
         /// </summary>
         public bool HoldWhenUnready { get; set; } = true;
+        public PlaybackReadinessGate ProgressiveStartGate { get; set; }
+        private bool progressiveStarted;
         public MasterAdapter(ISignalSource source, double endMs = double.PositiveInfinity) {
             waveFormat = WaveFormat.CreateIeeeFloatWaveFormat(SampleRate, Channels);
             this.source = source;
@@ -46,7 +48,16 @@ namespace OpenUtau.Core.SignalChain {
             for (int i = offset; i < offset + count; ++i) {
                 buffer[i] = 0;
             }
-            if (HoldWhenUnready && !source.IsReady(position, count)) {
+            bool shouldWait;
+            if (ProgressiveStartGate != null) {
+                if (!progressiveStarted) {
+                    progressiveStarted = ProgressiveStartGate.CanStart(position, count);
+                }
+                shouldWait = !progressiveStarted;
+            } else {
+                shouldWait = HoldWhenUnready && !source.IsReady(position, count);
+            }
+            if (shouldWait) {
                 Waited += count;
                 IsWaiting = true;
                 return count;
@@ -88,6 +99,7 @@ namespace OpenUtau.Core.SignalChain {
             this.position = position;
             startPosition = position;
             Waited = 0;
+            progressiveStarted = false;
         }
     }
 }

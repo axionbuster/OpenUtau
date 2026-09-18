@@ -17,6 +17,14 @@ namespace OpenUtau.Core.Render {
         }
 
         [Fact]
+        public void PlaybackFocusOnlyWinsWhenAudibleAndOverlapping() {
+            Assert.Equal(0, RenderPriority.PlaybackFocusBucket(true, true, true));
+            Assert.Equal(1, RenderPriority.PlaybackFocusBucket(true, false, true));
+            Assert.Equal(1, RenderPriority.PlaybackFocusBucket(true, true, false));
+            Assert.Equal(1, RenderPriority.PlaybackFocusBucket(false, true, true));
+        }
+
+        [Fact]
         public void PreRenderBucket_PrioritizesFocusedPartAtAttentionTick() {
             Assert.Equal(0, RenderPriority.PreRenderBucket(
                 isPriorityPart: true, overlapsPriority: true, isAfterPriorityStart: true));

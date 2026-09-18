@@ -22,6 +22,7 @@ namespace OpenUtau.Core.SignalChain {
     /// of slot objects referencing the same <see cref="Frozen{T}"/> buffers.
     /// </summary>
     public sealed class SampleSlot {
+        private const int ChannelsInTransport = 2;
         public readonly int Offset;          // source-sample units
         public readonly int EstimatedLength; // source-sample units (layout estimate, not data length)
         public readonly int Channels;        // 1 (mono, duplicated to stereo) or 2
@@ -30,6 +31,10 @@ namespace OpenUtau.Core.SignalChain {
         /// <summary>null unless <see cref="State"/> is Ready.</summary>
         public readonly Frozen<float> Data;
         public readonly SlotState State;
+        // Session-local click suppression. These positions are in the interleaved
+        // stereo transport domain and never alter the frozen/durable PCM.
+        public readonly int PublicationFadeStart;
+        public readonly int PublicationFadeLength;
 
         public SampleSlot(double offsetMs, double estimatedLengthMs, int channels)
             : this(offsetMs, estimatedLengthMs, 0, channels, null, SlotState.Pending) { }
@@ -41,16 +46,50 @@ namespace OpenUtau.Core.SignalChain {
 
         public SampleSlot(
                 double offsetMs, double estimatedLengthMs, double skipOverMs, int channels,
-                Frozen<float> data, SlotState state) {
+                Frozen<float> data, SlotState state,
+                int publicationFadeStart = -1, int publicationFadeLength = 0) {
             Offset = (int)((offsetMs - skipOverMs) * 44100 / 1000) * channels;
             EstimatedLength = (int)(estimatedLengthMs * 44100 / 1000) * channels;
             Channels = channels;
             EndMs = offsetMs + estimatedLengthMs;
             Data = data;
             State = state;
+            PublicationFadeStart = publicationFadeStart;
+            PublicationFadeLength = publicationFadeLength;
+        }
+
+        private SampleSlot(
+                int offset, int estimatedLength, int channels,
+                Frozen<float> data, SlotState state,
+                double endMs, int publicationFadeStart, int publicationFadeLength) {
+            Offset = offset;
+            EstimatedLength = estimatedLength;
+            Channels = channels;
+            EndMs = endMs;
+            Data = data;
+            State = state;
+            PublicationFadeStart = publicationFadeStart;
+            PublicationFadeLength = publicationFadeLength;
         }
 
         public bool HasSamples => Data != null;
+
+        internal SampleSlot WithPublicationFade(int transportPosition, int fadeFrames) {
+            int slotStart = Offset * (ChannelsInTransport / Channels);
+            // Begin at the next transport frame that can be heard. Aligning the
+            // stereo pair gives both channels exactly the same envelope.
+            int start = Math.Max(slotStart, transportPosition);
+            start -= start % ChannelsInTransport;
+            return new SampleSlot(Offset, EstimatedLength, Channels, Data, State, EndMs,
+                start, fadeFrames * ChannelsInTransport);
+        }
+
+        internal SlotState ReadinessAt(int position, int count, out bool overlaps) {
+            int copies = ChannelsInTransport / Channels;
+            overlaps = position + count > Offset * copies
+                && Offset * copies + EstimatedLength * copies > position;
+            return State;
+        }
 
         // Readiness: outside the slot's window the transport does not depend on the
         // slot at all. Inside the window, only Pending blocks — Failed must never
@@ -83,7 +122,15 @@ namespace OpenUtau.Core.SignalChain {
             int start = Math.Max(position, Offset * copies);
             int end = Math.Min(position + count, Offset * copies + Data.Length * copies);
             for (int i = start; i < end; ++i) {
-                buffer[index + i - position] += Data.Buffer[i / copies - Offset];
+                float gain = 1;
+                if (PublicationFadeLength > 0
+                        && i >= PublicationFadeStart
+                        && i < PublicationFadeStart + PublicationFadeLength) {
+                    int elapsedFrames = (i - PublicationFadeStart) / ChannelsInTransport;
+                    int fadeFrames = PublicationFadeLength / ChannelsInTransport;
+                    gain = Math.Clamp(elapsedFrames / (float)Math.Max(1, fadeFrames - 1), 0, 1);
+                }
+                buffer[index + i - position] += Data.Buffer[i / copies - Offset] * gain;
             }
             return end;
         }
@@ -98,12 +145,39 @@ namespace OpenUtau.Core.SignalChain {
     /// <see cref="WaveMix"/> does over its sources.
     /// </summary>
     public class SlotMixSource : ISignalSource {
+        private const int PublicationFadeFrames = 44100 * 20 / 1000;
         private volatile SampleSlot[] slots = Array.Empty<SampleSlot>();
+        private volatile int lastMixPosition = -1;
 
         /// <summary>Current slots; exposed for UI readers (waveform canvas, DAW).</summary>
         public SampleSlot[] CurrentSlots => slots;
 
         public void SetSlots(SampleSlot[] newSlots) {
+            var previous = slots;
+            int publicationPosition = lastMixPosition;
+            if (publicationPosition >= 0) {
+                int count = Math.Min(previous.Length, newSlots.Length);
+                for (int i = 0; i < count; ++i) {
+                    bool samePlacement = previous[i].Offset == newSlots[i].Offset
+                        && previous[i].EstimatedLength == newSlots[i].EstimatedLength
+                        && previous[i].Channels == newSlots[i].Channels;
+                    if (samePlacement
+                            && previous[i].State == SlotState.Ready
+                            && newSlots[i].State == SlotState.Ready
+                            && ReferenceEquals(previous[i].Data, newSlots[i].Data)) {
+                        // Preserve an in-flight publication envelope through an
+                        // unrelated planner rebuild without restarting it.
+                        newSlots[i] = previous[i];
+                    } else if (previous[i].State == SlotState.Pending
+                            && newSlots[i].State == SlotState.Ready
+                            && samePlacement
+                            && publicationPosition >= newSlots[i].Offset * (2 / newSlots[i].Channels)
+                            && publicationPosition < (newSlots[i].Offset + newSlots[i].EstimatedLength) * (2 / newSlots[i].Channels)) {
+                        newSlots[i] = newSlots[i].WithPublicationFade(
+                            publicationPosition, PublicationFadeFrames);
+                    }
+                }
+            }
             slots = newSlots;
         }
 
@@ -129,6 +203,7 @@ namespace OpenUtau.Core.SignalChain {
                     max = p;
                 }
             }
+            lastMixPosition = max;
             return max;
         }
     }

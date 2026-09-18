@@ -505,7 +505,13 @@ namespace OpenUtau.Core {
                         DocManager.Inst.ExecuteCmd(new WaveformReadyNotification());
                     }, CancellationToken.None, TaskCreationOptions.None, DocManager.Inst.MainScheduler);
 
-                    RenderEngine engine = new RenderEngine(project, startTick: tick, endTick: endTick, trackNo: trackNo);
+                    RenderEngine engine = new RenderEngine(
+                        project,
+                        startTick: tick,
+                        endTick: endTick,
+                        trackNo: trackNo,
+                        focusPart: preRenderFocusPart,
+                        focusTick: tick);
                     var result = engine.RenderMixdown(DocManager.Inst.MainScheduler, ref renderCancellation, wait: false, applyMixFx: true, planner: MixPlanner);
                     playbackMix = new PlaybackMix(result.Item1, metronomeEngine);
                     var playbackAdapter = new MasterAdapter(playbackMix);
@@ -513,6 +519,17 @@ namespace OpenUtau.Core {
                     // in loop mode where a pending phrase must not stall the clock.
                     // Failed phrases never hold in either mode.
                     playbackAdapter.HoldWhenUnready = !LoopPlayback;
+                    bool hasVoiSona = project.parts.OfType<UVoicePart>().Any(part =>
+                        (trackNo == -1 || part.trackNo == trackNo)
+                        && part.trackNo >= 0
+                        && part.trackNo < project.tracks.Count
+                        && !project.tracks[part.trackNo].Muted
+                        && project.tracks[part.trackNo].Singer?.SingerType == USingerType.VoiSona
+                        && part.End > tick
+                        && (endTick == -1 || part.position < endTick));
+                    if (!LoopPlayback && hasVoiSona) {
+                        playbackAdapter.ProgressiveStartGate = engine.PlaybackGate;
+                    }
                     playbackAdapter.SetPosition((int)(project.timeAxis.TickPosToMsPos(tick) * 44100 / 1000) * 2);
                     faders = result.Item2;
                     StartPlayback(project.timeAxis.TickPosToMsPos(tick), playbackAdapter);

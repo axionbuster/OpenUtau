@@ -92,6 +92,12 @@ namespace OpenUtau.Core.Render {
         readonly int trackNo;
         readonly UVoicePart focusPart;
         readonly int focusTick;
+        /// <summary>
+        /// Exact session gate created with this playback mix. Progressive audition
+        /// deliberately starts after one useful focused buffer and lets later
+        /// Pending slots contribute silence instead of stopping the clock.
+        /// </summary>
+        public PlaybackReadinessGate PlaybackGate { get; private set; } = PlaybackReadinessGate.Empty;
 
         static readonly System.Collections.Concurrent.ConcurrentDictionary<string, float[]> XsyBlendCache =
             new System.Collections.Concurrent.ConcurrentDictionary<string, float[]>();
@@ -161,7 +167,12 @@ namespace OpenUtau.Core.Render {
                 waveTrims[part] = trim;
                 specs.Add(new MixPlanner.SlotSpec(part, part.trackNo, 0, trim.offsetMs, trim.estimatedLengthMs, trim.channels));
             }
-            planner.BeginSession(specs);
+            PlaybackGate = planner.BeginSession(
+                specs,
+                focusPart,
+                trackNumber => trackNumber >= 0
+                    && trackNumber < project.tracks.Count
+                    && !project.tracks[trackNumber].Muted);
             for (int i = 0; i < project.tracks.Count; ++i) {
                 if (trackNo != -1 && trackNo != i) {
                     continue;
@@ -510,6 +521,14 @@ namespace OpenUtau.Core.Render {
                 .Select((tuple, index) => (tuple, index))
                 .OrderBy(item => RenderPriority.PlaybackBucket(
                     item.tuple.offsetMs, item.tuple.offsetMs + item.tuple.estimatedLengthMs, playbackStartMs))
+                .ThenBy(item => RenderPriority.PlaybackFocusBucket(
+                    focusPart != null && ReferenceEquals(item.tuple.request.part, focusPart),
+                    focusPart != null
+                        && focusPart.trackNo >= 0
+                        && focusPart.trackNo < project.tracks.Count
+                        && !project.tracks[focusPart.trackNo].Muted,
+                    item.tuple.offsetMs <= playbackStartMs
+                        && item.tuple.offsetMs + item.tuple.estimatedLengthMs > playbackStartMs))
                 .ThenBy(item => RenderPriority.PlaybackDistance(
                     item.tuple.offsetMs, item.tuple.offsetMs + item.tuple.estimatedLengthMs, playbackStartMs))
                 .ThenBy(item => item.index)

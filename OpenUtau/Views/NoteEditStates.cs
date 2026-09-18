@@ -18,6 +18,7 @@ namespace OpenUtau.App.Views {
         private readonly TrackBackground element;
         private readonly PianoRollViewModel vm;
         private int activeTone;
+        private double? activeFrequency;
 
         public KeyboardPlayState(TrackBackground element, PianoRollViewModel vm) {
             this.element = element;
@@ -26,20 +27,28 @@ namespace OpenUtau.App.Views {
         public void Begin(IPointer pointer, Point point) {
             pointer.Capture(element);
             var tone = vm.NotesViewModel.PointToTone(point);
-            PlaybackManager.Inst.PlayTone(MusicMath.ToneToFreq(vm.NotesViewModel.GridToTone(tone)));
+            activeFrequency = MusicMath.ToneToFreq(vm.NotesViewModel.GridToTone(tone));
+            PlaybackManager.Inst.PlayTone(activeFrequency.Value);
             activeTone = tone;
         }
         public void Update(IPointer pointer, Point point) {
             var tone = vm.NotesViewModel.PointToTone(point);
             if (activeTone != tone) {
-                PlaybackManager.Inst.EndTone(MusicMath.ToneToFreq(vm.NotesViewModel.GridToTone(activeTone)));
-                PlaybackManager.Inst.PlayTone(MusicMath.ToneToFreq(vm.NotesViewModel.GridToTone(tone)));
+                StopPreview();
+                activeFrequency = MusicMath.ToneToFreq(vm.NotesViewModel.GridToTone(tone));
+                PlaybackManager.Inst.PlayTone(activeFrequency.Value);
                 activeTone = tone;
             }
         }
         public void End(IPointer pointer, Point point) {
             pointer.Capture(null);
-            PlaybackManager.Inst.EndTone(MusicMath.ToneToFreq(vm.NotesViewModel.GridToTone(activeTone)));
+            StopPreview();
+        }
+        private void StopPreview() {
+            if (activeFrequency is double frequency) {
+                PlaybackManager.Inst.EndTone(frequency);
+                activeFrequency = null;
+            }
         }
     }
 
@@ -237,7 +246,7 @@ namespace OpenUtau.App.Views {
                     PlaybackManager.Inst.StopPlayback();
                 }
                 activeTone = note.GridTone;
-                activeFrequency = MusicMath.ToneToFreq(note.AdjustedTone);
+                activeFrequency = MusicMath.ToneToFreq(note.PreciseAdjustedTone);
                 PlaybackManager.Inst.PlayTone(activeFrequency.Value);
             }
             if (note != null) {

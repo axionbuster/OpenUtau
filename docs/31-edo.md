@@ -50,6 +50,11 @@ This application preference persists across launches and is available only for
 31-TET documents. It does not change notes, tuning, undo history, or project files.
 Pitch curves retain their exact pitch values and follow the folded display.
 
+Drawing a note or pressing a piano-roll key previews its exact grid frequency with
+a band-limited harmonic tone rather than a pure sine. The preview includes the
+fundamental and up to four successively quieter harmonics; partials at or above
+Nyquist are omitted so high notes do not acquire aliased pitches.
+
 Names come from a chain of 31 consecutive fifths: fifteen below the preferred key
 through fifteen above it. A fifth is 18 steps; a sharp raises a letter by two
 steps. Flats and sharps are distinct where appropriate. Octave numbers follow the
@@ -84,10 +89,10 @@ The optional Liquid Glass icon is not required for the standard icon to work.
 
 ## Fork version
 
-The local fork identifies itself as `0.1.570-tet31.26 [31-TET]`, based on the
+The local fork identifies itself as `0.1.570-tet31.27 [31-TET]`, based on the
 upstream 0.1.570 development line. The application title uses the informational
 version, preserving the fork suffix without the assembly's trailing zero. macOS
-uses numeric bundle version `0.1.570.26` and short version `0.1.570`. These build
+uses numeric bundle version `0.1.570.27` and short version `0.1.570`. These build
 versions are independent of the native project format revision.
 
 ## Image-scaling regression check

@@ -46,6 +46,12 @@ namespace OpenUtau.Core.Ustx {
         /// The final tone, taking tuning into consideration
         /// </summary>
         [YamlIgnore] public float AdjustedTone => BaseTone + tuning / 100f;
+        /// <summary>
+        /// The final tone without the single-precision rounding used by drawing code.
+        /// Use this when converting a note directly to an audible frequency.
+        /// </summary>
+        [YamlIgnore] public double PreciseAdjustedTone =>
+            (tone31.HasValue ? tone31.Value * Edo31.StepTone : tone) + tuning / 100.0;
 
         /// <summary>
         /// Position of the note in milliseconds, relative to the beginning of the project.

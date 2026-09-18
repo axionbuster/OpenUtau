@@ -63,9 +63,13 @@ namespace OpenUtau.Core {
             return count;
         }
 
+        protected virtual double GetOscillatorSample(double phase) {
+            return Math.Sin(phase);
+        }
+
         private float GetNextSample() {
             double delta = 2 * Math.PI * freq / waveFormat.SampleRate;
-            double sample = Math.Sin(position * delta);
+            double sample = GetOscillatorSample(position * delta);
 
             // Calculate attack envelope
             sample *= Math.Clamp(position / attackSampleCount, 0, 1);
@@ -95,17 +99,53 @@ namespace OpenUtau.Core {
         }
     }
 
+    /// <summary>
+    /// A band-limited, harmonic-rich tone for note previews. The fixed
+    /// normalization keeps its maximum level bounded even when all partials
+    /// align, while omitting partials at or above Nyquist prevents aliasing.
+    /// </summary>
+    public class HarmonicGenerator : SineGenerator {
+        private static readonly double[] HarmonicAmplitudes = { 1, 0.5, 0.25, 0.125, 0.0625 };
+        private const double Normalization = 1 + 0.5 + 0.25 + 0.125 + 0.0625;
+        private const double NyquistFrequency = 44100 / 2.0;
+
+        public HarmonicGenerator(double freq, float gain, int attackMs = 25, int releaseMs = 25)
+            : base(freq, gain, attackMs, releaseMs) { }
+
+        public HarmonicGenerator(double freq, float gain, int attackMs, int releaseMs, int startSampleOffset)
+            : base(freq, gain, attackMs, releaseMs, startSampleOffset) { }
+
+        protected override double GetOscillatorSample(double phase) {
+            double sample = 0;
+            for (int i = 0; i < HarmonicAmplitudes.Length; i++) {
+                int harmonic = i + 1;
+                if (freq * harmonic >= NyquistFrequency) {
+                    break;
+                }
+                sample += HarmonicAmplitudes[i] * Math.Sin(phase * harmonic);
+            }
+            return sample / Normalization;
+        }
+    }
+
     public class ToneGenerator : ISignalSource {
         private Dictionary<double, SineGenerator> activeFrequencies = new Dictionary<double, SineGenerator>();
         private List<SineGenerator> inactiveFrequencies = new List<SineGenerator>();
-        private float gain = 0.4f;
+        private float gain;
+        private readonly bool useHarmonics;
 
         private readonly object _lockObj = new object();
 
-        public ToneGenerator() {}
-
-        public ToneGenerator(float gain) {
+        public ToneGenerator(float gain = 0.4f, bool useHarmonics = false) {
             this.gain = gain;
+            this.useHarmonics = useHarmonics;
+        }
+
+        private SineGenerator CreateGenerator(
+            double freq, int attackMs = 25, int releaseMs = 25, int startSampleOffset = 0) {
+            return useHarmonics
+                ? new HarmonicGenerator(freq, gain, attackMs, releaseMs, startSampleOffset)
+                : new SineGenerator(freq, gain, attackMs, releaseMs, startSampleOffset);
         }
 
         public void SetGain(float gain) {
@@ -149,7 +189,7 @@ namespace OpenUtau.Core {
                         return;
                     }
                 }
-                activeFrequencies[freq] = new SineGenerator(freq, gain);
+                activeFrequencies[freq] = CreateGenerator(freq);
             }
         }
 
@@ -160,7 +200,7 @@ namespace OpenUtau.Core {
                         return;
                     }
                 }
-                activeFrequencies[freq] = new SineGenerator(freq, gain, attackMs, releaseMs, startSampleOffset);
+                activeFrequencies[freq] = CreateGenerator(freq, attackMs, releaseMs, startSampleOffset);
             }
         }
 
@@ -245,7 +285,7 @@ namespace OpenUtau.Core {
                 Log.Error(e, "Failed to release source temp.");
             }
 
-            toneGenerator = new ToneGenerator();
+            toneGenerator = new ToneGenerator(useHarmonics: true);
             metronomeEngine = new MetronomeEngine();
             metronomeEngine.SetEnabled(Preferences.Default.Metronome);
             editingMix = new MasterAdapter(toneGenerator);

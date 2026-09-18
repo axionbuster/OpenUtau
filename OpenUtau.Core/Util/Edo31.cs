@@ -45,12 +45,23 @@ namespace OpenUtau.Core.Util {
             (major && IsMajorDegree(relativeStep)) || (minor && IsMinorDegree(relativeStep));
         static readonly int[] ScaleSteps = { 0, 5, 8, 10, 13, 18, 21, 23, HarmonicSeventh, 26, 28 };
         static readonly string[] ScaleLabels = { "1", "2", "♭3", "3", "4", "5", "♭6", "6", "H7", "♭7", "7" };
+        // Familiar chromatic degrees that can be useful when an out-of-scale note reveals their row.
+        // They are not part of either folded scale collection and must not make rows visible by themselves.
+        static readonly int[] CommonChromaticSteps = { 2, 3, 7, 11, 12, 15, 16, 20, 24, 30 };
+        static readonly string[] CommonChromaticLabels = { "♯1", "♭2", "♯2", "♭4", "♯3", "♯4", "♭5", "♯5", "𝄫7", "♯7" };
+        public static bool IsCommonChromaticDegree(int relativeStep) =>
+            Array.IndexOf(CommonChromaticSteps, Mod(relativeStep, Divisions)) >= 0;
         public static int ScaleColorIndex(int step, int tonicFifths) =>
             Mod(step - tonicFifths * 18, 31);
-        public static string ScaleDegreeLabel(int step, int tonicFifths) {
+        public static string ScaleDegreeLabel(int step, int tonicFifths, bool includeCommonChromatic = false) {
             int relativeStep = ScaleColorIndex(step, tonicFifths);
             int index = Array.IndexOf(ScaleSteps, relativeStep);
-            return index < 0 ? $"+{relativeStep}" : ScaleLabels[index];
+            if (index >= 0) { return ScaleLabels[index]; }
+            if (includeCommonChromatic) {
+                index = Array.IndexOf(CommonChromaticSteps, relativeStep);
+                if (index >= 0) { return CommonChromaticLabels[index]; }
+            }
+            return $"+{relativeStep}";
         }
     }
 }

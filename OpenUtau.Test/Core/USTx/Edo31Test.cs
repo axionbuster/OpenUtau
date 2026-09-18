@@ -37,6 +37,15 @@ namespace OpenUtau.Core.Ustx {
             Assert.Equal(31, Enumerable.Range(0, 31).Select(s => Edo31.ScaleColorIndex(s, 0)).Distinct().Count());
             Assert.Equal("1", Edo31.ScaleDegreeLabel(36, 2));
             Assert.Equal("+1", Edo31.ScaleDegreeLabel(6, 2));
+            Assert.Equal("+3", Edo31.ScaleDegreeLabel(39, 2));
+            Assert.Equal("♭2", Edo31.ScaleDegreeLabel(39, 2, includeCommonChromatic: true));
+            Assert.Equal("♯2", Edo31.ScaleDegreeLabel(43, 2, includeCommonChromatic: true));
+            Assert.Equal("𝄫7", Edo31.ScaleDegreeLabel(60, 2, includeCommonChromatic: true));
+            Assert.True(Edo31.IsCommonChromaticDegree(3));
+            Assert.True(Edo31.IsCommonChromaticDegree(7));
+            Assert.True(Edo31.IsCommonChromaticDegree(24));
+            Assert.False(Edo31.IsCommonChromaticDegree(1));
+            Assert.False(Edo31.IsCommonChromaticDegree(5));
             Assert.Equal(Edo31.HarmonicSeventh, (int)Math.Round(31 * Math.Log2(7.0 / 4)));
             Assert.True(Edo31.IsDegreeInSelectedScales(10, major: true, minor: false));
             Assert.False(Edo31.IsDegreeInSelectedScales(10, major: false, minor: true));

@@ -28,7 +28,7 @@ namespace OpenUtau.App {
             project.Is31Edo = true;
             var part = new UVoicePart { trackNo = 0, position = 0, Duration = 1920 };
             project.parts.Add(part);
-            foreach (int step in new[] { 155, 160, 165, 168, 173, 178, 183, 186 }) {
+            foreach (int step in new[] { 155, 160, 163, 165, 167, 168, 173, 178, 183, 184, 186 }) {
                 part.notes.Add(project.CreateGridNote(step, (step - 155) * 40, 120));
             }
             var previous = DocManager.Inst.TakeProjectForTest(project);
@@ -117,13 +117,19 @@ namespace OpenUtau.App {
                 Assert.Contains(185, notes.DisplayRows!); // H7 also remains in minor-only mode.
                 Assert.DoesNotContain(170, notes.DisplayRows!); // D minor omits F-sharp.
                 notes.FoldMajor31 = true;
-                Assert.Equal(121, notes.DisplayTrackCount);
+                Assert.Equal(124, notes.DisplayTrackCount);
                 // D major and D natural minor, with both forms of degrees 3, 6, and 7.
                 foreach (int step in new[] { 160, 165, 168, 170, 173, 178, 181, 183, 186, 188 }) {
                     Assert.Contains(step, notes.DisplayRows!);
                 }
                 Assert.Contains(155, notes.DisplayRows!); // C in D natural minor.
                 Assert.Contains(186, notes.DisplayRows!); // C in D natural minor.
+                Assert.Contains(163, notes.DisplayRows!); // E-flat is a present flat second.
+                Assert.Contains(167, notes.DisplayRows!); // E-sharp is a present sharp second.
+                Assert.Contains(184, notes.DisplayRows!); // C-flat is a present double-flat seventh.
+                Assert.DoesNotContain(132, notes.DisplayRows!); // Exceptional degrees do not reveal every octave.
+                Assert.DoesNotContain(136, notes.DisplayRows!);
+                Assert.DoesNotContain(153, notes.DisplayRows!);
                 Assert.Equal(341, notes.TrackCount);
                 Assert.DoesNotContain(156, notes.DisplayRows!);
                 Assert.Contains(165, notes.DisplayRows!); // Existing E remains visible.

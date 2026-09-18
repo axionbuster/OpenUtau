@@ -36,7 +36,11 @@ to 7:4 (about 967.7 cents). It is distinct from the natural minor seventh at 26 
 H7 uses the same full-size black interval label as the scale degrees and retains its
 color in the full chromatic view. While either scale view is active, note names outside
 the selected scale collection are italicized to make them less prominent. This includes
-H7, which remains visible but is not a major- or natural-minor-scale degree. Each mode
+H7, which remains visible but is not a major- or natural-minor-scale degree. When an
+existing note reveals a familiar chromatic degree such as **♭2**, **♯2**, or **𝄫7**, the
+interval column names that exception in italics instead of showing only its raw 31-TET
+step offset. These exceptions do not reveal unused rows or appear throughout every octave.
+Each mode
 shows eight pitches per octave; together
 they show eleven. Existing pitches anywhere in the project remain visible, including
 out-of-scale notes. Rows revealed during editing stay available until the view is
@@ -89,10 +93,10 @@ The optional Liquid Glass icon is not required for the standard icon to work.
 
 ## Fork version
 
-The local fork identifies itself as `0.1.570-tet31.27 [31-TET]`, based on the
+The local fork identifies itself as `0.1.570-tet31.28 [31-TET]`, based on the
 upstream 0.1.570 development line. The application title uses the informational
 version, preserving the fork suffix without the assembly's trailing zero. macOS
-uses numeric bundle version `0.1.570.27` and short version `0.1.570`. These build
+uses numeric bundle version `0.1.570.28` and short version `0.1.570`. These build
 versions are independent of the native project format revision.
 
 ## Image-scaling regression check

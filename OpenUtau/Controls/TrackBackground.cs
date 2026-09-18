@@ -194,18 +194,22 @@ namespace OpenUtau.App.Controls {
                         perfectLabels.Add((colorIndex, top + TrackHeight / 2));
                     }
                     if (IsKeyboard && TrackHeight >= 12) {
+                        bool isFoldedScale = FoldMajor31 || FoldMinor31;
+                        bool isExceptionalDegree = isFoldedScale && Edo31.IsCommonChromaticDegree(colorIndex);
                         bool isScaleDegree = Edo31.IsMajorDegree(colorIndex) || Edo31.IsMinorDegree(colorIndex) ||
-                            colorIndex == Edo31.HarmonicSeventh;
+                            colorIndex == Edo31.HarmonicSeventh || isExceptionalDegree;
                         var degree = TextLayoutCache.Get(
-                            Edo31.ScaleDegreeLabel(step, Preferences.Default.PreferredKey31Fifths),
-                            isScaleDegree ? Brushes.Black : ChromaticDegreeBrush, isScaleDegree ? 12 : 10, bold: colorIndex == 0);
+                            Edo31.ScaleDegreeLabel(step, Preferences.Default.PreferredKey31Fifths,
+                                includeCommonChromatic: isExceptionalDegree),
+                            isScaleDegree ? Brushes.Black : ChromaticDegreeBrush, isScaleDegree ? 12 : 10,
+                            bold: colorIndex == 0, italic: isExceptionalDegree);
                         degree.Draw(context, new Point(4, top + (TrackHeight - degree.Height) / 2));
                         bool isSelectedScaleDegree = Edo31.IsDegreeInSelectedScales(
                             colorIndex, FoldMajor31, FoldMinor31);
                         var label = TextLayoutCache.Get(
                             Edo31.Name(step, Preferences.Default.PreferredKey31Fifths),
                             Brushes.Black, 12, bold: colorIndex == 0,
-                            italic: (FoldMajor31 || FoldMinor31) && !isSelectedScaleDegree);
+                            italic: isFoldedScale && !isSelectedScaleDegree);
                         label.Draw(context, new Point(Bounds.Width - 4 - label.Width, top + (TrackHeight - label.Height) / 2));
                     }
                     track++;

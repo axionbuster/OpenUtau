@@ -187,7 +187,7 @@ namespace OpenUtau.Core.DiffSinger
             var paddedToRealNoteIndex = new List<int>();
             //Head padding
             noteDurMsList.Add(Math.Max(0, phrase.notes[0].positionMs - startMs));
-            noteMidiList.Add(phrase.notes[0].adjustedTone);
+            noteMidiList.Add((float)phrase.ToneToRendererTone(phrase.notes[0].adjustedTone));
             noteRestList.Add(true);
             paddedToRealNoteIndex.Add(0);
             double prevNoteEndMs = phrase.notes[0].positionMs;
@@ -197,12 +197,12 @@ namespace OpenUtau.Core.DiffSinger
                 if (gapMs > 0) {
                     //Insert a rest note for the gap; associate it with the previous real note
                     noteDurMsList.Add(gapMs);
-                    noteMidiList.Add(note.adjustedTone);
+                    noteMidiList.Add((float)phrase.ToneToRendererTone(note.adjustedTone));
                     noteRestList.Add(true);
                     paddedToRealNoteIndex.Add(realIdx - 1);
                 }
                 noteDurMsList.Add(note.durationMs);
-                noteMidiList.Add(note.adjustedTone);
+                noteMidiList.Add((float)phrase.ToneToRendererTone(note.adjustedTone));
                 paddedToRealNoteIndex.Add(realIdx);
                 //Slur notes follow the previous note's rest status
                 if (note.lyric.StartsWith("+")) {
@@ -220,7 +220,7 @@ namespace OpenUtau.Core.DiffSinger
             }
             //Tail padding
             noteDurMsList.Add(DiffSingerUtils.GetTailMs(frameMs));
-            noteMidiList.Add(phrase.notes[^1].adjustedTone);
+            noteMidiList.Add((float)phrase.ToneToRendererTone(phrase.notes[^1].adjustedTone));
             noteRestList.Add(true);
             paddedToRealNoteIndex.Add(phrase.notes.Length - 1);
 
@@ -328,7 +328,8 @@ namespace OpenUtau.Core.DiffSinger
                     .Select(i=>(float)phrase.timeAxis.MsPosToTickPos(startMs + i*frameMs) - phrase.position)
                     .Append((float)phrase.duration + 1)
                     .ToArray(),
-                    tones = pitch_out.Append(pitch_out[^1]).ToArray(),
+                    tones = pitch_out.Select(t => (float)phrase.RendererToneToTone(t))
+                        .Append((float)phrase.RendererToneToTone(pitch_out[^1])).ToArray(),
                     retakeMask = retakeNoteIndexes != null ? retake.Append(retake[^1]).ToArray() : null,
                 };
             }else{
@@ -336,7 +337,7 @@ namespace OpenUtau.Core.DiffSinger
                     ticks = Enumerable.Range(0,totalFrames)
                     .Select(i=>(float)phrase.timeAxis.MsPosToTickPos(startMs + i*frameMs) - phrase.position)
                     .ToArray(),
-                    tones = pitch_out,
+                    tones = pitch_out.Select(t => (float)phrase.RendererToneToTone(t)).ToArray(),
                     retakeMask = retakeNoteIndexes != null ? retake : null,
                 };
             }

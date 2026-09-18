@@ -62,14 +62,16 @@ namespace OpenUtau.Core.VoiSona {
         public static VoiSonaScore FromPhrase(RenderPhrase phrase, VoiSonaSinger singer) {
             var notes = phrase.notes.Where(n => n.endMs > phrase.positionMs && n.positionMs < phrase.endMs)
                 .Select(n => new VoiSonaNote(n.positionMs - phrase.positionMs + HeadMs, n.durationMs,
-                    n.adjustedTone, singer.NoteLanguage == 2 && n.lyric.Contains('[') ? n.lyric : Lyric(n))).ToArray();
+                    phrase.ToneToRendererTone(n.adjustedTone),
+                    singer.NoteLanguage == 2 && n.lyric.Contains('[') ? n.lyric : Lyric(n))).ToArray();
             double length = Math.Max(phrase.durationMs + HeadMs + TailMs, notes.Max(n => n.StartMs + n.DurationMs) + TailMs);
             var age = phrase.curves.FirstOrDefault(c => c.Item1 == "alp")?.Item2;
             var husky = phrase.curves.FirstOrDefault(c => c.Item1 == "hus")?.Item2;
             return Build(singer, notes, length, ms => Sample(phrase, phrase.pitches, ms) / 100,
                 phrase.VoiSonaSettings,
                 age == null || age.All(v => v == 0) ? null : ms => Sample(phrase, age, ms) / 100,
-                husky == null || husky.All(v => v == 0) ? null : ms => Sample(phrase, husky, ms) / 100);
+                husky == null || husky.All(v => v == 0) ? null : ms => Sample(phrase, husky, ms) / 100,
+                tone => Math.Log(phrase.ToneToFrequency(tone)));
         }
         internal static double Sample(RenderPhrase phrase, float[] values, double ms) {
             double tick = phrase.timeAxis.MsPosToTickPos(ms - HeadMs + phrase.positionMs);
@@ -164,7 +166,8 @@ namespace OpenUtau.Core.VoiSona {
         }
         public static VoiSonaScore Build(VoiSonaSinger singer, IReadOnlyList<VoiSonaNote> notes,
                 double lengthMs, Func<double, double> pitch, VoiSonaSettings? settings = null,
-                Func<double, double>? age = null, Func<double, double>? husky = null) {
+                Func<double, double>? age = null, Func<double, double>? husky = null,
+                Func<double, double>? toneToLogF0 = null) {
             settings = settings?.ValidatedCopy() ?? new VoiSonaSettings();
             if (notes.Count == 0 || !double.IsFinite(lengthMs) || lengthMs <= 0 || lengthMs > 600_000)
                 throw new ArgumentException("VoiSona phrases must contain notes and be at most ten minutes long.");
@@ -197,7 +200,7 @@ namespace OpenUtau.Core.VoiSona {
             int frames = (int)Math.Ceiling(lengthMs / 5);
             var f0 = new VoiSonaTree("LogF0", ("Length", frames));
             for (int i = 0; i < frames; i++) {
-                double value = LogF0(pitch(i * 5));
+                double value = (toneToLogF0 ?? LogF0)(pitch(i * 5));
                 if (!double.IsFinite(value)) throw new ArgumentException("VoiSona pitch must be finite.");
                 f0.Add(new VoiSonaTree("Data", ("Index", i), ("Repeat", 1), ("Value", value)));
             }

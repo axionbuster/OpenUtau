@@ -54,6 +54,7 @@ namespace OpenUtau.App.ViewModels {
         public int TrackCount => Is31Edo ? Edo31.MaxStep : ViewConstants.MaxTone;
         public double PitchStep => Is31Edo ? Edo31.StepTone : 1;
         public double GridToTone(double row) => row * PitchStep;
+        public double GridToFrequency(double row) => Project.ToneToFrequency(GridToTone(row));
         // Display rows are independent of the document's exact pitch steps.
         public int[]? DisplayRows { get; private set; }
         public int DisplayTrackCount => DisplayRows?.Length ?? TrackCount;
@@ -426,6 +427,7 @@ namespace OpenUtau.App.ViewModels {
             MessageBus.Current.Listen<CurveCopyEvent>()
                 .Subscribe(e => {
                     DocManager.Inst.NotesClipboard?.Clear();
+                    DocManager.Inst.NotesClipboardPitchReference31 = null;
                 });
         }
 
@@ -973,6 +975,8 @@ namespace OpenUtau.App.ViewModels {
             if (Part != null && !Selection.IsEmpty) {
                 var selectedNotes = Selection.ToList();
                 DocManager.Inst.NotesClipboard = selectedNotes.Select(note => note.Clone()).ToList();
+                DocManager.Inst.NotesClipboardPitchReference31 = Is31Edo
+                    ? Project.PitchReference31.ValidatedCopy() : null;
             }
         }
 
@@ -980,6 +984,8 @@ namespace OpenUtau.App.ViewModels {
             if (Part != null && !Selection.IsEmpty) {
                 var selectedNotes = Selection.ToList();
                 DocManager.Inst.NotesClipboard = selectedNotes.Select(note => note.Clone()).ToList();
+                DocManager.Inst.NotesClipboardPitchReference31 = Is31Edo
+                    ? Project.PitchReference31.ValidatedCopy() : null;
                 DocManager.Inst.StartUndoGroup("command.note.delete");
                 DocManager.Inst.ExecuteCmd(new RemoveNoteCommand(Part, selectedNotes));
                 DocManager.Inst.EndUndoGroup();
@@ -990,6 +996,12 @@ namespace OpenUtau.App.ViewModels {
             if (Part != null && DocManager.Inst.NotesClipboard != null && DocManager.Inst.NotesClipboard.Count > 0) {
                 if (DocManager.Inst.NotesClipboard.Any(n => n.tone31.HasValue != Is31Edo)) {
                     DocManager.Inst.ExecuteCmd(new ErrorMessageNotification(new FileFormatException("Convert a project copy before pasting between tuning systems.")));
+                    return;
+                }
+                if (Is31Edo && (DocManager.Inst.NotesClipboardPitchReference31 == null ||
+                    !DocManager.Inst.NotesClipboardPitchReference31.HasSameTuning(Project.PitchReference31))) {
+                    DocManager.Inst.ExecuteCmd(new ErrorMessageNotification(new FileFormatException(
+                        "Match the 31-TET pitch reference before pasting notes.")));
                     return;
                 }
                 int snapUnit = DocManager.Inst.Project.resolution * 4 / SnapDiv;
@@ -1031,6 +1043,12 @@ namespace OpenUtau.App.ViewModels {
             if (Part != null && DocManager.Inst.NotesClipboard != null && DocManager.Inst.NotesClipboard.Count > 0) {
                 if (DocManager.Inst.NotesClipboard.Any(n => n.tone31.HasValue != Is31Edo)) {
                     DocManager.Inst.ExecuteCmd(new ErrorMessageNotification(new FileFormatException("Convert a project copy before pasting between tuning systems.")));
+                    return;
+                }
+                if (Is31Edo && (DocManager.Inst.NotesClipboardPitchReference31 == null ||
+                    !DocManager.Inst.NotesClipboardPitchReference31.HasSameTuning(Project.PitchReference31))) {
+                    DocManager.Inst.ExecuteCmd(new ErrorMessageNotification(new FileFormatException(
+                        "Match the 31-TET pitch reference before pasting notes.")));
                     return;
                 }
                 int snapUnit = DocManager.Inst.Project.resolution * 4 / SnapDiv;

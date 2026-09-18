@@ -240,5 +240,18 @@ namespace OpenUtau.App {
                 ThreadGuard.SetUiThread(null);
             }
         }
+
+        [AvaloniaFact]
+        public void PitchReferenceDialogShowsNativeAnchorModes() {
+            var absolute = new Views.PitchReference31Dialog(Edo31PitchReference.Default);
+            Assert.True(absolute.FindControl<RadioButton>("A4Mode").IsChecked);
+            Assert.Equal(440m, absolute.FindControl<NumericUpDown>("A4Frequency").Value);
+            Assert.Contains("native anchor at 440", absolute.FindControl<TextBlock>("Summary").Text);
+
+            var synchronized = new Views.PitchReference31Dialog(Edo31PitchReference.LegacyC);
+            Assert.True(synchronized.FindControl<RadioButton>("NoteMode").IsChecked);
+            Assert.Equal(0, synchronized.FindControl<ComboBox>("ReferenceNote").SelectedIndex);
+            Assert.Contains("437.547", synchronized.FindControl<TextBlock>("Summary").Text);
+        }
     }
 }

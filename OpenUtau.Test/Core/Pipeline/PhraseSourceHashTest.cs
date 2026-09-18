@@ -108,6 +108,10 @@ namespace OpenUtau.Core.Pipeline {
             note0.vibrato.length = 60;
             note0.vibrato.period = 180;
             note0.vibrato.depth = 30;
+            note0.vibrato.@in = 10;
+            note0.vibrato.@out = 10;
+            note0.vibrato.shift = 0;
+            note0.vibrato.drift = 0;
             note0.vibrato.volLink = 40;
             // A per-phoneme velocity so the envelope and overlap math see a
             // non-default consonant stretch.
@@ -135,6 +139,17 @@ namespace OpenUtau.Core.Pipeline {
             note3.lyric = "+o";
 
             var notes = new[] { note0, note1, note2, note3 };
+            foreach (var note in notes.Skip(1)) {
+                // Keep this cache-identity fixture independent of the user's
+                // configurable new-note vibrato preset.
+                note.vibrato.period = 175;
+                note.vibrato.depth = 25;
+                note.vibrato.@in = 10;
+                note.vibrato.@out = 10;
+                note.vibrato.shift = 0;
+                note.vibrato.drift = 0;
+                note.vibrato.volLink = 0;
+            }
             for (int i = 0; i < notes.Length; ++i) {
                 notes[i].Prev = i > 0 ? notes[i - 1] : null;
                 notes[i].Next = i + 1 < notes.Length ? notes[i + 1] : null;

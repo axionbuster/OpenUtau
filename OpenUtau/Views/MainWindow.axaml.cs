@@ -208,6 +208,24 @@ namespace OpenUtau.App.Views {
             dialog.ShowDialog(this);
         }
 
+        async void OnMenuPitchReference31(object sender, RoutedEventArgs e) {
+            var project = DocManager.Inst.Project;
+            if (!project.Is31Edo) {
+                return;
+            }
+            var dialog = new PitchReference31Dialog(project.PitchReference31);
+            var reference = await dialog.ShowDialog<Core.Util.Edo31PitchReference?>(this);
+            if (reference == null ||
+                (reference.Mode == project.PitchReference31.Mode &&
+                 reference.A4Frequency == project.PitchReference31.A4Frequency &&
+                 reference.TwelveTetPitchClass == project.PitchReference31.TwelveTetPitchClass)) {
+                return;
+            }
+            DocManager.Inst.StartUndoGroup();
+            DocManager.Inst.ExecuteCmd(new PitchReference31Command(project, reference));
+            DocManager.Inst.EndUndoGroup();
+        }
+
         private void AddTimeSigChange(int bar) {
             var project = DocManager.Inst.Project;
             var timeSig = project.timeAxis.TimeSignatureAtBar(bar);

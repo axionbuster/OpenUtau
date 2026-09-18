@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 using Avalonia;
 using DynamicData;
@@ -372,12 +373,18 @@ namespace OpenUtau.App.ViewModels {
         public void CopyParts() {
             if (SelectedParts.Count > 0) {
                 DocManager.Inst.PartsClipboard = SelectedParts.Select(part => part.Clone()).ToList();
+                DocManager.Inst.PartsClipboardIs31Edo = Project.Is31Edo;
+                DocManager.Inst.PartsClipboardPitchReference31 = Project.Is31Edo
+                    ? Project.PitchReference31.ValidatedCopy() : null;
             }
         }
 
         public void CutParts() {
             if (SelectedParts.Count > 0) {
                 DocManager.Inst.PartsClipboard = SelectedParts.Select(part => part.Clone()).ToList();
+                DocManager.Inst.PartsClipboardIs31Edo = Project.Is31Edo;
+                DocManager.Inst.PartsClipboardPitchReference31 = Project.Is31Edo
+                    ? Project.PitchReference31.ValidatedCopy() : null;
                 DocManager.Inst.StartUndoGroup("command.part.delete");
                 var toRemove = new List<UPart>(SelectedParts);
                 SelectedParts.Clear();
@@ -390,6 +397,14 @@ namespace OpenUtau.App.ViewModels {
 
         public void PasteParts() {
             if (DocManager.Inst.PartsClipboard == null || DocManager.Inst.PartsClipboard.Count == 0) {
+                return;
+            }
+            if (DocManager.Inst.PartsClipboard.Any(part => part is UVoicePart) &&
+                (DocManager.Inst.PartsClipboardIs31Edo != Project.Is31Edo ||
+                 (Project.Is31Edo && (DocManager.Inst.PartsClipboardPitchReference31 == null ||
+                  !DocManager.Inst.PartsClipboardPitchReference31.HasSameTuning(Project.PitchReference31))))) {
+                DocManager.Inst.ExecuteCmd(new ErrorMessageNotification(new FileFormatException(
+                    "Match the project tuning and 31-TET pitch reference before pasting voice parts.")));
                 return;
             }
             var parts = DocManager.Inst.PartsClipboard

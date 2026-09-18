@@ -110,7 +110,7 @@ namespace OpenUtau.Classic {
                         }
                     }
                     int frames = (int)Math.Ceiling(result.estimatedLengthMs / frameMs);
-                    var f0 = SampleCurve(phrase, phrase.pitches, 0, frames, x => MusicMath.ToneToFreq(x * 0.01));
+                    var f0 = SampleCurve(phrase, phrase.pitches, 0, frames, x => phrase.ToneToFrequency(x * 0.01));
                     var gender = SampleCurve(phrase, phrase.gender, 0.5, frames, x => 0.5 + 0.005 * x);
                     var tension = SampleCurve(phrase, phrase.tension, 0.5, frames, x => 0.5 + 0.005 * x);
                     var breathiness = SampleCurve(phrase, phrase.breathiness, 0.5, frames, x => 0.5 + 0.005 * x);
@@ -249,4 +249,3 @@ namespace OpenUtau.Classic {
         public override string ToString() => version == 1 ? Renderers.WORLDLINE_R : Renderers.WORLDLINE_R2;
     }
 }
-

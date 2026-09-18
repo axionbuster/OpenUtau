@@ -164,6 +164,10 @@ namespace OpenUtau.Core.Format {
             if (loadedProjects.Any(loaded => loaded.Is31Edo != project.Is31Edo)) {
                 throw new FileFormatException("Convert a copy to the destination tuning before importing tracks.");
             }
+            if (project.Is31Edo && loadedProjects.Any(loaded =>
+                    !loaded.PitchReference31.HasSameTuning(project.PitchReference31))) {
+                throw new FileFormatException("Match the 31-TET pitch reference before importing tracks.");
+            }
             int initialTracks = project.tracks.Count;
             int initialParts = project.parts.Count;
             foreach (UProject loaded in loadedProjects) {

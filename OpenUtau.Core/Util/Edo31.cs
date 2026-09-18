@@ -1,15 +1,86 @@
 using System;
 
 namespace OpenUtau.Core.Util {
+    public enum Edo31PitchReferenceMode {
+        A4Frequency,
+        TwelveTetNote,
+    }
+
+    /// <summary>
+    /// Project-level absolute pitch reference for native 31-TET documents.
+    /// The editor grid remains step-relative; this reference shifts sounding pitch only.
+    /// </summary>
+    public sealed class Edo31PitchReference {
+        public Edo31PitchReferenceMode Mode { get; set; } = Edo31PitchReferenceMode.A4Frequency;
+        public double A4Frequency { get; set; } = 440;
+        public int TwelveTetPitchClass { get; set; } = 9;
+
+        public static Edo31PitchReference Default => new Edo31PitchReference();
+        public static Edo31PitchReference LegacyC => new Edo31PitchReference {
+            Mode = Edo31PitchReferenceMode.TwelveTetNote,
+            TwelveTetPitchClass = 0,
+        };
+
+        private (double Tone, double Frequency) Anchor => Mode switch {
+            Edo31PitchReferenceMode.A4Frequency =>
+                (Edo31.A4Step * Edo31.StepTone, A4Frequency),
+            Edo31PitchReferenceMode.TwelveTetNote => (
+                60 + Edo31.NearestStepForTwelveTetPitchClass(TwelveTetPitchClass) * Edo31.StepTone,
+                MusicMath.ToneToFreq(60 + TwelveTetPitchClass)),
+            _ => throw new ArgumentOutOfRangeException(nameof(Mode)),
+        };
+
+        public double ToneToFrequency(double tone) {
+            var anchor = Anchor;
+            return anchor.Frequency * Math.Pow(2, (tone - anchor.Tone) / 12);
+        }
+
+        public double FrequencyToTone(double frequency) {
+            if (!double.IsFinite(frequency) || frequency <= 0) {
+                throw new ArgumentOutOfRangeException(nameof(frequency));
+            }
+            var anchor = Anchor;
+            return anchor.Tone + 12 * Math.Log2(frequency / anchor.Frequency);
+        }
+
+        public double EffectiveA4Frequency => ToneToFrequency(Edo31.A4Step * Edo31.StepTone);
+
+        public bool HasSameTuning(Edo31PitchReference other) =>
+            Math.Abs(1200 * Math.Log2(EffectiveA4Frequency / other.EffectiveA4Frequency)) < 1e-9;
+
+        public Edo31PitchReference ValidatedCopy() {
+            if (Mode == Edo31PitchReferenceMode.A4Frequency &&
+                (!double.IsFinite(A4Frequency) || A4Frequency <= 0 || A4Frequency > 20000)) {
+                throw new ArgumentOutOfRangeException(nameof(A4Frequency));
+            }
+            if (Mode == Edo31PitchReferenceMode.TwelveTetNote &&
+                (TwelveTetPitchClass < 0 || TwelveTetPitchClass >= 12)) {
+                throw new ArgumentOutOfRangeException(nameof(TwelveTetPitchClass));
+            }
+            return new Edo31PitchReference {
+                Mode = Mode,
+                A4Frequency = A4Frequency,
+                TwelveTetPitchClass = TwelveTetPitchClass,
+            };
+        }
+    }
+
     /// <summary>Pitch arithmetic and display-only chain-of-fifths spelling.</summary>
     public static class Edo31 {
         public const int Divisions = 31;
         public const double StepTone = 12.0 / Divisions;
         public const int MaxStep = 341; // Eleven octaves, matching the ordinary editor.
+        public const int A4Step = 178;
         static readonly string[] Letters = { "F", "C", "G", "D", "A", "E", "B" };
         static readonly int[] Naturals = { 13, 0, 18, 5, 23, 10, 28 };
         public static int Mod(int n, int d) => (n % d + d) % d;
         public static int NearestStep(double tone) => (int)Math.Round(tone / StepTone, MidpointRounding.AwayFromZero);
+        public static int NearestStepForTwelveTetPitchClass(int pitchClass) {
+            if (pitchClass < 0 || pitchClass >= 12) {
+                throw new ArgumentOutOfRangeException(nameof(pitchClass));
+            }
+            return NearestStep(pitchClass);
+        }
         public static int ParseName(string name) {
             var match = System.Text.RegularExpressions.Regex.Match(name.Trim().Replace("𝄪", "##").Replace("𝄫", "bb").Replace("x", "##"), @"^([A-Ga-g])([#♯b♭]*)(-?\d+)$");
             if (!match.Success) { return -1; }

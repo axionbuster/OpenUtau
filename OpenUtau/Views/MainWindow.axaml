@@ -56,6 +56,8 @@
           </MenuItem>
           <MenuItem Header="{DynamicResource menu.project}" IsEnabled="{Binding Page}">
             <MenuItem Header="{DynamicResource menu.project.expressions}" Click="OnMenuExpressionss"/>
+            <MenuItem Header="31-TET reference pitch…" Click="OnMenuPitchReference31"
+                      IsVisible="{Binding Is31Edo}"/>
             <MenuItem Header="{DynamicResource menu.project.remaptimeaxis}" Click="OnMenuRemapTimeaxis"/>
           </MenuItem>
           <MenuItem Header="{DynamicResource menu.tools}">

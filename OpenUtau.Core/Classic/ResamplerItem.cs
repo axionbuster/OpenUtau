@@ -94,7 +94,7 @@ namespace OpenUtau.Classic {
 
                 var sampleLerped = phrase.pitches[sampleStart] + (phrase.pitches[sampleEnd] - phrase.pitches[sampleStart]) * sampleAlpha;
 
-                pitches[i] = (int)Math.Round(sampleLerped - phone.tone * 100);
+                pitches[i] = (int)Math.Round(phrase.ToneToRendererTone(sampleLerped / 100) * 100 - phone.tone * 100);
             }
 
             hash = Hash();

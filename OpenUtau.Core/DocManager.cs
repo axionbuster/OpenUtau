@@ -69,7 +69,10 @@ namespace OpenUtau.Core {
         public UProject Project { get; private set; }
         public bool HasOpenUndoGroup => undoGroup != null;
         public List<UPart>? PartsClipboard { get; set; }
+        public bool? PartsClipboardIs31Edo { get; set; }
+        public Edo31PitchReference? PartsClipboardPitchReference31 { get; set; }
         public List<UNote>? NotesClipboard { get; set; }
+        public Edo31PitchReference? NotesClipboardPitchReference31 { get; set; }
         public CurveSelection? CurvesClipboard { get; set; }
         internal PhonemizerRunner PhonemizerRunner { get; private set; }
 

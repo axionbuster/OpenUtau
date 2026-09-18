@@ -17,6 +17,15 @@ namespace OpenUtau.Core.Ustx {
             note.lyric = "あ";
             note.pitch.AddPoint(new PitchPoint(-5, 0));
             note.pitch.AddPoint(new PitchPoint(5, 0));
+            // Serialization expectations must not depend on the user's
+            // configurable new-note vibrato preset.
+            note.vibrato.period = 175;
+            note.vibrato.depth = 25;
+            note.vibrato.@in = 10;
+            note.vibrato.@out = 10;
+            note.vibrato.shift = 0;
+            note.vibrato.drift = 0;
+            note.vibrato.volLink = 0;
             note.phonemeExpressions.Add(new UExpression(descriptor) {
                 index = 0,
                 value = 123,

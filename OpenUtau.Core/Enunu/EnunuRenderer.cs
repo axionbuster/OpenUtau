@@ -118,7 +118,7 @@ namespace OpenUtau.Core.Enunu {
                             var tailMs = phrase.timeAxis.TickPosToMsPos(phrase.end + tailTicks) - phrase.endMs;
                             int headFrames = (int)Math.Round(headMs / config.framePeriod);
                             int tailFrames = (int)Math.Round(tailMs / config.framePeriod);
-                            var editorF0 = SampleCurve(phrase, phrase.pitches, 0, config.framePeriod, totalFrames, headFrames, tailFrames, x => MusicMath.ToneToFreq(x * 0.01));
+                            var editorF0 = SampleCurve(phrase, phrase.pitches, 0, config.framePeriod, totalFrames, headFrames, tailFrames, x => phrase.ToneToFrequency(x * 0.01));
                             np.Save(editorF0, editorf0Path);
                             SyntheResponse sy_response = new SyntheResponse();
                             sy_response = EnunuClient.Inst.SendRequest<SyntheResponse>(new string[] { "synthe", ustPath, wavPath, voicebankNameHash, "600" }, port);
@@ -151,7 +151,7 @@ namespace OpenUtau.Core.Enunu {
                             var tailMs = phrase.timeAxis.TickPosToMsPos(phrase.end + tailTicks) - phrase.endMs;
                             int headFrames = (int)Math.Round(headMs / config.framePeriod);
                             int tailFrames = (int)Math.Round(tailMs / config.framePeriod);
-                            var editorF0 = SampleCurve(phrase, phrase.pitches, 0, config.framePeriod, totalFrames, headFrames, tailFrames, x => MusicMath.ToneToFreq(x * 0.01));
+                            var editorF0 = SampleCurve(phrase, phrase.pitches, 0, config.framePeriod, totalFrames, headFrames, tailFrames, x => phrase.ToneToFrequency(x * 0.01));
                             var gender = SampleCurve(phrase, phrase.gender, 0.5, config.framePeriod, totalFrames, headFrames, tailFrames, x => 0.5 + 0.005 * x);
                             var tension = SampleCurve(phrase, phrase.tension, 0.5, config.framePeriod, totalFrames, headFrames, tailFrames, x => 0.5 + 0.005 * x);
                             var breathiness = SampleCurve(phrase, phrase.breathiness, 0.5, config.framePeriod, totalFrames, headFrames, tailFrames, x => 0.5 + 0.005 * x);
@@ -227,7 +227,7 @@ namespace OpenUtau.Core.Enunu {
             var config = EnunuConfig.Load(phrase.singer);
             var f0 = np.Load<double[]>(f0Path);
             var result = new RenderPitchResult() {
-                tones = f0.Select(f => (float)MusicMath.FreqToTone(f)).ToArray(),
+                tones = f0.Select(f => (float)phrase.FrequencyToTone(f)).ToArray(),
             };
             result.ticks = new float[result.tones.Length];
             var layout = Layout(phrase);

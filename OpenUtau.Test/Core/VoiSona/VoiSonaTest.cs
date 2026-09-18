@@ -8,6 +8,7 @@ using Newtonsoft.Json.Linq;
 using OpenUtau.Core.VoiSona;
 using OpenUtau.Core.Ustx;
 using OpenUtau.Core.Render;
+using OpenUtau.Core.Util;
 using Xunit;
 
 namespace OpenUtau.Core {
@@ -157,11 +158,27 @@ namespace OpenUtau.Core {
         }
         [Fact]
         public void PhraseConversionUsesNativePitchAndTempoMappedDuration() {
-            var (_, phrase) = NativePhrase(Singer);
+            var (project, phrase) = NativePhrase(Singer);
             Assert.Equal(178 * 12.0 / 31 + 0.07, phrase.notes[0].adjustedTone, 4);
+            Assert.Equal(440 * Math.Pow(2,
+                    (phrase.notes[0].adjustedTone - Edo31.A4Step * Edo31.StepTone) / 12),
+                phrase.ToneToFrequency(phrase.notes[0].adjustedTone), 8);
             Assert.Equal(5500, phrase.durationMs, 5);
             var score = VoiSonaState.FromPhrase(phrase, Singer);
             Assert.Equal(6500, score.DurationMs, 5);
+
+            project.PitchReference31 = new Edo31PitchReference {
+                Mode = Edo31PitchReferenceMode.A4Frequency,
+                A4Frequency = 442,
+            };
+            var reanchored = Assert.Single(RenderPhrase.FromPart(
+                project, project.tracks[0], (UVoicePart)project.parts[0]));
+            Assert.Equal(442 * Math.Pow(2,
+                    (reanchored.notes[0].adjustedTone - Edo31.A4Step * Edo31.StepTone) / 12),
+                reanchored.ToneToFrequency(reanchored.notes[0].adjustedTone), 8);
+            Assert.NotEqual(phrase.hash, reanchored.hash);
+            Assert.NotEqual(score.State, VoiSonaState.FromPhrase(reanchored, Singer).State);
+
             var (_, updated) = NativePhrase(new VoiSonaSinger("ja_JP", "2.2.0", "/unused"));
             Assert.NotEqual(phrase.hash, updated.hash);
         }

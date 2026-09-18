@@ -116,7 +116,7 @@ namespace OpenUtau.Core.DiffSinger {
             if(options.exportPitch){
                 f0_seq = DiffSingerUtils.SampleCurve(phrase, phrase.pitches,
                     0, frameMs, totalFrames, headFrames, tailFrames,
-                    x => MusicMath.ToneToFreq(x * 0.01));
+                    x => phrase.ToneToFrequency(x * 0.01));
             }
 
             //velc

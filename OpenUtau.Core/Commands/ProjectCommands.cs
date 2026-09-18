@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Linq;
 using OpenUtau.Core.Ustx;
+using OpenUtau.Core.Util;
 
 namespace OpenUtau.Core {
     public abstract class ProjectCommand : UCommand {
@@ -150,6 +151,18 @@ namespace OpenUtau.Core {
         public override string ToString() => $"Change key from {oldKey} to {newKey}";
         public override void Execute() => project.key = newKey;
         public override void Unexecute() => project.key = oldKey;
+    }
+
+    public class PitchReference31Command : ProjectCommand {
+        public readonly Edo31PitchReference oldReference;
+        public readonly Edo31PitchReference newReference;
+        public PitchReference31Command(UProject project, Edo31PitchReference reference) : base(project) {
+            oldReference = project.PitchReference31.ValidatedCopy();
+            newReference = reference.ValidatedCopy();
+        }
+        public override string ToString() => "Change 31-TET pitch reference";
+        public override void Execute() => project.PitchReference31 = newReference.ValidatedCopy();
+        public override void Unexecute() => project.PitchReference31 = oldReference.ValidatedCopy();
     }
 
     public class ConfigureExpressionsCommand : ProjectCommand {

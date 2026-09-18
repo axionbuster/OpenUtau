@@ -325,6 +325,8 @@ namespace OpenUtau.Core.Pipeline {
         public readonly VoiSona.VoiSonaSettings VoiSonaSettings;
         public readonly ClassicSinger ClassicSinger;
         public readonly bool ModpSupported;
+        public readonly bool Is31Edo;
+        public readonly Util.Edo31PitchReference PitchReference31;
 
         public readonly NoteSource[] Notes;
         public readonly CurveSource[] Curves;
@@ -353,6 +355,8 @@ namespace OpenUtau.Core.Pipeline {
             ClassicSinger = Singer as ClassicSinger;
             ModpSupported = track.TryGetExpDescriptor(project, Format.Ustx.MODP, out var modp)
                 && Renderer.SupportsExpression(modp);
+            Is31Edo = project.Is31Edo;
+            PitchReference31 = project.PitchReference31.ValidatedCopy();
             XsyAvailable = part.curves.Any(c => c.abbr == Format.Ustx.XSY);
 
             var noteIndexByNote = new Dictionary<UNote, int>();

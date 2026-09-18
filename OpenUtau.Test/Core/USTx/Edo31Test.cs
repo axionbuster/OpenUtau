@@ -1,6 +1,7 @@
 using System;
 using System.IO;
 using System.Linq;
+using System.Text.RegularExpressions;
 using OpenUtau.Core.Format;
 using OpenUtau.Core.Util;
 using Xunit;
@@ -80,12 +81,16 @@ namespace OpenUtau.Core.Ustx {
             Assert.DoesNotContain("key:", text);
             Assert.DoesNotContain("preferred", text);
             Assert.Contains("features:", text);
+            Assert.Contains("pitch-reference-v1", text);
+            Assert.Contains("pitch_reference:", text);
+            Assert.Contains("frequency: 440", text);
             var project = Ustx31.Deserialize(text);
             var note = Assert.Single(Assert.Single(project.voiceParts).notes);
             Assert.True(project.Is31Edo);
             Assert.Equal(156, note.tone31);
             Assert.Equal(7, note.tuning);
             Assert.InRange(Math.Abs(note.AdjustedTone - (156 * 12.0 / 31 + .07)), 0, 0.00001);
+            Assert.Equal(440, project.ToneToFrequency(Edo31.A4Step * Edo31.StepTone), 10);
         }
         [Fact]
         public void OrdinarySerializationIsIdenticalToUpstreamSerializer() {
@@ -102,11 +107,13 @@ namespace OpenUtau.Core.Ustx {
             Assert.Equal(7, loaded.voiceParts[0].notes.First().tuning);
         }
         [Theory]
-        [InlineData("format_revision: 1", "format_revision: 2")]
+        [InlineData("format_revision: 2", "format_revision: 3")]
         [InlineData("edo31-v1", "unknown-v1")]
         [InlineData("tone31: 156", "tone31: -1")]
         [InlineData("tone31: 156", "tone31: 341")]
         [InlineData("tone31: 156", "unrecognized: 156")]
+        [InlineData("frequency: 440", "frequency: -1")]
+        [InlineData("mode: a4-frequency", "mode: unknown")]
         public void RejectsUnsupportedOrInvalidNativeData(string before, string after) {
             var text = SaveText(Fixture(true));
             Assert.Contains(before, text);
@@ -116,6 +123,51 @@ namespace OpenUtau.Core.Ustx {
         public void OrdinaryFileCannotSmuggleNativeNotes() {
             string text = SaveText(Fixture(false)).Replace("tone: 60", "tone: 60\n    tone31: 155");
             Assert.ThrowsAny<Exception>(() => Ustx31.Deserialize(text));
+        }
+        [Fact]
+        public void PitchReferenceUsesNativeAnchorsAndRoundTrips() {
+            var project = Fixture(true);
+            Assert.Equal(440, project.PitchReference31.EffectiveA4Frequency, 10);
+            Assert.Equal(440, project.ToneToFrequency(Edo31.A4Step * Edo31.StepTone), 10);
+
+            project.PitchReference31 = new Edo31PitchReference {
+                Mode = Edo31PitchReferenceMode.TwelveTetNote,
+                TwelveTetPitchClass = 0,
+            };
+            Assert.Equal(MusicMath.ToneToFreq(60), project.ToneToFrequency(155 * Edo31.StepTone), 10);
+            Assert.Equal(437.5473070250114, project.PitchReference31.EffectiveA4Frequency, 10);
+
+            project.PitchReference31.TwelveTetPitchClass = 2;
+            Assert.Equal(MusicMath.ToneToFreq(62), project.ToneToFrequency((155 + 5) * Edo31.StepTone), 10);
+            var loaded = Ustx31.Deserialize(SaveText(project));
+            Assert.Equal(Edo31PitchReferenceMode.TwelveTetNote, loaded.PitchReference31.Mode);
+            Assert.Equal(2, loaded.PitchReference31.TwelveTetPitchClass);
+            Assert.Equal(project.PitchReference31.EffectiveA4Frequency,
+                loaded.PitchReference31.EffectiveA4Frequency, 10);
+        }
+        [Fact]
+        public void RevisionOneMigratesToItsOriginalCReference() {
+            string text = SaveText(Fixture(true))
+                .Replace("format_revision: 2", "format_revision: 1")
+                .Replace("- pitch-reference-v1\n", "");
+            text = Regex.Replace(text,
+                @"  pitch_reference:\n    mode: a4-frequency\n    frequency: 440\n", "");
+            var project = Ustx31.Deserialize(text);
+            Assert.Equal(Edo31PitchReferenceMode.TwelveTetNote, project.PitchReference31.Mode);
+            Assert.Equal(0, project.PitchReference31.TwelveTetPitchClass);
+            Assert.Equal(MusicMath.ToneToFreq(60), project.ToneToFrequency(155 * Edo31.StepTone), 10);
+        }
+        [Fact]
+        public void PitchReferenceCommandIsUndoable() {
+            var project = Fixture(true);
+            var command = new PitchReference31Command(project, new Edo31PitchReference {
+                Mode = Edo31PitchReferenceMode.A4Frequency,
+                A4Frequency = 442,
+            });
+            command.Execute();
+            Assert.Equal(442, project.ToneToFrequency(Edo31.A4Step * Edo31.StepTone), 10);
+            command.Unexecute();
+            Assert.Equal(440, project.ToneToFrequency(Edo31.A4Step * Edo31.StepTone), 10);
         }
         [Fact]
         public void FormatDetectorUsesNativeContentAndLoaderRestoresMode() {
@@ -165,7 +217,10 @@ namespace OpenUtau.Core.Ustx {
             Assert.False(copy.Is31Edo);
             var note = copy.parts.OfType<UVoicePart>().Single().notes.First();
             Assert.Null(note.tone31);
-            Assert.InRange(Math.Abs(note.AdjustedTone - source.parts.OfType<UVoicePart>().Single().notes.First().AdjustedTone) * 100, 0, 0.501);
+            double sourceFrequency = source.ToneToFrequency(
+                source.parts.OfType<UVoicePart>().Single().notes.First().PreciseAdjustedTone);
+            double copyFrequency = copy.ToneToFrequency(note.PreciseAdjustedTone);
+            Assert.InRange(Math.Abs(1200 * Math.Log2(copyFrequency / sourceFrequency)), 0, 0.501);
             Assert.DoesNotContain("features", SaveText(copy));
             var native = Ustx31.ConvertCopy(copy, true);
             Assert.Equal(156, native.parts.OfType<UVoicePart>().Single().notes.First().tone31);
@@ -181,6 +236,9 @@ namespace OpenUtau.Core.Ustx {
             Assert.ThrowsAny<Exception>(() => Formats.ImportTracks(ordinary, new[] { native }));
             Assert.Single(ordinary.tracks);
             Assert.True(native.CloneAsTemplate().Is31Edo);
+            var differentlyAnchored = Fixture(true);
+            differentlyAnchored.PitchReference31 = Edo31PitchReference.LegacyC;
+            Assert.ThrowsAny<Exception>(() => Formats.ImportTracks(native, new[] { differentlyAnchored }));
         }
 
         [Fact]

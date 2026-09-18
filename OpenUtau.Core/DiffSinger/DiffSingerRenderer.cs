@@ -247,7 +247,7 @@ namespace OpenUtau.Core.DiffSinger {
                 .ToList();
             int totalFrames = durations.Sum();
             float[] f0 = DiffSingerUtils.SampleCurve(phrase, phrase.pitches, 0, frameMs, totalFrames, headFrames, tailFrames, 
-                x => MusicMath.ToneToFreq(x * 0.01))
+                x => phrase.ToneToFrequency(x * 0.01))
                 .Select(f => (float)f).ToArray();
             float[] shiftedF0 = f0.Zip(DiffSingerUtils.SampleCurve(phrase, phrase.toneShift, 0, frameMs, totalFrames,
                 headFrames, tailFrames, x => x),
@@ -574,7 +574,7 @@ namespace OpenUtau.Core.DiffSinger {
             var ph_dur = DiffSingerUtils.PaddedPhoneDurations(phrase, frameMs, headFrames, tailFrames);
             int totalFrames = ph_dur.Sum();
             var existingPitch = DiffSingerUtils.SampleCurve(phrase, phrase.pitches, 0, frameMs, totalFrames, headFrames, tailFrames,
-                x => x * 0.01).Select(f => (float)f).ToArray();
+                x => phrase.ToneToRendererTone(x * 0.01)).Select(f => (float)f).ToArray();
             lock (singer.SessionLock) {
                 return pitchPredictor.Process(phrase, pitchSteps, fastRealtime, retakeNoteIndexes, existingPitch);
             }

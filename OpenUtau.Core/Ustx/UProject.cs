@@ -35,6 +35,13 @@ namespace OpenUtau.Core.Ustx {
     public class UProject {
         [YamlIgnore] public bool Is31Edo { get; set; }
         [YamlIgnore] public string NativeExtension => Is31Edo ? ".ustx31" : ".ustx";
+        [YamlIgnore] public Edo31PitchReference PitchReference31 { get; set; } = Edo31PitchReference.Default;
+        public double ToneToFrequency(double tone) => Is31Edo
+            ? PitchReference31.ToneToFrequency(tone)
+            : MusicMath.ToneToFreq(tone);
+        public double FrequencyToTone(double frequency) => Is31Edo
+            ? PitchReference31.FrequencyToTone(frequency)
+            : MusicMath.FreqToTone(frequency);
         public string name = "New Project";
         public string comment = string.Empty;
         public string outputDir = "Vocal";
@@ -173,6 +180,7 @@ namespace OpenUtau.Core.Ustx {
             var project = new UProject() {
                 ustxVersion = ustxVersion,
                 Is31Edo = Is31Edo,
+                PitchReference31 = PitchReference31.ValidatedCopy(),
             };
             foreach (var kv in expressions) {
                 project.expressions.Add(kv.Key, kv.Value.Clone());

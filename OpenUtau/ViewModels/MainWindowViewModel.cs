@@ -72,6 +72,7 @@ namespace OpenUtau.App.ViewModels {
 
         [Reactive] public partial string ClearCacheHeader { get; set; }
         public bool ProjectSaved => !string.IsNullOrEmpty(DocManager.Inst.Project.FilePath) && DocManager.Inst.Project.Saved;
+        public bool Is31Edo => DocManager.Inst.Project.Is31Edo;
         public string AppVersion {
             get {
                 var assembly = typeof(MainWindowViewModel).Assembly;
@@ -479,6 +480,7 @@ namespace OpenUtau.App.ViewModels {
             }
             SetUndoState();
             this.RaisePropertyChanged(nameof(Title));
+            this.RaisePropertyChanged(nameof(Is31Edo));
         }
 
         #endregion

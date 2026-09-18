@@ -77,6 +77,11 @@ namespace OpenUtau.Core {
             Assert.Equal(261.6255653005986, MusicMath.ToneToFreq(155 * Edo31.StepTone), 10);
             Assert.Equal(437.5473070250114, MusicMath.ToneToFreq(178 * Edo31.StepTone), 10);
             Assert.Equal(447.4408797803159, MusicMath.ToneToFreq(179 * Edo31.StepTone), 10);
+            var project = Format.Ustx.Create();
+            project.Is31Edo = true;
+            Assert.Equal(440, project.ToneToFrequency(Edo31.A4Step * Edo31.StepTone), 10);
+            Assert.Equal(440 * Math.Pow(2, 1.0 / 31),
+                project.ToneToFrequency((Edo31.A4Step + 1) * Edo31.StepTone), 10);
         }
 
         private static double MeasureAmplitude(float[] stereoBuffer, double frequency) {

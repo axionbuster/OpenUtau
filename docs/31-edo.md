@@ -5,6 +5,13 @@ Choose **New → 31-TET** from the Start page or **File → New**, use the direc
 The New dialog also offers **12-TET** and **Cancel**. Ordinary `.ustx`
 projects keep their existing keyboard, key control, and pitch editing behavior.
 
+New 31-TET projects use a native A4 = 440 Hz reference: A4 is step 178, and every
+adjacent step differs by the exact ratio `2^(1/31)`. Use **Project → 31-TET
+reference pitch…** to enter another absolute A4 frequency or synchronize the nearest
+31-TET step with a chosen 12-TET pitch class under standard A4 = 440 Hz. The choice
+is saved in the project and participates in undo and redo. It changes sounding pitch,
+not note spelling. Older revision-1 `.ustx31` files retain their historical C anchor.
+
 The native keyboard has 31 equal steps per octave. Draw and drag notes by one
 step; octave transposition moves 31 steps. Colors identify intervals from the selected
 tonic: the tonic is always blue, regardless of its note name. All 31 pitches use one
@@ -94,10 +101,10 @@ The optional Liquid Glass icon is not required for the standard icon to work.
 
 ## Fork version
 
-The local fork identifies itself as `0.1.570-tet31.29 [31-TET]`, based on the
+The local fork identifies itself as `0.1.570-tet31.30 [31-TET]`, based on the
 upstream 0.1.570 development line. The application title uses the informational
 version, preserving the fork suffix without the assembly's trailing zero. macOS
-uses numeric bundle version `0.1.570.29` and short version `0.1.570`. These build
+uses numeric bundle version `0.1.570.30` and short version `0.1.570`. These build
 versions are independent of the native project format revision.
 
 ## Image-scaling regression check

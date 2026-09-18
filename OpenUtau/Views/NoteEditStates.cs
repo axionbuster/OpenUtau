@@ -27,7 +27,7 @@ namespace OpenUtau.App.Views {
         public void Begin(IPointer pointer, Point point) {
             pointer.Capture(element);
             var tone = vm.NotesViewModel.PointToTone(point);
-            activeFrequency = MusicMath.ToneToFreq(vm.NotesViewModel.GridToTone(tone));
+            activeFrequency = vm.NotesViewModel.GridToFrequency(tone);
             PlaybackManager.Inst.PlayTone(activeFrequency.Value);
             activeTone = tone;
         }
@@ -35,7 +35,7 @@ namespace OpenUtau.App.Views {
             var tone = vm.NotesViewModel.PointToTone(point);
             if (activeTone != tone) {
                 StopPreview();
-                activeFrequency = MusicMath.ToneToFreq(vm.NotesViewModel.GridToTone(tone));
+                activeFrequency = vm.NotesViewModel.GridToFrequency(tone);
                 PlaybackManager.Inst.PlayTone(activeFrequency.Value);
                 activeTone = tone;
             }
@@ -246,7 +246,7 @@ namespace OpenUtau.App.Views {
                     PlaybackManager.Inst.StopPlayback();
                 }
                 activeTone = note.GridTone;
-                activeFrequency = MusicMath.ToneToFreq(note.PreciseAdjustedTone);
+                activeFrequency = DocManager.Inst.Project.ToneToFrequency(note.PreciseAdjustedTone);
                 PlaybackManager.Inst.PlayTone(activeFrequency.Value);
             }
             if (note != null) {
@@ -270,7 +270,7 @@ namespace OpenUtau.App.Views {
             if (playTone && activeTone != tone) {
                 // Tone has changed
                 StopPreview();
-                activeFrequency = MusicMath.ToneToFreq(vm.NotesViewModel.GridToTone(tone));
+                activeFrequency = vm.NotesViewModel.GridToFrequency(tone);
                 PlaybackManager.Inst.PlayTone(activeFrequency.Value);
                 activeTone = tone;
             }

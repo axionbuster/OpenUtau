@@ -6,6 +6,7 @@ using System.Numerics;
 using K4os.Hash.xxHash;
 using OpenUtau.Classic;
 using OpenUtau.Core.Ustx;
+using OpenUtau.Core.Util;
 using Serilog;
 
 namespace OpenUtau.Core.Render {
@@ -199,6 +200,17 @@ namespace OpenUtau.Core.Render {
         internal readonly IRenderer renderer;
         public readonly string wavtool;
         public readonly VoiSona.VoiSonaSettings VoiSonaSettings;
+        public readonly bool Is31Edo;
+        public readonly Edo31PitchReference PitchReference31;
+
+        public double ToneToFrequency(double tone) => Is31Edo
+            ? PitchReference31.ToneToFrequency(tone)
+            : MusicMath.ToneToFreq(tone);
+        public double FrequencyToTone(double frequency) => Is31Edo
+            ? PitchReference31.FrequencyToTone(frequency)
+            : MusicMath.FreqToTone(frequency);
+        public double ToneToRendererTone(double tone) => MusicMath.FreqToTone(ToneToFrequency(tone));
+        public double RendererToneToTone(double tone) => FrequencyToTone(MusicMath.ToneToFreq(tone));
 
         /// <summary>
         /// The [startMs, endMs) range (absolute ms) of the rendered phrase
@@ -216,6 +228,8 @@ namespace OpenUtau.Core.Render {
         /// </summary>
         internal RenderPhrase(Pipeline.PhraseSource source, int phraseStart, int phraseEnd, VoiSona.VoiSonaChunk? voisonaChunk = null) {
             VoiSonaChunk = voisonaChunk;
+            Is31Edo = source.Is31Edo;
+            PitchReference31 = source.PitchReference31.ValidatedCopy();
             var phrasePhonemes = source.Phonemes
                 .Skip(phraseStart)
                 .Take(phraseEnd - phraseStart)
@@ -538,6 +552,12 @@ namespace OpenUtau.Core.Render {
                     writer.Write(renderer?.ToString() ?? "");
                     writer.Write(wavtool ?? "");
                     if (singer is VoiSona.VoiSonaSinger) VoiSonaSettings.WriteHash(writer);
+                    if (Is31Edo) {
+                        writer.Write("pitch-reference31");
+                        writer.Write((int)PitchReference31.Mode);
+                        writer.Write(PitchReference31.A4Frequency);
+                        writer.Write(PitchReference31.TwelveTetPitchClass);
+                    }
                     writer.Write(timeAxis.Timestamp);
                     foreach (var phone in phones) {
                         writer.Write(phone.hash);

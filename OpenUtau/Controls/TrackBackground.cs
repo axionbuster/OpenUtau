@@ -144,9 +144,8 @@ namespace OpenUtau.App.Controls {
             }
             int step = DisplayRows == null ? row : DisplayRows[row];
             int relativeStep = Edo31.ScaleColorIndex(step, Preferences.Default.PreferredKey31Fifths);
-            string interval = Edo31.MeantoneIntervalLabel(step, Preferences.Default.PreferredKey31Fifths);
             string unit = relativeStep == 1 ? "step" : "steps";
-            ToolTip.SetTip(this, $"{interval} — {relativeStep} {unit} (31-TET)");
+            ToolTip.SetTip(this, $"{relativeStep} {unit}");
         }
 
         protected override void OnPropertyChanged(AvaloniaPropertyChangedEventArgs change) {

@@ -76,7 +76,7 @@ namespace OpenUtau.App {
                 var hoverPoint = scaleKeyboard.TranslatePoint(
                     new Point(10, augmentedSixth.Y + notes.TrackHeight / 2), window)!.Value;
                 window.MouseMove(hoverPoint, RawInputModifiers.None);
-                Assert.Equal("A6 — 25 steps (31-TET)", ToolTip.GetTip(scaleKeyboard));
+                Assert.Equal("25 steps", ToolTip.GetTip(scaleKeyboard));
                 project.BeforeSave();
                 string before = Core.Format.Ustx31.Serialize(project);
                 project.AfterSave();

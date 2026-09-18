@@ -17,6 +17,7 @@ namespace OpenUtau.Core.VoiSona {
     public sealed class VoiSonaRenderer : IRenderer {
         // Bound memory-heavy native instances across overlapping render passes.
         static readonly VoiSonaRenderGate Gate = new(4);
+        static readonly VoiSonaHostPool PlaybackHosts = new(HelperPath, maxHosts: 2);
         static readonly SemaphoreSlim[] CacheGates = Enumerable.Range(0, 256).Select(_ => new SemaphoreSlim(1)).ToArray();
         internal static int Concurrency(bool exporting, int processors)
             => Math.Clamp(processors / 2, 1, exporting ? 4 : 2);
@@ -94,7 +95,13 @@ namespace OpenUtau.Core.VoiSona {
                                     .Select(n => new[] { n.positionMs - phrase.positionMs + VoiSonaState.HeadMs,
                                         n.endMs - phrase.positionMs + VoiSonaState.HeadMs }).ToArray(),
                             };
-                            await RunHelper(HelperPath, job, directory, token, message => progress.Complete(0, $"Track {trackNo + 1}: {message}"), lowPriority: !exporting);
+                            if (exporting) {
+                                await RunHelper(HelperPath, job, directory, token,
+                                    message => progress.Complete(0, $"Track {trackNo + 1}: {message}"));
+                            } else {
+                                await RunPlaybackHelper(PlaybackHosts, HelperPath, job, directory, token,
+                                    message => progress.Complete(0, $"Track {trackNo + 1}: {message}"));
+                            }
                             samples = TryReadAudio(job.output, frames) ?? throw new InvalidOperationException("VoiSona returned invalid or silent audio. No audio was cached.");
                             token.ThrowIfCancellationRequested();
                             Format.Wave.WriteMonoCache(cache, samples, 24);
@@ -197,6 +204,27 @@ namespace OpenUtau.Core.VoiSona {
                 throw new InvalidOperationException(detail);
             }
         }
+        internal static async Task RunPlaybackHelper(VoiSonaHostPool pool, string helper, VoiSonaJob job,
+                string directory, CancellationToken token, Action<string>? report = null, TimeSpan? timeout = null) {
+            job.protocolVersion = 2;
+            job.generation = Guid.NewGuid().ToString("N");
+            try {
+                await pool.RunAsync(job, directory, token, report, timeout);
+            } catch (VoiSonaPersistentHostException) when (!token.IsCancellationRequested) {
+                // Retry once with the established isolated helper. A server crash or
+                // protocol failure must not make live playback unavailable.
+                job.protocolVersion = 1;
+                job.generation = "";
+                TryDelete(job.result);
+                TryDelete(job.output);
+                TryDelete(job.cancel);
+                await RunHelper(helper, job, directory, token, report, timeout, lowPriority: true);
+            }
+        }
+        static void TryDelete(string path) {
+            if (string.IsNullOrEmpty(path)) return;
+            try { File.Delete(path); } catch (IOException) { }
+        }
         public static Process OpenSetup() {
             if (!OperatingSystem.IsMacOS()) throw new PlatformNotSupportedException("VoiSona requires macOS.");
             if (!File.Exists(HelperPath)) throw new FileNotFoundException("VoiSona helper is missing. Reinstall OpenUtau.", HelperPath);
@@ -209,6 +237,7 @@ namespace OpenUtau.Core.VoiSona {
     }
     internal sealed class VoiSonaJob {
         public int protocolVersion = 1;
+        public string generation = "";
         public byte[] state = Array.Empty<byte>();
         public double durationMs;
         public string output = "";

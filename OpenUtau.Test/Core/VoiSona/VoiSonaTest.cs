@@ -133,6 +133,116 @@ namespace OpenUtau.Core {
                 await Assert.ThrowsAnyAsync<OperationCanceledException>(() => VoiSonaRenderer.RunHelper(script, job, dir, cancel.Token));
             } finally { Directory.Delete(dir, true); }
         }
+        [MacFact]
+        public async Task PersistentHostServesBackToBackGenerationsInOneProcess() {
+            string root = Path.Combine(Path.GetTempPath(), "voisona-pool-" + Guid.NewGuid().ToString("N"));
+            Directory.CreateDirectory(root);
+            try {
+                string script = await WriteFakeHost(root, """
+                    #!/bin/sh
+                    base=$(/usr/bin/dirname "$0")
+                    [ "$1" = "--server" ] || exit 91
+                    printf 'READY 2\n'
+                    while IFS= read -r request; do
+                      json=$(/bin/cat "$request")
+                      generation=$(printf '%s' "$json" | /usr/bin/sed -E 's/.*"generation":"([^"]+)".*/\1/')
+                      result=$(printf '%s' "$json" | /usr/bin/sed -E 's/.*"result":"([^"]+)".*/\1/')
+                      printf '%s\n' "$$" >> "$base/pids"
+                      printf '{"protocolVersion":2,"generation":"%s","ok":true,"frames":44100,"sampleRate":44100}' "$generation" > "$result"
+                      printf 'DONE %s\n' "$generation"
+                    done
+                    """);
+                using var pool = new VoiSonaHostPool(script, idleTimeout: TimeSpan.FromSeconds(30), lowPriority: false);
+                foreach (string generation in new[] { "first", "second" }) {
+                    string dir = Path.Combine(root, generation); Directory.CreateDirectory(dir);
+                    var job = Protocol2Job(dir, generation);
+                    await pool.RunAsync(job, dir, TestContext.Current.CancellationToken, timeout: TimeSpan.FromSeconds(2));
+                }
+                string[] pids = await File.ReadAllLinesAsync(Path.Combine(root, "pids"), TestContext.Current.CancellationToken);
+                Assert.Equal(2, pids.Length);
+                Assert.Equal(pids[0], pids[1]);
+            } finally { Directory.Delete(root, true); }
+        }
+        [MacFact]
+        public async Task DeadPersistentHostFallsBackToOneShotHelper() {
+            string root = Path.Combine(Path.GetTempPath(), "voisona-fallback-" + Guid.NewGuid().ToString("N"));
+            Directory.CreateDirectory(root);
+            try {
+                string script = await WriteFakeHost(root, """
+                    #!/bin/sh
+                    base=$(/usr/bin/dirname "$0")
+                    if [ "$1" = "--server" ]; then
+                      printf 'READY 2\n'
+                      IFS= read -r request
+                      exit 17
+                    fi
+                    json=$(/bin/cat "$1")
+                    result=$(printf '%s' "$json" | /usr/bin/sed -E 's/.*"result":"([^"]+)".*/\1/')
+                    printf '{"protocolVersion":1,"ok":true,"frames":44100,"sampleRate":44100}' > "$result"
+                    : > "$base/oneshot-ran"
+                    """);
+                using var pool = new VoiSonaHostPool(script, lowPriority: false);
+                string dir = Path.Combine(root, "job"); Directory.CreateDirectory(dir);
+                var job = Protocol2Job(dir, "will-be-replaced");
+                await VoiSonaRenderer.RunPlaybackHelper(pool, script, job, dir,
+                    TestContext.Current.CancellationToken, timeout: TimeSpan.FromSeconds(2));
+                Assert.True(File.Exists(Path.Combine(root, "oneshot-ran")));
+                Assert.Equal(1, job.protocolVersion);
+                Assert.Equal("", job.generation);
+            } finally { Directory.Delete(root, true); }
+        }
+        [MacFact]
+        public async Task CanceledPersistentJobIsKilledAndReplaced() {
+            string root = Path.Combine(Path.GetTempPath(), "voisona-cancel-" + Guid.NewGuid().ToString("N"));
+            Directory.CreateDirectory(root);
+            try {
+                string script = await WriteFakeHost(root, """
+                    #!/bin/sh
+                    base=$(/usr/bin/dirname "$0")
+                    [ "$1" = "--server" ] || exit 91
+                    printf 'READY 2\n'
+                    while IFS= read -r request; do
+                      json=$(/bin/cat "$request")
+                      generation=$(printf '%s' "$json" | /usr/bin/sed -E 's/.*"generation":"([^"]+)".*/\1/')
+                      result=$(printf '%s' "$json" | /usr/bin/sed -E 's/.*"result":"([^"]+)".*/\1/')
+                      printf '%s\n' "$$" >> "$base/pids"
+                      if [ ! -e "$base/blocked-once" ]; then
+                        : > "$base/blocked-once"
+                        /bin/sleep 30
+                      else
+                        printf '{"protocolVersion":2,"generation":"%s","ok":true,"frames":44100,"sampleRate":44100}' "$generation" > "$result"
+                        printf 'DONE %s\n' "$generation"
+                      fi
+                    done
+                    """);
+                using var pool = new VoiSonaHostPool(script, idleTimeout: TimeSpan.FromSeconds(30), lowPriority: false);
+                string firstDir = Path.Combine(root, "first"); Directory.CreateDirectory(firstDir);
+                using (var cancel = new CancellationTokenSource(TimeSpan.FromMilliseconds(300))) {
+                    await Assert.ThrowsAnyAsync<OperationCanceledException>(() => pool.RunAsync(
+                        Protocol2Job(firstDir, "canceled"), firstDir, cancel.Token, timeout: TimeSpan.FromSeconds(5)));
+                }
+                string secondDir = Path.Combine(root, "second"); Directory.CreateDirectory(secondDir);
+                await pool.RunAsync(Protocol2Job(secondDir, "fresh"), secondDir,
+                    TestContext.Current.CancellationToken, timeout: TimeSpan.FromSeconds(2));
+                string[] pids = await File.ReadAllLinesAsync(Path.Combine(root, "pids"), TestContext.Current.CancellationToken);
+                Assert.Equal(2, pids.Length);
+                Assert.NotEqual(pids[0], pids[1]);
+            } finally { Directory.Delete(root, true); }
+        }
+        static VoiSonaJob Protocol2Job(string directory, string generation) => new() {
+            protocolVersion = 2,
+            generation = generation,
+            durationMs = 1000,
+            cancel = Path.Combine(directory, "cancel"),
+            result = Path.Combine(directory, "result.json"),
+            output = Path.Combine(directory, "audio.wav"),
+        };
+        static async Task<string> WriteFakeHost(string directory, string contents) {
+            string script = Path.Combine(directory, "fake-host");
+            await File.WriteAllTextAsync(script, contents, TestContext.Current.CancellationToken);
+            File.SetUnixFileMode(script, UnixFileMode.UserRead | UnixFileMode.UserWrite | UnixFileMode.UserExecute);
+            return script;
+        }
         internal static (UProject, RenderPhrase) NativePhrase(VoiSonaSinger singer) {
             var project = Format.Ustx.Create(); project.Is31Edo = true;
             project.tempos.Clear(); project.tempos.Add(new UTempo(0, 120)); project.tempos.Add(new UTempo(1440, 80));

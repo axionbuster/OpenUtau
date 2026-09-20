@@ -43,7 +43,7 @@ seven pitches per octave; together they show ten. The 25-step approximation to 7
 (about 967.7 cents) is spelled **♯6**, the septimal-meantone augmented sixth, rather than
 as a harmonic or minor seventh. It is not part of the major or natural-minor collections,
 so folded views hide it unless an existing note reveals that row. The adjacent 24-, 25-,
-and 26-step intervals are labeled **𝄫7**, **♯6**, and **♭7** respectively. All other rows
+and 26-step intervals are labeled **♭♭7**, **♯6**, and **♭7** respectively. All other rows
 likewise use fifth-based septimal-meantone scale degrees with Arabic numerals and accidentals;
 raw 31-TET step counts appear on hover. While either scale view is active, note names outside the selected scale
 collection are italicized to make them less prominent. Existing pitches anywhere in the project remain visible, including
@@ -66,9 +66,9 @@ Nyquist are omitted so high notes do not acquire aliased pitches.
 Names come from a chain of 31 consecutive fifths: fifteen below the preferred key
 through fifteen above it. A fifth is 18 steps; a sharp raises a letter by two
 steps. Flats and sharps are distinct where appropriate. Octave numbers follow the
-written letter, including spellings that cross C. Double accidentals use 𝄪 and 𝄫;
-combined symbols represent more remote alterations (for example, five flats are
-shown compactly as 𝄫𝄫♭).
+written letter, including spellings that cross C. Double and more remote accidentals
+use repeated ordinary UI glyphs (for example, a double flat is **♭♭** and five
+flats are **♭♭♭♭♭**). Piano-roll labels use slight negative tracking for compactness.
 
 **File → Convert a copy between 12-TET and 31-TET** creates a separate unsaved
 document. Conversion to 31-TET rounds note targets to the nearest step; conversion
@@ -98,10 +98,10 @@ The optional Liquid Glass icon is not required for the standard icon to work.
 
 ## Fork version
 
-The local fork identifies itself as `0.1.570-tet31.33 [31-TET]`, based on the
+The local fork identifies itself as `0.1.570-tet31.34 [31-TET]`, based on the
 upstream 0.1.570 development line. The application title uses the informational
 version, preserving the fork suffix without the assembly's trailing zero. macOS
-uses numeric bundle version `0.1.570.33` and short version `0.1.570`. These build
+uses numeric bundle version `0.1.570.34` and short version `0.1.570`. These build
 versions are independent of the native project format revision.
 
 ## Image-scaling regression check

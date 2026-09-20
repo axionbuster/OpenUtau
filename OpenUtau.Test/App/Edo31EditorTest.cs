@@ -90,10 +90,11 @@ namespace OpenUtau.App {
                 notes.SetKeyCommand.Execute(2).Subscribe();
                 Capture(window, "keyboard-31edo.png");
                 notes.SetKeyCommand.Execute(-15).Subscribe();
-                Assert.Equal("Tonic: F𝄫", notes.KeyText);
+                Assert.Equal("Tonic: F♭♭", notes.KeyText);
                 Dispatcher.UIThread.RunJobs();
                 Capture(window, "keyboard-31edo-f-double-flat.png");
                 notes.SetKeyCommand.Execute(2).Subscribe();
+                Dispatcher.UIThread.RunJobs();
                 Assert.Contains("[31-TET]", new MainWindowViewModel().AppVersion);
                 Assert.Contains("0.1.570-tet31.", new MainWindowViewModel().AppVersion);
                 var toggle = editor.FindControl<CheckBox>("MajorScaleToggle");
@@ -238,12 +239,20 @@ namespace OpenUtau.App {
                 var get = cacheType.GetMethod("Get", System.Reflection.BindingFlags.Public |
                     System.Reflection.BindingFlags.Static)!;
                 var upright = (TextLayout)get.Invoke(null, new object[] {
-                    "B♯4", Brushes.Black, 12d, false, false })!;
+                    "B♯4", Brushes.Black, 12d, false, false, 0d })!;
                 var italic = (TextLayout)get.Invoke(null, new object[] {
-                    "B♯4", Brushes.Black, 12d, false, true })!;
+                    "B♯4", Brushes.Black, 12d, false, true, 0d })!;
+                var compact = (TextLayout)get.Invoke(null, new object[] {
+                    "F♭♭4", Brushes.Black, 12d, false, false, -0.4d })!;
                 Assert.NotSame(upright, italic);
                 Assert.Equal(FontStyle.Normal, upright.TextLines.Single().TextRuns.First().Properties!.Typeface.Style);
                 Assert.Equal(FontStyle.Italic, italic.TextLines.Single().TextRuns.First().Properties!.Typeface.Style);
+                Assert.Equal(-0.4, compact.LetterSpacing);
+                var compactSpacing = cacheType.GetMethod("CompactAccidentalLetterSpacing",
+                    System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Static)!;
+                Assert.Equal(0d, compactSpacing.Invoke(null, new object[] { "F♭4" }));
+                Assert.Equal(-0.4d, compactSpacing.Invoke(null, new object[] { "F♭♭4" }));
+                Assert.Equal(-0.4d, compactSpacing.Invoke(null, new object[] { "F♯♯4" }));
             } finally {
                 ThreadGuard.SetUiThread(null);
             }

@@ -37,10 +37,10 @@ namespace OpenUtau.Core.Ustx {
             }
             Assert.Equal(31, Enumerable.Range(0, 31).Select(s => Edo31.ScaleColorIndex(s, 0)).Distinct().Count());
             string[] degreeLabels = {
-                "1", "𝄫2", "♯1", "♭2", "𝄪1", "2", "𝄫3", "♯2",
-                "♭3", "𝄫4", "3", "♭4", "♯3", "4", "𝄫5", "♯4",
-                "♭5", "𝄪4", "5", "𝄫6", "♯5", "♭6", "𝄪5", "6",
-                "𝄫7", "♯6", "♭7", "𝄫1", "7", "♭1", "♯7",
+                "1", "♭♭2", "♯1", "♭2", "♯♯1", "2", "♭♭3", "♯2",
+                "♭3", "♭♭4", "3", "♭4", "♯3", "4", "♭♭5", "♯4",
+                "♭5", "♯♯4", "5", "♭♭6", "♯5", "♭6", "♯♯5", "6",
+                "♭♭7", "♯6", "♭7", "♭♭1", "7", "♭1", "♯7",
             };
             for (int step = 0; step < Edo31.Divisions; step++) {
                 Assert.Equal(degreeLabels[step], Edo31.ScaleDegreeLabel(step, 0));
@@ -61,16 +61,18 @@ namespace OpenUtau.Core.Ustx {
             Assert.Equal("♭3", Edo31.ScaleDegreeLabel(13, 2));
             Assert.Equal("C4", Edo31.Name(155, 2));
             Assert.NotEqual(Edo31.ParseName("C#4"), Edo31.ParseName("Db4"));
+            Assert.Equal(Edo31.ParseName("F♭♭4"), Edo31.ParseName("F𝄫4"));
+            Assert.Equal(Edo31.ParseName("F♯♯4"), Edo31.ParseName("F𝄪4"));
         }
         [Theory]
         [InlineData(-8, "F♭")]
-        [InlineData(-15, "F𝄫")]
-        [InlineData(-22, "F𝄫♭")]
-        [InlineData(-29, "F𝄫𝄫")]
-        [InlineData(-30, "B𝄫𝄫♭")]
-        [InlineData(13, "F𝄪")]
-        [InlineData(20, "F𝄪♯")]
-        public void FifthNamesUseCompactDoubleAccidentalGlyphs(int fifths, string expected) {
+        [InlineData(-15, "F♭♭")]
+        [InlineData(-22, "F♭♭♭")]
+        [InlineData(-29, "F♭♭♭♭")]
+        [InlineData(-30, "B♭♭♭♭♭")]
+        [InlineData(13, "F♯♯")]
+        [InlineData(20, "F♯♯♯")]
+        public void FifthNamesUsePairedUiAccidentalGlyphs(int fifths, string expected) {
             Assert.Equal(expected, Edo31.FifthName(fifths));
         }
         [Fact]

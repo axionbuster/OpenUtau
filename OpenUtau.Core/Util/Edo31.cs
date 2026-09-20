@@ -95,8 +95,8 @@ namespace OpenUtau.Core.Util {
             int letter = Mod(fifths + 1, 7);
             int accidental = (fifths + 1 - letter) / 7;
             string accidentalName = accidental < 0
-                ? new string('b', -accidental).Replace("bb", "𝄫").Replace("b", "♭")
-                : new string('#', accidental).Replace("##", "𝄪").Replace("#", "♯");
+                ? new string('♭', -accidental)
+                : new string('♯', accidental);
             return Letters[letter] + accidentalName;
         }
         public static int FifthsForStep(int step, int preferredFifths) {
@@ -121,10 +121,10 @@ namespace OpenUtau.Core.Util {
         // Fifth-based scale-degree spellings for one octave of septimal meantone.
         // Every entry agrees with the note spelling selected from the 31-note fifth chain.
         static readonly string[] ScaleDegreeLabels = {
-            "1", "𝄫2", "♯1", "♭2", "𝄪1", "2", "𝄫3", "♯2",
-            "♭3", "𝄫4", "3", "♭4", "♯3", "4", "𝄫5", "♯4",
-            "♭5", "𝄪4", "5", "𝄫6", "♯5", "♭6", "𝄪5", "6",
-            "𝄫7", "♯6", "♭7", "𝄫1", "7", "♭1", "♯7",
+            "1", "♭♭2", "♯1", "♭2", "♯♯1", "2", "♭♭3", "♯2",
+            "♭3", "♭♭4", "3", "♭4", "♯3", "4", "♭♭5", "♯4",
+            "♭5", "♯♯4", "5", "♭♭6", "♯5", "♭6", "♯♯5", "6",
+            "♭♭7", "♯6", "♭7", "♭♭1", "7", "♭1", "♯7",
         };
         public static int ScaleColorIndex(int step, int tonicFifths) =>
             Mod(step - tonicFifths * 18, 31);

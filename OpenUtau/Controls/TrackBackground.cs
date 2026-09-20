@@ -228,17 +228,21 @@ namespace OpenUtau.App.Controls {
                     if (IsKeyboard && TrackHeight >= 12) {
                         bool isFoldedScale = FoldMajor31 || FoldMinor31;
                         bool isScaleDegree = Edo31.IsMajorDegree(colorIndex) || Edo31.IsMinorDegree(colorIndex);
+                        string degreeText = Edo31.ScaleDegreeLabel(step, Preferences.Default.PreferredKey31Fifths);
                         var degree = TextLayoutCache.Get(
-                            Edo31.ScaleDegreeLabel(step, Preferences.Default.PreferredKey31Fifths),
+                            degreeText,
                             isScaleDegree ? Brushes.Black : ChromaticDegreeBrush, isScaleDegree ? 12 : 10,
-                            bold: colorIndex == 0);
+                            bold: colorIndex == 0,
+                            letterSpacing: TextLayoutCache.CompactAccidentalLetterSpacing(degreeText));
                         degree.Draw(context, new Point(4, top + (TrackHeight - degree.Height) / 2));
                         bool isSelectedScaleDegree = Edo31.IsDegreeInSelectedScales(
                             colorIndex, FoldMajor31, FoldMinor31);
+                        string labelText = Edo31.Name(step, Preferences.Default.PreferredKey31Fifths);
                         var label = TextLayoutCache.Get(
-                            Edo31.Name(step, Preferences.Default.PreferredKey31Fifths),
+                            labelText,
                             Brushes.Black, 12, bold: colorIndex == 0,
-                            italic: isFoldedScale && !isSelectedScaleDegree);
+                            italic: isFoldedScale && !isSelectedScaleDegree,
+                            letterSpacing: TextLayoutCache.CompactAccidentalLetterSpacing(labelText));
                         label.Draw(context, new Point(Bounds.Width - 4 - label.Width, top + (TrackHeight - label.Height) / 2));
                     }
                     track++;

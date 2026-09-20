@@ -58,8 +58,6 @@ namespace OpenUtau.App {
             Assert.Equal("Helvetica Neue", MatchFamily('1'));
             Assert.Equal("Helvetica Neue", MatchFamily('♭'));
             Assert.Equal("Helvetica Neue", MatchFamily('♯'));
-            Assert.Equal("Apple Symbols", MatchFamily(0x1D12B)); // musical double flat
-            Assert.Equal("Apple Symbols", MatchFamily(0x1D12A)); // musical double sharp
         }
 
         private static string MatchFamily(int codepoint) {

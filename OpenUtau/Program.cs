@@ -84,10 +84,14 @@ namespace OpenUtau.App {
                 .UsePlatformDetect()
                 .LogToTrace()
                 .UseReactiveUI(_ => { })
-                .With(CreateFontManagerOptions());
+                .With(CreateFontManagerOptions())
+                .With(new SkiaOptions
+                {
+                    MaxGpuResourceSizeBytes = 256 * 1024 * 1024 // 256 MB
+                });
             
             if (OS.IsLinux() && Core.Util.Preferences.Default.UseWayland) {
-                builder.UseWayland();
+                builder.UseWaylandWithFallback();
             }
             
             return builder.With(new X11PlatformOptions {

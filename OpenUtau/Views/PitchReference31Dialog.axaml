@@ -10,7 +10,7 @@
       <Setter Property="Padding" Value="4,0"/>
     </Style>
   </Window.Styles>
-  <Border Margin="{Binding $parent.WindowDecorationMargin}">
+  <Border Margin="{Binding $parent[Window].WindowDecorationMargin}">
     <StackPanel Margin="20" Spacing="12">
       <TextBlock Text="Choose the absolute pitch anchor for this project. Note positions and interval sizes do not change."
                  TextWrapping="Wrap"/>

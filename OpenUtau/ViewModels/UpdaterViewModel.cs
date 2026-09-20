@@ -10,7 +10,6 @@ using NetSparkleUpdater.AppCastHandlers;
 using NetSparkleUpdater.Enums;
 using NetSparkleUpdater.Interfaces;
 using NetSparkleUpdater.SignatureVerifiers;
-using Newtonsoft.Json;
 using OpenUtau.Core;
 using OpenUtau.Core.Util;
 using ReactiveUI.SourceGenerators;
@@ -115,7 +114,7 @@ namespace OpenUtau.App.ViewModels {
             using var resposne = await client.GetAsync("https://api.github.com/repos/stakira/OpenUtau/releases?per_page=100");
             resposne.EnsureSuccessStatusCode();
             string respBody = await resposne.Content.ReadAsStringAsync();
-            List<GithubRelease>? releases = JsonConvert.DeserializeObject<List<GithubRelease>>(respBody);
+            var releases = Json.Deserialize<List<GithubRelease>>(respBody);
             if (releases == null) {
                 return null;
             }
@@ -126,7 +125,9 @@ namespace OpenUtau.App.ViewModels {
         }
 
         static GithubReleaseAsset? SelectAppcast(GithubRelease release) {
-            string suffix = PathManager.Inst.IsInstalled ? "-installer" : "";
+            string suffix = PathManager.Inst.IsInstalled ? "-installer"
+                            : PathManager.Inst.IsAppImage ? "-appimage"
+                            : "";
             return release.assets
                 .Where(a => a.name == $"appcast.{OS.GetUpdaterRid()}{suffix}.xml")
                 .FirstOrDefault();
@@ -270,6 +271,37 @@ namespace OpenUtau.App.ViewModels {
                 return $"{unzipperPath} \"{downloadFilePath}\" \"{restart}\"";
             }
             return downloadFilePath;
+        }
+
+        protected override async Task RunDownloadedInstaller(string downloadFilePath) {
+            if (OS.IsLinux() && Path.GetExtension(downloadFilePath) == ".AppImage" && PathManager.Inst.IsAppImage) {
+                string batchFilePath = Path.Combine(Path.GetTempPath(), Guid.NewGuid() + ".sh");
+                string updateScript = $"""
+                        COUNTER=0;
+                        while ps -p {Environment.ProcessId} > /dev/null;
+                            do sleep 1;
+                            COUNTER=$((++COUNTER));
+                            if [ $COUNTER -eq 90 ]
+                            then
+                                exit -1;
+                            fi;
+                        done;
+
+                        mv -f "{downloadFilePath}" "{PathManager.Inst.AppImagePath}"
+
+                        chmod +x "{PathManager.Inst.AppImagePath}"
+
+                        "{PathManager.Inst.AppImagePath}"
+                    """;
+
+                await File.WriteAllTextAsync(batchFilePath, updateScript.Replace("\r\n", "\n"));
+
+                Exec($"chmod +x '{batchFilePath}' && '{batchFilePath}'", false);
+
+                await QuitApplication();
+            } else {
+                await base.RunDownloadedInstaller(downloadFilePath);
+            }
         }
     }
 }

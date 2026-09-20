@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
@@ -21,6 +22,8 @@ namespace OpenUtau.Classic {
         readonly int version;
         readonly double frameMs;
         byte[]? vocoderBytes;
+
+        static readonly ConcurrentDictionary<string, object> cacheFileLocks = new ConcurrentDictionary<string, object>();
 
         public WorldlineRenderer(int version) {
             if (version != 1 && version != 2) {
@@ -75,10 +78,13 @@ namespace OpenUtau.Classic {
                 // r2 discards phrase tails rendered with undersized native control curves.
                 var wavPath = Path.Join(PathManager.Inst.CachePath, $"wdl-v{version}-r2-{phrase.hash:x16}.flac");
                 phrase.AddCacheFile(wavPath);
-                Wave.MigrateCache(wavPath);
                 string progressInfo = $"Track {trackNo + 1}: {this} {string.Join(" ", phrase.phones.Select(p => p.phoneme))}";
                 progress.Complete(0, progressInfo);
-                result.samples = Wave.ReadMonoCache(wavPath);
+                var cacheLock = cacheFileLocks.GetOrAdd(wavPath, _ => new object());
+                lock (cacheLock) {
+                    Wave.MigrateCache(wavPath);
+                    result.samples = Wave.ReadMonoCache(wavPath);
+                }
                 if (result.samples == null) {
                     var phraseSynth = new Worldline.PhraseSynthV2(44100, version == 1 ? 441 : 512, 2048);
                     double posOffsetMs = phrase.positionMs - phrase.leadingMs;
@@ -177,14 +183,14 @@ namespace OpenUtau.Classic {
                     }
                     AddDirects(phrase, resamplerItems, result);
                     if (result.samples != null) {
-                        var samplesCopy = (float[])result.samples.Clone();
-                        Task.Run(() => {
-                            try {
-                                Wave.WriteMonoCache(wavPath, samplesCopy);
-                            } catch (Exception e) {
-                                Serilog.Log.Error(e, $"Failed to write cache file: {wavPath}");
+                        // Complete atomic FLAC publication before a following render can read it.
+                        try {
+                            lock (cacheLock) {
+                                Wave.WriteMonoCache(wavPath, result.samples);
                             }
-                        });
+                        } catch (Exception e) {
+                            Serilog.Log.Error(e, $"Failed to write cache file: {wavPath}");
+                        }
                     }
                 }
                 progress.Complete(phrase.phones.Length, progressInfo);

@@ -105,7 +105,7 @@ namespace OpenUtau.App {
             var type = typeof(Controls.PianoRoll).Assembly.GetType("OpenUtau.App.Views." + stateName)!;
             object[] args = stateName switch {
                 "NoteDrawEditState" => new object[] { editor, vm, editor, false },
-                "NoteMoveEditState" => new object[] { editor, vm, editor, note },
+                "NoteMoveEditState" => new object[] { editor, vm, editor, note, false },
                 _ => new object[] { editor, vm, editor, note, false },
             };
             var state = Activator.CreateInstance(type, args)!;

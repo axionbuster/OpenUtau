@@ -51,7 +51,7 @@ namespace OpenUtau.Plugin.Builtin {
                     original[i] = replaced;
                 }
             }
-            
+
             List<string> finalProcessedPhonemes = new List<string>();
             foreach (string s in original) {
                 switch (s) {
@@ -401,6 +401,8 @@ namespace OpenUtau.Plugin.Builtin {
             return phonemes;
         }
         protected override string ValidateAlias(string alias, int tone = 0) {
+            if (HasOto(alias, tone)) return alias;
+
             string baseResolved = base.ValidateAlias(alias, tone);
             if (!string.IsNullOrEmpty(baseResolved) && baseResolved != alias) {
                 if (HasOto(baseResolved, tone)) {
@@ -416,9 +418,9 @@ namespace OpenUtau.Plugin.Builtin {
             // }
 
             var rules = new Dictionary<string, string> {
-                { "I", "y" }, { "U", "w" }, 
+                { "I", "y" }, { "U", "w" },
                 { "BB", "B" }, { "DD", "D" },
-                { "ff", "f" }, 
+                { "ff", "f" },
                 { "GG", "G" },
                 { "ll", "l" }, { "mm", "m" }, { "nn", "n" },
                 { "rrr", "rr" },

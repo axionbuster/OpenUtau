@@ -387,7 +387,7 @@
               <MenuItem Name="SpellingMenu" Header="{Binding NotesViewModel.KeyText}"
                         IsVisible="{Binding NotesViewModel.Is31Edo}"
                         ItemsSource="{Binding NotesViewModel.Keys}" Classes="MenuItemWithSubMenu"
-                        ToolTip.Tip="Tonic for scale colors, septimal-meantone interval labels, and note spelling. Hover a keyboard row for its 31-TET step. Display only; does not modify the project."/>
+                        ToolTip.Tip="Tonic for scale colors, scale-degree labels, and note spelling. Hover a keyboard row for its 31-TET step. Display only; does not modify the project."/>
             </Menu>
             <TextBlock Text="Major" VerticalAlignment="Center" Margin="4,0,4,0"
                        IsVisible="{Binding NotesViewModel.Is31Edo}"/>

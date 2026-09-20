@@ -229,7 +229,7 @@ namespace OpenUtau.App.Controls {
                         bool isFoldedScale = FoldMajor31 || FoldMinor31;
                         bool isScaleDegree = Edo31.IsMajorDegree(colorIndex) || Edo31.IsMinorDegree(colorIndex);
                         var degree = TextLayoutCache.Get(
-                            Edo31.MeantoneIntervalLabel(step, Preferences.Default.PreferredKey31Fifths),
+                            Edo31.ScaleDegreeLabel(step, Preferences.Default.PreferredKey31Fifths),
                             isScaleDegree ? Brushes.Black : ChromaticDegreeBrush, isScaleDegree ? 12 : 10,
                             bold: colorIndex == 0);
                         degree.Draw(context, new Point(4, top + (TrackHeight - degree.Height) / 2));
@@ -280,7 +280,7 @@ namespace OpenUtau.App.Controls {
             if (perfectLabels != null) {
                 using (context.PushClip(new Rect(Bounds.Size))) {
                     foreach (var (degree, centerY) in perfectLabels) {
-                        string text = degree == 0 ? "P1" : degree == 13 ? "P4" : "P5";
+                        string text = degree == 0 ? "1" : degree == 13 ? "4" : "5";
                         var label = TextLayoutCache.Get(text, Brushes.Black, 18, bold: true);
                         // Separate columns keep adjacent fourth/fifth rows readable in folded views.
                         double x = degree == 0 ? 8 : degree == 13 ? (Bounds.Width - label.Width) / 2

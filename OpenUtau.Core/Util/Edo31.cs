@@ -118,17 +118,17 @@ namespace OpenUtau.Core.Util {
         public static bool IsMinorDegree(int relativeStep) => relativeStep is 0 or 5 or 8 or 13 or 18 or 21 or 26;
         public static bool IsDegreeInSelectedScales(int relativeStep, bool major, bool minor) =>
             (major && IsMajorDegree(relativeStep)) || (minor && IsMinorDegree(relativeStep));
-        // Fifth-based interval spellings for one octave of septimal meantone.
+        // Fifth-based scale-degree spellings for one octave of septimal meantone.
         // Every entry agrees with the note spelling selected from the 31-note fifth chain.
-        static readonly string[] MeantoneIntervalLabels = {
-            "P1", "d2", "A1", "m2", "AA1", "M2", "d3", "A2",
-            "m3", "dd4", "M3", "d4", "A3", "P4", "dd5", "A4",
-            "d5", "AA4", "P5", "d6", "A5", "m6", "AA5", "M6",
-            "d7", "A6", "m7", "dd8", "M7", "d8", "A7",
+        static readonly string[] ScaleDegreeLabels = {
+            "1", "𝄫2", "♯1", "♭2", "𝄪1", "2", "𝄫3", "♯2",
+            "♭3", "𝄫4", "3", "♭4", "♯3", "4", "𝄫5", "♯4",
+            "♭5", "𝄪4", "5", "𝄫6", "♯5", "♭6", "𝄪5", "6",
+            "𝄫7", "♯6", "♭7", "𝄫1", "7", "♭1", "♯7",
         };
         public static int ScaleColorIndex(int step, int tonicFifths) =>
             Mod(step - tonicFifths * 18, 31);
-        public static string MeantoneIntervalLabel(int step, int tonicFifths) =>
-            MeantoneIntervalLabels[ScaleColorIndex(step, tonicFifths)];
+        public static string ScaleDegreeLabel(int step, int tonicFifths) =>
+            ScaleDegreeLabels[ScaleColorIndex(step, tonicFifths)];
     }
 }

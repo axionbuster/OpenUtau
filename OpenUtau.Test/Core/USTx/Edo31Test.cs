@@ -36,15 +36,15 @@ namespace OpenUtau.Core.Ustx {
                 }
             }
             Assert.Equal(31, Enumerable.Range(0, 31).Select(s => Edo31.ScaleColorIndex(s, 0)).Distinct().Count());
-            string[] intervalLabels = {
-                "P1", "d2", "A1", "m2", "AA1", "M2", "d3", "A2",
-                "m3", "dd4", "M3", "d4", "A3", "P4", "dd5", "A4",
-                "d5", "AA4", "P5", "d6", "A5", "m6", "AA5", "M6",
-                "d7", "A6", "m7", "dd8", "M7", "d8", "A7",
+            string[] degreeLabels = {
+                "1", "𝄫2", "♯1", "♭2", "𝄪1", "2", "𝄫3", "♯2",
+                "♭3", "𝄫4", "3", "♭4", "♯3", "4", "𝄫5", "♯4",
+                "♭5", "𝄪4", "5", "𝄫6", "♯5", "♭6", "𝄪5", "6",
+                "𝄫7", "♯6", "♭7", "𝄫1", "7", "♭1", "♯7",
             };
             for (int step = 0; step < Edo31.Divisions; step++) {
-                Assert.Equal(intervalLabels[step], Edo31.MeantoneIntervalLabel(step, 0));
-                Assert.Equal(intervalLabels[step], Edo31.MeantoneIntervalLabel(step + 36, 2));
+                Assert.Equal(degreeLabels[step], Edo31.ScaleDegreeLabel(step, 0));
+                Assert.Equal(degreeLabels[step], Edo31.ScaleDegreeLabel(step + 36, 2));
             }
             Assert.Equal(Edo31.SeptimalAugmentedSixth, (int)Math.Round(31 * Math.Log2(7.0 / 4)));
             Assert.True(Edo31.IsDegreeInSelectedScales(10, major: true, minor: false));
@@ -55,10 +55,10 @@ namespace OpenUtau.Core.Ustx {
             Assert.False(Edo31.IsDegreeInSelectedScales(Edo31.SeptimalAugmentedSixth, major: true, minor: true));
             Assert.False(Edo31.IsDegreeInSelectedScales(0, major: false, minor: false));
             for (int key = -15; key <= 15; key++) {
-                Assert.Equal("A6", Edo31.MeantoneIntervalLabel(
+                Assert.Equal("♯6", Edo31.ScaleDegreeLabel(
                     key * 18 + Edo31.SeptimalAugmentedSixth, key));
             }
-            Assert.Equal("m3", Edo31.MeantoneIntervalLabel(13, 2));
+            Assert.Equal("♭3", Edo31.ScaleDegreeLabel(13, 2));
             Assert.Equal("C4", Edo31.Name(155, 2));
             Assert.NotEqual(Edo31.ParseName("C#4"), Edo31.ParseName("Db4"));
         }

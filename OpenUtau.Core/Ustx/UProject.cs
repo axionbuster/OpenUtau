@@ -271,6 +271,20 @@ namespace OpenUtau.Core.Ustx {
                     item.part.chordHelpers.Remove(item.helper);
                 }
             }
+            var regions = parts.OfType<UVoicePart>()
+                .SelectMany(part => part.chordRegions.Select((region, index) => (part, region, index)))
+                .OrderBy(item => item.part.position + item.region.position)
+                .ThenBy(item => item.part.trackNo)
+                .ThenBy(item => item.index)
+                .ToList();
+            destination.chordRegions.Clear();
+            foreach (var item in regions) {
+                item.region.position += item.part.position;
+                destination.chordRegions.Add(item.region);
+                if (!ReferenceEquals(item.part, destination)) {
+                    item.part.chordRegions.Remove(item.region);
+                }
+            }
             foreach (var extra in chordParts.Where(part => !ReferenceEquals(part, destination))) {
                 parts.Remove(extra);
             }
@@ -295,7 +309,9 @@ namespace OpenUtau.Core.Ustx {
             destination.trackNo = 0;
             destination.notes.Clear();
             destination.curves.Clear();
-            destination.duration = Math.Max(1, destination.chordHelpers.Select(helper => helper.End).DefaultIfEmpty(1).Max());
+            destination.duration = Math.Max(
+                destination.chordHelpers.Select(helper => helper.End).DefaultIfEmpty(1).Max(),
+                destination.chordRegions.Select(region => region.End).DefaultIfEmpty(1).Max());
             if (!parts.Contains(destination)) parts.Add(destination);
         }
 

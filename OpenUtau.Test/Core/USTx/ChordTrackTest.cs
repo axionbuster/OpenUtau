@@ -32,6 +32,66 @@ namespace OpenUtau.Core.Ustx {
         }
 
         [Fact]
+        public void RegionRoundTripSurvivesCanonicalConsolidation() {
+            var project = Format.Ustx.Create();
+            project.Is31Edo = true;
+            project.ChordsPart.chordRegions.Add(new UChordRegion {
+                position = 1440,
+                sourceDuration = 1920,
+                duration = 4800,
+                chordHelpers = new() {
+                    new UChordHelper { position = 0, duration = 480, root = 0, rootTone = 155 },
+                    new UChordHelper { position = 960, duration = 480, root = 18, rootTone = 173 },
+                },
+            });
+            project.BeforeSave();
+            string text;
+            try { text = Ustx31.Serialize(project); }
+            finally { project.AfterSave(); }
+
+            var loaded = Ustx31.Deserialize(text);
+            loaded.AfterLoad();
+            var region = Assert.Single(loaded.ChordsPart.chordRegions);
+            Assert.Equal(1440, region.position);
+            Assert.Equal(1920, region.sourceDuration);
+            Assert.Equal(4800, region.duration);
+            Assert.Equal(new[] { 0, 960 }, region.chordHelpers.Select(helper => helper.position));
+            Assert.Equal(6240, loaded.ChordsPart.duration);
+
+            loaded.EnsureChordsTrack();
+            Assert.Same(region, Assert.Single(loaded.ChordsPart.chordRegions));
+            Assert.Equal(1440, region.position);
+            Assert.Equal(6240, loaded.ChordsPart.duration);
+        }
+
+        [Fact]
+        public void DuplicateChordPartsConsolidateRegionsAtAbsoluteTicks() {
+            var project = Format.Ustx.Create();
+            var extraTrack = UTrack.CreateChordsTrack();
+            extraTrack.TrackNo = project.tracks.Count;
+            project.tracks.Add(extraTrack);
+            var extra = new UVoicePart {
+                isChordPart = true,
+                trackNo = extraTrack.TrackNo,
+                position = 960,
+                duration = 3000,
+            };
+            var region = new UChordRegion { position = 480, sourceDuration = 960, duration = 1920 };
+            extra.chordRegions.Add(region);
+            project.parts.Add(extra);
+
+            project.EnsureChordsTrack();
+
+            Assert.Same(region, Assert.Single(project.ChordsPart.chordRegions));
+            Assert.Equal(1440, region.position);
+            Assert.Equal(3360, project.ChordsPart.duration);
+            Assert.Single(project.tracks.Where(track => track.IsChordsTrack));
+            Assert.Single(project.parts.OfType<UVoicePart>().Where(part => part.IsChordPart));
+            project.EnsureChordsTrack();
+            Assert.Equal(1440, Assert.Single(project.ChordsPart.chordRegions).position);
+        }
+
+        [Fact]
         public void LegacyPartsMigrateAtAbsoluteTicksWithoutDeduplicatingOverlap() {
             var project = Format.Ustx.Create();
             project.tracks.RemoveAll(track => track.IsChordsTrack);

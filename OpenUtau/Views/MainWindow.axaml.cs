@@ -982,6 +982,15 @@ namespace OpenUtau.App.Views {
                 return;
             }
 
+            if (args.Key == Key.Escape && chordRegionDrag != null && chordRegionDragBefore != null) {
+                chordRegionDrag.CopyFrom(chordRegionDragBefore);
+                MessageBus.Current.SendMessage(new PartRefreshEvent(DocManager.Inst.Project.ChordsPart));
+                chordRegionDrag = chordRegionDragBefore = null;
+                Cursor = null;
+                args.Handled = true;
+                return;
+            }
+
             var tracksVm = viewModel.TracksViewModel;
 
             if (args.KeyModifiers == KeyModifiers.None) {

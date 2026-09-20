@@ -107,9 +107,14 @@ mixed-mode or unequal-reference import rejection.
 
 The headless `Edo31EditorTest` renders the real piano-roll control, checks row
 coordinates and spelling preference behavior, verifies the pitch-reference dialog,
-and verifies that switching back to USTx restores the ordinary editor. To also save keyboard PNGs, set
-`OPENUTAU_QA_OUTPUT` to an output directory when running that test. Real voicebank
-synthesis and listening are separate verification steps.
+and verifies that switching back to USTx restores the ordinary editor. Its Skia
+test host reuses the production font-manager settings, including the macOS
+Helvetica Neue and Apple Symbols fallbacks used by scale-degree accidentals. Each
+capture is rendered and size-checked even when no output directory is requested.
+Set `OPENUTAU_QA_OUTPUT` to an output directory to also save the keyboard PNGs.
+This path uses Avalonia's headless platform rather than a native macOS window, so
+it remains the appropriate renderer when the interactive session is unavailable
+or locked. Real voicebank synthesis and listening are separate verification steps.
 
 ```sh
 dotnet test OpenUtau.Test/OpenUtau.Test.csproj --filter 'FullyQualifiedName~Edo31'

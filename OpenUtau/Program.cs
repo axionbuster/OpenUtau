@@ -52,7 +52,7 @@ namespace OpenUtau.App {
         }
 
         // Avalonia configuration, don't remove; also used by visual designer.
-        public static AppBuilder BuildAvaloniaApp() {
+        public static FontManagerOptions CreateFontManagerOptions() {
             FontManagerOptions fontOptions = new();
             if (OS.IsLinux()) {
                 using Process process = Process.Start(new ProcessStartInfo("fc-match")
@@ -76,12 +76,15 @@ namespace OpenUtau.App {
                     new FontFallback { FontFamily = new FontFamily("Arial") },
                 ];
             }
+            return fontOptions;
+        }
 
+        public static AppBuilder BuildAvaloniaApp() {
             var builder = AppBuilder.Configure<App>()
                 .UsePlatformDetect()
                 .LogToTrace()
                 .UseReactiveUI(_ => { })
-                .With(fontOptions);
+                .With(CreateFontManagerOptions());
             
             if (OS.IsLinux() && Core.Util.Preferences.Default.UseWayland) {
                 builder.UseWayland();

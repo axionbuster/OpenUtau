@@ -219,13 +219,15 @@ namespace OpenUtau.App {
             }
         }
         static void Capture(Window window, string name) {
-            string? output = Environment.GetEnvironmentVariable("OPENUTAU_QA_OUTPUT");
-            if (string.IsNullOrEmpty(output)) { return; }
-            Directory.CreateDirectory(output);
             AvaloniaHeadlessPlatform.ForceRenderTimerTick();
             using var frame = window.CaptureRenderedFrame();
             Assert.NotNull(frame);
-            frame.Save(Path.Combine(output, name));
+            Assert.Equal(new PixelSize(1100, 900), frame.PixelSize);
+            string? output = Environment.GetEnvironmentVariable("OPENUTAU_QA_OUTPUT");
+            if (!string.IsNullOrEmpty(output)) {
+                Directory.CreateDirectory(output);
+                frame.Save(Path.Combine(output, name));
+            }
         }
 
         [AvaloniaFact]

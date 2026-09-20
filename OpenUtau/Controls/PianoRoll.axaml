@@ -722,7 +722,7 @@
                            VerticalAlignment="Center"/>
                 <Button Grid.Column="1" Content="Delete" Command="{Binding ChordHelpers.DeleteCommand}"/>
               </Grid>
-              <Button Content="Create Region from Chord" Command="{Binding ChordHelpers.CreateRegionCommand}"
+              <Button Content="Create Region from Chord Range" Command="{Binding ChordHelpers.CreateRegionCommand}"
                       IsVisible="{Binding !ChordHelpers.HasRegion}"/>
 
               <Grid ColumnDefinitions="110,*" RowDefinitions="Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto">

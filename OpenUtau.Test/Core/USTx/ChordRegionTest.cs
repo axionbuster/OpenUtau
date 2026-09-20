@@ -75,5 +75,50 @@ namespace OpenUtau.Test.Core.USTx {
             pasted.chordHelpers[0].root = 4;
             Assert.Equal(0, source.chordHelpers[0].root);
         }
+
+        [Fact]
+        public void CreateFromSelectionPreservesPhraseSilenceAndRelativeTiming() {
+            var helpers = new[] {
+                new UChordHelper { position = 1200, duration = 240 },
+                new UChordHelper { position = 1800, duration = 300 },
+                new UChordHelper { position = 3000, duration = 240 },
+            };
+            var region = ChordRegionExpander.CreateFromFreeHelpers(helpers, 960, 2400, 480)!;
+            Assert.Equal(960, region.position);
+            Assert.Equal(1440, region.sourceDuration);
+            Assert.Equal(new[] { 240, 840 }, region.chordHelpers.Select(helper => helper.position));
+            Assert.Equal(new[] { 240, 300 }, region.chordHelpers.Select(helper => helper.duration));
+        }
+
+        [Fact]
+        public void GroupCommandsUndoAndRedoWithoutAliasing() {
+            var part = new UVoicePart();
+            var first = new UChordHelper { position = 120, duration = 240 };
+            var second = new UChordHelper { position = 720, duration = 480 };
+            part.chordHelpers.AddRange(new[] { first, second });
+            var region = ChordRegionExpander.CreateFromFreeHelpers(part.chordHelpers, 0, 1440, 480)!;
+            var removeFirst = new OpenUtau.Core.RemoveChordHelperCommand(part, first);
+            var removeSecond = new OpenUtau.Core.RemoveChordHelperCommand(part, second);
+            var add = new OpenUtau.Core.AddChordRegionCommand(part, region);
+            removeFirst.Execute(); removeSecond.Execute(); add.Execute();
+            Assert.Empty(part.chordHelpers);
+            Assert.Same(region, Assert.Single(part.chordRegions));
+            add.Unexecute(); removeSecond.Unexecute(); removeFirst.Unexecute();
+            Assert.Equal(new[] { first, second }, part.chordHelpers);
+            Assert.Empty(part.chordRegions);
+            removeFirst.Execute(); removeSecond.Execute(); add.Execute();
+            Assert.Equal(2, part.chordRegions.Single().chordHelpers.Count);
+        }
+
+        [Fact]
+        public void ActiveEmptyRegionCanAccumulateIndependentSourceHelpers() {
+            var region = new UChordRegion { position = 1440, sourceDuration = 1920, duration = 3840 };
+            var first = new UChordHelper { position = 0, duration = 480 };
+            var second = new UChordHelper { position = 960, duration = 480 };
+            region.chordHelpers.Add(first);
+            region.chordHelpers.Add(second);
+            Assert.Equal(new[] { 1440, 2400, 3360, 4320 },
+                ChordRegionExpander.Enumerate(region, 0, 6000).Select(item => item.StartTick));
+        }
     }
 }

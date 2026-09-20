@@ -197,6 +197,25 @@ namespace OpenUtau.Core.Ustx {
             }
             return true;
         }
+
+        public static UChordRegion? CreateFromFreeHelpers(
+                IEnumerable<UChordHelper> helpers, int selectionStart, int selectionEnd, int defaultPeriod) {
+            var selected = helpers.Where(helper => selectionEnd > selectionStart
+                    ? helper.position >= selectionStart && helper.position < selectionEnd
+                    : true).ToList();
+            if (selected.Count == 0) return null;
+            int anchor = selectionEnd > selectionStart ? selectionStart : selected.Min(helper => helper.position);
+            int end = selectionEnd > selectionStart
+                ? Math.Max(selectionEnd, selected.Max(helper => helper.End))
+                : selected.Max(helper => helper.End);
+            int length = Math.Max(Math.Max(1, defaultPeriod), end - anchor);
+            return new UChordRegion {
+                position = anchor, sourceDuration = length, duration = length,
+                chordHelpers = selected.Select(helper => {
+                    var clone = helper.Clone(); clone.position -= anchor; return clone;
+                }).ToList(),
+            };
+        }
     }
 
     public sealed class ChordHelperPreset {

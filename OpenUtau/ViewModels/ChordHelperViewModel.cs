@@ -231,18 +231,21 @@ namespace OpenUtau.App.ViewModels {
         void CreateRegionFromSelected() {
             if (!HasSelection || selectedRegion != null) return;
             var part = selectedPart!;
-            var original = selectedHelper!;
-            int anchor = original.position;
-            int period = Math.Max(DocManager.Inst.Project.resolution * 4, original.duration);
-            var helper = original.Clone(); helper.position = 0;
-            var region = new UChordRegion { position = anchor, sourceDuration = period,
-                duration = period, chordHelpers = new List<UChordHelper> { helper } };
+            var manager = DocManager.Inst;
+            int rangeStart = manager.rangeStartTick;
+            int rangeEnd = manager.rangeEndTick;
+            var candidates = rangeEnd > rangeStart
+                ? part.chordHelpers.Where(helper => helper.position >= rangeStart && helper.position < rangeEnd).ToList()
+                : new List<UChordHelper> { selectedHelper! };
+            var region = ChordRegionExpander.CreateFromFreeHelpers(candidates, rangeStart, rangeEnd,
+                manager.Project.resolution * 4);
+            if (region == null) return;
             DocManager.Inst.StartUndoGroup();
-            DocManager.Inst.ExecuteCmd(new RemoveChordHelperCommand(part, original));
+            foreach (var original in candidates) DocManager.Inst.ExecuteCmd(new RemoveChordHelperCommand(part, original));
             DocManager.Inst.ExecuteCmd(new AddChordRegionCommand(part, region));
             DocManager.Inst.EndUndoGroup();
             selectedRegion = region;
-            Select(part, helper);
+            Select(part, region.chordHelpers[0]);
         }
 
         public static IEnumerable<(UVoicePart Part, UChordHelper Helper)> VisibleHelpers(UProject project) =>

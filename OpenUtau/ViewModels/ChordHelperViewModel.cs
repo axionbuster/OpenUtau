@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using Avalonia.Media;
 using DynamicData.Binding;
 using OpenUtau.Core;
 using OpenUtau.Core.Ustx;
@@ -44,13 +45,14 @@ namespace OpenUtau.App.ViewModels {
         public UChordInterval Interval { get; }
         [Reactive] public partial bool IsEnabled { get; set; }
         public string Label => Interval.Label;
-        public string ButtonText => IsEnabled ? "✓ " + Label : Label;
+        public FontWeight Weight => IsEnabled ? FontWeight.Bold : FontWeight.Normal;
         public string Background {
             get {
                 int step = Edo31.Mod(Interval.Offset(DocManager.Inst.Project.Is31Edo),
                     DocManager.Inst.Project.Is31Edo ? 31 : 12);
-                string[] colors = { "#3B82F6", "#8B5CF6", "#EC4899", "#F97316", "#EAB308", "#22C55E", "#06B6D4" };
-                return IsEnabled ? colors[step % colors.Length] : "#30343A";
+                string[] vivid = { "#3B82F6", "#8B5CF6", "#EC4899", "#F97316", "#EAB308", "#22C55E", "#06B6D4" };
+                string[] muted = { "#3E6FAE", "#7659AF", "#AC4F7D", "#B96428", "#A88B22", "#38945C", "#278C9E" };
+                return (IsEnabled ? vivid : muted)[step % vivid.Length];
             }
         }
         public ChordDegreeViewModel(UChordInterval interval, bool enabled) {
@@ -58,7 +60,7 @@ namespace OpenUtau.App.ViewModels {
             IsEnabled = enabled;
         }
         public void Refresh() {
-            this.RaisePropertyChanged(nameof(ButtonText));
+            this.RaisePropertyChanged(nameof(Weight));
             this.RaisePropertyChanged(nameof(Background));
         }
     }

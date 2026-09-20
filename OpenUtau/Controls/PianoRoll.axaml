@@ -735,8 +735,7 @@
                 <TextBlock Grid.Row="2" Text="Inversion / bass" VerticalAlignment="Center"/>
                 <ComboBox Name="ChordBass" Grid.Row="2" Grid.Column="1"
                           ItemsSource="{Binding ChordHelpers.BassChoices}"
-                          SelectedItem="{Binding ChordHelpers.SelectedBass, Mode=TwoWay}"
-                          ToolTip.Tip="Names the bass (for example C/E); chord-tone rows remain unchanged."/>
+                          SelectedItem="{Binding ChordHelpers.SelectedBass, Mode=TwoWay}"/>
                 <TextBlock Grid.Row="3" Text="Onset (ticks)" VerticalAlignment="Center"/>
                 <NumericUpDown Name="ChordOnset" Grid.Row="3" Grid.Column="1"
                                Height="32" Padding="4,0" VerticalContentAlignment="Center"
@@ -749,15 +748,11 @@
                                Value="{Binding ChordHelpers.Duration, Mode=TwoWay}"/>
               </Grid>
 
-              <Grid ColumnDefinitions="Auto,*"
-                    ToolTip.Tip="The root remains the harmonic reference when its degree button is off; no root row is drawn then.">
+              <Grid ColumnDefinitions="Auto,*">
                 <CheckBox Name="ChordHighlightRoot"
                           IsChecked="{Binding ChordHelpers.HighlightRoot, Mode=TwoWay}"/>
                 <TextBlock Grid.Column="1" Margin="6,0,0,0" Text="Highlight root" VerticalAlignment="Center"/>
               </Grid>
-              <TextBlock Text="Harmonic seventh is the 31-TET approximation of 7:4 and uses ♯6 (25 steps)."
-                         IsVisible="{Binding NotesViewModel.Is31Edo}" FontSize="10" Opacity="0.75"
-                         TextWrapping="Wrap"/>
               <TextBlock Text="Degrees" FontWeight="SemiBold"/>
               <ItemsControl Width="{Binding ChordHelpers.DegreeGridWidth}" HorizontalAlignment="Left"
                             ItemsSource="{Binding ChordHelpers.Degrees}">
@@ -769,17 +764,15 @@
                 <ItemsControl.ItemTemplate>
                   <DataTemplate x:DataType="vm:ChordDegreeViewModel">
                     <Button Width="46" Height="32" Margin="2" Padding="2"
-                            Content="{Binding ButtonText}" Background="{Binding Background}"
+                            Content="{Binding Label}" Background="{Binding Background}"
+                            FontWeight="{Binding Weight}"
                             BorderBrush="{DynamicResource SystemControlForegroundBaseHighBrush}"
                             BorderThickness="1"
-                            ToolTip.Tip="At least one degree stays enabled; unison is a valid helper."
                             Command="{Binding $parent[UserControl].DataContext.ChordHelpers.ToggleDegreeCommand}"
                             CommandParameter="{Binding}"/>
                   </DataTemplate>
                 </ItemsControl.ItemTemplate>
               </ItemsControl>
-              <TextBlock Text="All helpers remain visible. Helpers owned by the selected track are filled and editable; other tracks stay outline-only. Use the Ch tool to create, select, move, or resize."
-                         FontSize="10" Opacity="0.75" TextWrapping="Wrap"/>
             </StackPanel>
           </ScrollViewer>
         </Grid>

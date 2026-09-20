@@ -104,19 +104,6 @@ namespace OpenUtau.Core.Ustx {
                 helper.Normalize(project.Is31Edo);
             }
             chordRegions.RemoveAll(region => !region.Normalize(project.Is31Edo));
-            if (IsChordPart && chordRegions.Count == 0 && chordHelpers.Count > 0) {
-                int start = chordHelpers.Min(helper => helper.position);
-                int end = chordHelpers.Max(helper => helper.End);
-                chordRegions.Add(new UChordRegion {
-                    position = start,
-                    sourceDuration = Math.Max(1, end - start),
-                    duration = Math.Max(1, end - start),
-                    chordHelpers = chordHelpers.Select(helper => {
-                        var clone = helper.Clone(); clone.position -= start; return clone;
-                    }).ToList(),
-                });
-                chordHelpers.Clear();
-            }
             foreach (var note in notes) {
                 note.AfterLoad(project, track, this);
             }

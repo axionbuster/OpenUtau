@@ -722,8 +722,10 @@
                            VerticalAlignment="Center"/>
                 <Button Grid.Column="1" Content="Delete" Command="{Binding ChordHelpers.DeleteCommand}"/>
               </Grid>
+              <Button Content="Create Region from Chord" Command="{Binding ChordHelpers.CreateRegionCommand}"
+                      IsVisible="{Binding !ChordHelpers.HasRegion}"/>
 
-              <Grid ColumnDefinitions="110,*" RowDefinitions="Auto,Auto,Auto,Auto,Auto">
+              <Grid ColumnDefinitions="110,*" RowDefinitions="Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto">
                 <TextBlock Text="Quality" VerticalAlignment="Center"/>
                 <ComboBox Name="ChordQuality" Grid.Column="1"
                           ItemsSource="{Binding ChordHelpers.QualityChoices}"
@@ -746,6 +748,15 @@
                                Height="32" Padding="4,0" VerticalContentAlignment="Center"
                                Minimum="1" Maximum="100000000" Increment="1" FormatString="0"
                                Value="{Binding ChordHelpers.Duration, Mode=TwoWay}"/>
+                <TextBlock Grid.Row="5" Text="Region onset" IsVisible="{Binding ChordHelpers.HasRegion}" VerticalAlignment="Center"/>
+                <NumericUpDown Grid.Row="5" Grid.Column="1" IsVisible="{Binding ChordHelpers.HasRegion}"
+                               Minimum="0" Maximum="100000000" Value="{Binding ChordHelpers.RegionPosition, Mode=TwoWay}"/>
+                <TextBlock Grid.Row="6" Text="Loop length" IsVisible="{Binding ChordHelpers.HasRegion}" VerticalAlignment="Center"/>
+                <NumericUpDown Grid.Row="6" Grid.Column="1" IsVisible="{Binding ChordHelpers.HasRegion}"
+                               Minimum="1" Maximum="100000000" Value="{Binding ChordHelpers.LoopLength, Mode=TwoWay}"/>
+                <TextBlock Grid.Row="7" Text="Region length" IsVisible="{Binding ChordHelpers.HasRegion}" VerticalAlignment="Center"/>
+                <NumericUpDown Grid.Row="7" Grid.Column="1" IsVisible="{Binding ChordHelpers.HasRegion}"
+                               Minimum="1" Maximum="100000000" Value="{Binding ChordHelpers.RegionLength, Mode=TwoWay}"/>
               </Grid>
 
               <Grid ColumnDefinitions="Auto,*" RowDefinitions="Auto,Auto">

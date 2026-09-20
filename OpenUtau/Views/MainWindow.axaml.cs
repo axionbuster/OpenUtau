@@ -1531,6 +1531,9 @@ namespace OpenUtau.App.Views {
                 }
                 int tick = viewModel.TracksViewModel.PointToTick(args.GetPosition(canvas));
                 DocManager.Inst.ExecuteCmd(new LoadPartNotification(hitPartControl.part, DocManager.Inst.Project, tick));
+                if (chordHit != null && hitPartControl.part is UVoicePart chordPart) {
+                    pianoRoll.ViewModel.ChordHelpers.SelectRegion(chordPart, chordHit.Value.Region);
+                }
                 pianoRoll.AttachExpressions();
             }
         }
@@ -1549,6 +1552,21 @@ namespace OpenUtau.App.Views {
                     DocManager.Inst.ExecuteCmd(new AddChordRegionCommand(project.ChordsPart, created));
                     DocManager.Inst.EndUndoGroup();
                 }) });
+                var payload = DocManager.Inst.ChordsClipboard;
+                items.Add(new MenuItem { Header = "Paste Chord Region", IsEnabled = payload?.Regions.Count > 0,
+                    Command = ReactiveCommand.Create(() => {
+                        viewModel.TracksViewModel.PointToLineTick(point, out int left, out _);
+                        var project = DocManager.Inst.Project;
+                        var pasted = payload?.CloneRegionsForPaste(project, left);
+                        if (pasted == null) {
+                            DocManager.Inst.ExecuteCmd(new ErrorMessageNotification(new FileFormatException(
+                                "Match the project tuning and 31-TET pitch reference before pasting chord regions.")));
+                            return;
+                        }
+                        DocManager.Inst.StartUndoGroup();
+                        foreach (var item in pasted) DocManager.Inst.ExecuteCmd(new AddChordRegionCommand(project.ChordsPart, item));
+                        DocManager.Inst.EndUndoGroup();
+                    }) });
             } else {
                 items.Add(new MenuItem { Header = "Loop", IsEnabled = !region.IsLooped,
                     Command = ReactiveCommand.Create(() => ChangeRegion(region, changed => changed.duration = checked(changed.sourceDuration * 2))) });
@@ -1557,6 +1575,13 @@ namespace OpenUtau.App.Views {
                 items.Add(new MenuItem { Header = "Break Loop", IsEnabled = region.IsLooped,
                     Command = ReactiveCommand.Create(() => BreakChordLoop(region)) });
                 items.Add(new Separator());
+                items.Add(new MenuItem { Header = "Copy Chord Region", Command = ReactiveCommand.Create(() => CopyChordRegion(region)) });
+                items.Add(new MenuItem { Header = "Cut Chord Region", Command = ReactiveCommand.Create(() => {
+                    CopyChordRegion(region);
+                    DocManager.Inst.StartUndoGroup();
+                    DocManager.Inst.ExecuteCmd(new RemoveChordRegionCommand(DocManager.Inst.Project.ChordsPart, region));
+                    DocManager.Inst.EndUndoGroup();
+                }) });
                 items.Add(new MenuItem { Header = "Delete", Command = ReactiveCommand.Create(() => {
                     DocManager.Inst.StartUndoGroup();
                     DocManager.Inst.ExecuteCmd(new RemoveChordRegionCommand(DocManager.Inst.Project.ChordsPart, region));
@@ -1565,6 +1590,14 @@ namespace OpenUtau.App.Views {
             }
             menu.ItemsSource = items;
             menu.Open();
+        }
+
+        void CopyChordRegion(UChordRegion region) {
+            var project = DocManager.Inst.Project;
+            DocManager.Inst.ChordsClipboard = new ChordClipboardPayload(new[] { region }, project.Is31Edo,
+                project.Is31Edo ? project.PitchReference31 : null);
+            DocManager.Inst.NotesClipboard = null;
+            DocManager.Inst.CurvesClipboard = null;
         }
 
         void ChangeRegion(UChordRegion region, Action<UChordRegion> change) {

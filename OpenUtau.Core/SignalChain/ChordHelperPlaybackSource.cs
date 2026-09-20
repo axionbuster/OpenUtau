@@ -71,15 +71,14 @@ namespace OpenUtau.Core.SignalChain {
                 }
                 float trackScale = PlaybackManager.DecibelToVolume(track.Volume);
                 (float panLeft, float panRight) = MusicMath.PanToChannelVolumes((float)track.Pan);
-                var occurrences = part.chordRegions.Count == 0
-                    ? part.chordHelpers.Select(helper => new ChordOccurrence(
+                var occurrences = part.chordHelpers.Select(helper => new ChordOccurrence(
                         new UChordRegion { position = part.position, sourceDuration = int.MaxValue, duration = int.MaxValue },
                         helper, 0, part.position + helper.position, part.position + helper.End))
-                    : part.chordRegions.SelectMany(region => ChordRegionExpander.Enumerate(
+                    .Concat(part.chordRegions.SelectMany(region => ChordRegionExpander.Enumerate(
                         region, 0, region.End)).Select(item => item with {
                             StartTick = item.StartTick + part.position,
                             EndTick = item.EndTick + part.position,
-                        });
+                        }));
                 foreach (var occurrence in occurrences) {
                     var helper = occurrence.Helper;
                     if (helper.mute || helper.tones.Count == 0) {

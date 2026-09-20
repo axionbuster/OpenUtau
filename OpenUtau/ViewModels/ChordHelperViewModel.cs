@@ -88,6 +88,7 @@ namespace OpenUtau.App.ViewModels {
         bool syncing;
         UVoicePart? selectedPart;
         UChordHelper? selectedHelper;
+        UChordRegion? selectedRegion;
         string? selectedQuality;
         ChordRootChoice? selectedRoot;
         ChordBassChoice? selectedBass;
@@ -99,6 +100,11 @@ namespace OpenUtau.App.ViewModels {
         public bool HasSelection => selectedPart != null && selectedHelper != null;
         public UVoicePart? SelectedPart => selectedPart;
         public UChordHelper? SelectedHelper => selectedHelper;
+        public UChordRegion? SelectedRegion => selectedRegion;
+        public bool HasRegion => selectedRegion != null;
+        public int RegionPosition { get => selectedRegion?.position ?? 0; set => ApplyRegionChange(region => region.position = Math.Max(0, value)); }
+        public int LoopLength { get => selectedRegion?.sourceDuration ?? 1; set => ApplyRegionChange(region => region.sourceDuration = Math.Max(1, value)); }
+        public int RegionLength { get => selectedRegion?.duration ?? 1; set => ApplyRegionChange(region => region.duration = Math.Max(1, value)); }
         public ObservableCollectionExtended<string> QualityChoices { get; } = new();
         public ObservableCollectionExtended<ChordRootChoice> RootChoices { get; } = new();
         public ObservableCollectionExtended<ChordBassChoice> BassChoices { get; } = new();
@@ -214,10 +220,29 @@ namespace OpenUtau.App.ViewModels {
 
         public ReactiveCommand<ChordDegreeViewModel, RxVoid> ToggleDegreeCommand { get; }
         public ReactiveCommand<RxVoid, RxVoid> DeleteCommand { get; }
+        public ReactiveCommand<RxVoid, RxVoid> CreateRegionCommand { get; }
 
         public ChordHelperViewModel() {
             ToggleDegreeCommand = ReactiveCommand.Create<ChordDegreeViewModel>(ToggleDegree);
             DeleteCommand = ReactiveCommand.Create(DeleteSelected);
+            CreateRegionCommand = ReactiveCommand.Create(CreateRegionFromSelected);
+        }
+
+        void CreateRegionFromSelected() {
+            if (!HasSelection || selectedRegion != null) return;
+            var part = selectedPart!;
+            var original = selectedHelper!;
+            int anchor = original.position;
+            int period = Math.Max(DocManager.Inst.Project.resolution * 4, original.duration);
+            var helper = original.Clone(); helper.position = 0;
+            var region = new UChordRegion { position = anchor, sourceDuration = period,
+                duration = period, chordHelpers = new List<UChordHelper> { helper } };
+            DocManager.Inst.StartUndoGroup();
+            DocManager.Inst.ExecuteCmd(new RemoveChordHelperCommand(part, original));
+            DocManager.Inst.ExecuteCmd(new AddChordRegionCommand(part, region));
+            DocManager.Inst.EndUndoGroup();
+            selectedRegion = region;
+            Select(part, helper);
         }
 
         public static IEnumerable<(UVoicePart Part, UChordHelper Helper)> VisibleHelpers(UProject project) =>
@@ -249,11 +274,28 @@ namespace OpenUtau.App.ViewModels {
             if (!IsOwnedByEditorTrack(editorPart, ownerPart)) {
                 return false;
             }
+            selectedRegion = ownerPart.chordRegions.FirstOrDefault(region => region.chordHelpers.Contains(helper));
             Select(ownerPart, helper);
             return true;
         }
 
+        public void SelectRegion(UVoicePart editorPart, UChordRegion region) {
+            selectedRegion = region;
+            var helper = region.chordHelpers.FirstOrDefault();
+            if (helper != null) {
+                Select(editorPart, helper);
+            } else {
+                selectedPart = editorPart;
+                selectedHelper = null;
+                this.RaisePropertyChanged(nameof(SelectedPart));
+                this.RaisePropertyChanged(nameof(SelectedHelper));
+                this.RaisePropertyChanged(nameof(HasSelection));
+            }
+            RaiseRegionProperties();
+        }
+
         void Select(UVoicePart? part, UChordHelper? helper) {
+            if (part == null) selectedRegion = null;
             selectedPart = part;
             selectedHelper = helper;
             this.RaisePropertyChanged(nameof(SelectedPart));
@@ -261,6 +303,25 @@ namespace OpenUtau.App.ViewModels {
             this.RaisePropertyChanged(nameof(HasSelection));
             Refresh();
             MessageBus.Current.SendMessage(new ChordHelperSelectionEvent(part, helper));
+            RaiseRegionProperties();
+        }
+
+        void RaiseRegionProperties() {
+            this.RaisePropertyChanged(nameof(HasRegion));
+            this.RaisePropertyChanged(nameof(RegionPosition));
+            this.RaisePropertyChanged(nameof(LoopLength));
+            this.RaisePropertyChanged(nameof(RegionLength));
+        }
+
+        void ApplyRegionChange(Action<UChordRegion> change) {
+            if (syncing || selectedPart == null || selectedRegion == null) return;
+            var changed = selectedRegion.Clone(false);
+            change(changed);
+            if (!changed.Normalize(DocManager.Inst.Project.Is31Edo)) return;
+            DocManager.Inst.StartUndoGroup();
+            DocManager.Inst.ExecuteCmd(new ChangeChordRegionCommand(selectedPart, selectedRegion, changed));
+            DocManager.Inst.EndUndoGroup();
+            RaiseRegionProperties();
         }
 
         public void Refresh() {
@@ -450,6 +511,11 @@ namespace OpenUtau.App.ViewModels {
             left.tones.SequenceEqual(right.tones);
 
         public void OnCommand(UCommand command) {
+            if (command is ChordRegionCommand regionCommand && selectedPart == regionCommand.Part) {
+                if (selectedRegion != null && !selectedPart.chordRegions.Contains(selectedRegion)) Select(null, null);
+                else RaiseRegionProperties();
+                return;
+            }
             if (command is not ChordHelperCommand chord || selectedPart != chord.Part) {
                 return;
             }

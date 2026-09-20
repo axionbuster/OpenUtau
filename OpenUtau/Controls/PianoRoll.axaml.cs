@@ -813,7 +813,9 @@ namespace OpenUtau.App.Controls {
                 };
                 helper.Normalize(notesVm.Is31Edo);
                 DocManager.Inst.StartUndoGroup();
-                var region = chordPart.chordRegions.LastOrDefault(item =>
+                var region = ViewModel.ChordHelpers.SelectedRegion;
+                if (region != null && !chordPart.chordRegions.Contains(region)) region = null;
+                region ??= chordPart.chordRegions.LastOrDefault(item =>
                     absolutePosition >= item.position && absolutePosition < item.position + item.sourceDuration);
                 if (region == null) {
                     int sourceDuration = Math.Max(duration, DocManager.Inst.Project.resolution * 4);

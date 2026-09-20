@@ -177,6 +177,14 @@ namespace OpenUtau.App.Controls {
                 }
                 if (change.NewValue != null && change.NewValue is ObservableCollection<UPart> newCol) {
                     newCol.CollectionChanged += Items_CollectionChanged;
+                    foreach (var part in partControls.Keys.Where(part => !newCol.Contains(part)).ToArray()) {
+                        Remove(part);
+                    }
+                    foreach (var part in newCol) {
+                        if (!partControls.ContainsKey(part)) {
+                            Add(part);
+                        }
+                    }
                 }
             }
         }

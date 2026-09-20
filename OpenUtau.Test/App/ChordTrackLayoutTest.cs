@@ -55,6 +55,28 @@ namespace OpenUtau.App {
             AssertHeaderLayout(loaded);
         }
 
+        [AvaloniaFact]
+        public void PrepopulatedPartsCollectionHydratesOnceAndTracksReplacement() {
+            var project = Core.Format.Ustx.Create();
+            project.ChordsPart.chordRegions.Add(new UChordRegion {
+                sourceDuration = 1920, duration = 3840,
+            });
+            var first = new ObservableCollection<UPart>(project.parts);
+            var canvas = new PartsCanvas { Items = first };
+            Assert.Equal(first.Count, canvas.Children.OfType<PartControl>().Count());
+            canvas.Items = first;
+            Assert.Equal(first.Count, canvas.Children.OfType<PartControl>().Count());
+
+            var replacementPart = new UVoicePart { trackNo = 1, duration = 1920 };
+            var replacement = new ObservableCollection<UPart> { project.ChordsPart, replacementPart };
+            canvas.Items = replacement;
+            Assert.Equal(2, canvas.Children.OfType<PartControl>().Count());
+            Assert.Contains(canvas.Children.OfType<PartControl>(), control => control.part == project.ChordsPart);
+            Assert.Contains(canvas.Children.OfType<PartControl>(), control => control.part == replacementPart);
+            Assert.DoesNotContain(canvas.Children.OfType<PartControl>(), control =>
+                !replacement.Contains(control.part));
+        }
+
         static void AssertHeaderLayout(UProject project) {
             var oldProject = DocManager.Inst.TakeProjectForTest(project);
             var oldSink = DocManager.Inst.CommandSink;

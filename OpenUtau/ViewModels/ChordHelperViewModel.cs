@@ -519,7 +519,8 @@ namespace OpenUtau.App.ViewModels {
             if (command is not ChordHelperCommand chord || selectedPart != chord.Part) {
                 return;
             }
-            if (selectedHelper == null || !selectedPart.chordHelpers.Contains(selectedHelper)) {
+            if (selectedHelper == null || (!selectedPart.chordHelpers.Contains(selectedHelper) &&
+                    !selectedPart.chordRegions.Any(region => region.chordHelpers.Contains(selectedHelper)))) {
                 Select(null, null);
             } else {
                 Refresh();

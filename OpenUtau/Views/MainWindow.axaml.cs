@@ -46,6 +46,7 @@ namespace OpenUtau.App.Views {
         private UChordRegion? chordRegionDragBefore;
         private bool chordRegionLoopDrag;
         private int chordRegionPointerTick;
+        private UChordRegion? selectedChordRegion;
 
         // Time range selection state
         private bool isSelectingRange;
@@ -986,7 +987,10 @@ namespace OpenUtau.App.Views {
             if (args.KeyModifiers == KeyModifiers.None) {
                 args.Handled = true;
                 switch (args.Key) {
-                    case Key.Delete: viewModel.TracksViewModel.DeleteSelectedParts(); break;
+                    case Key.Delete:
+                        if (selectedChordRegion != null) DeleteChordRegion(selectedChordRegion);
+                        else viewModel.TracksViewModel.DeleteSelectedParts();
+                        break;
                     case Key.Space: PlayOrPause(); break;
                     case Key.Home: viewModel.PlaybackViewModel.MovePlayPos(0); break;
                     case Key.End:
@@ -1021,9 +1025,17 @@ namespace OpenUtau.App.Views {
                     case Key.S: _ = Save(); break;
                     case Key.Z: viewModel.Undo(); break;
                     case Key.Y: viewModel.Redo(); break;
-                    case Key.C: tracksVm.CopyParts(); break;
-                    case Key.X: tracksVm.CutParts(); break;
-                    case Key.V: tracksVm.PasteParts(); break;
+                    case Key.C:
+                        if (selectedChordRegion != null) CopyChordRegion(selectedChordRegion); else tracksVm.CopyParts();
+                        break;
+                    case Key.X:
+                        if (selectedChordRegion != null) { CopyChordRegion(selectedChordRegion); DeleteChordRegion(selectedChordRegion); }
+                        else tracksVm.CutParts();
+                        break;
+                    case Key.V:
+                        if (DocManager.Inst.ChordsClipboard?.Regions.Count > 0) PasteChordRegions(DocManager.Inst.playPosTick);
+                        else tracksVm.PasteParts();
+                        break;
                     default:
                         args.Handled = false;
                         break;
@@ -1308,6 +1320,7 @@ namespace OpenUtau.App.Views {
             }
             if (point.Properties.IsLeftButtonPressed) {
                 if (chordHit != null) {
+                    selectedChordRegion = chordHit.Value.Region;
                     chordRegionDrag = chordHit.Value.Region;
                     chordRegionDragBefore = chordRegionDrag.Clone(false);
                     chordRegionLoopDrag = chordHit.Value.LoopHandle;
@@ -1359,6 +1372,7 @@ namespace OpenUtau.App.Views {
                 }
             } else if (point.Properties.IsRightButtonPressed) {
                 if (viewModel.TracksViewModel.PointToTrackNo(point.Position) == 0) {
+                    selectedChordRegion = chordHit?.Region;
                     OpenChordRegionMenu(control, point.Position, chordHit?.Region);
                     args.Handled = true;
                     return;
@@ -1594,10 +1608,34 @@ namespace OpenUtau.App.Views {
 
         void CopyChordRegion(UChordRegion region) {
             var project = DocManager.Inst.Project;
+            if (!project.ChordsPart.chordRegions.Contains(region)) { selectedChordRegion = null; return; }
             DocManager.Inst.ChordsClipboard = new ChordClipboardPayload(new[] { region }, project.Is31Edo,
                 project.Is31Edo ? project.PitchReference31 : null);
             DocManager.Inst.NotesClipboard = null;
             DocManager.Inst.CurvesClipboard = null;
+        }
+
+        void DeleteChordRegion(UChordRegion region) {
+            var part = DocManager.Inst.Project.ChordsPart;
+            if (!part.chordRegions.Contains(region)) { selectedChordRegion = null; return; }
+            DocManager.Inst.StartUndoGroup();
+            DocManager.Inst.ExecuteCmd(new RemoveChordRegionCommand(part, region));
+            DocManager.Inst.EndUndoGroup();
+            selectedChordRegion = null;
+        }
+
+        void PasteChordRegions(int targetTick) {
+            var project = DocManager.Inst.Project;
+            var pasted = DocManager.Inst.ChordsClipboard?.CloneRegionsForPaste(project, Math.Max(0, targetTick));
+            if (pasted == null) {
+                DocManager.Inst.ExecuteCmd(new ErrorMessageNotification(new FileFormatException(
+                    "Match the project tuning and 31-TET pitch reference before pasting chord regions.")));
+                return;
+            }
+            DocManager.Inst.StartUndoGroup();
+            foreach (var region in pasted) DocManager.Inst.ExecuteCmd(new AddChordRegionCommand(project.ChordsPart, region));
+            DocManager.Inst.EndUndoGroup();
+            selectedChordRegion = pasted[0];
         }
 
         void ChangeRegion(UChordRegion region, Action<UChordRegion> change) {

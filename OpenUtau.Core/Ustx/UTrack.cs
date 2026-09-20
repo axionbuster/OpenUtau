@@ -113,11 +113,13 @@ namespace OpenUtau.Core.Ustx {
         public UTrack() {
         }
         public UTrack(UProject project) {
-            int trackCount = 0;
-            if (project.tracks != null && project.tracks.Count > 0) {
-                trackCount = project.tracks.Max(t => int.TryParse(t.TrackName.Replace("Track", ""), out int result) ? result : 0);
-                if (project.tracks.Count > trackCount) {
-                    trackCount = project.tracks.Count;
+            var ordinaryTracks = project.tracks?.Where(track => !track.IsChordsTrack).ToList()
+                ?? new List<UTrack>();
+            int trackCount = ordinaryTracks.Count;
+            foreach (var track in ordinaryTracks) {
+                if (track.TrackName.StartsWith("Track", StringComparison.Ordinal) &&
+                    int.TryParse(track.TrackName.AsSpan("Track".Length), out int suffix)) {
+                    trackCount = Math.Max(trackCount, suffix);
                 }
             }
             TrackName = "Track" + (trackCount + 1);

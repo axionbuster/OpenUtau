@@ -5,6 +5,33 @@ using Xunit;
 
 namespace OpenUtau.Core.Ustx {
     public class ChordTrackTest {
+        [Fact]
+        public void DefaultTrackNamesExcludeTheSpecialChordsTrack() {
+            var project = Format.Ustx.Create();
+            Assert.Equal("Track1", project.tracks.Single(track => !track.IsChordsTrack).TrackName);
+
+            var second = new UTrack(project) { TrackNo = project.tracks.Count };
+            project.tracks.Add(second);
+            var third = new UTrack(project) { TrackNo = project.tracks.Count };
+
+            Assert.Equal("Track2", second.TrackName);
+            Assert.Equal("Track3", third.TrackName);
+        }
+
+        [Fact]
+        public void DefaultTrackNamesPreserveCustomNamesAndContinuePastHighestSuffix() {
+            var project = Format.Ustx.Create();
+            project.ChordsTrack.TrackName = "Track99";
+            project.tracks.Add(new UTrack("Piano") { TrackNo = 2 });
+            project.tracks.Add(new UTrack("Track7") { TrackNo = 3 });
+
+            var added = new UTrack(project);
+
+            Assert.Equal("Track8", added.TrackName);
+            Assert.Equal(new[] { "Track1", "Piano", "Track7" },
+                project.tracks.Where(track => !track.IsChordsTrack).Select(track => track.TrackName));
+        }
+
         [Theory]
         [InlineData(false)]
         [InlineData(true)]

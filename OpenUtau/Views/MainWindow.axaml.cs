@@ -42,6 +42,10 @@ namespace OpenUtau.App.Views {
         private WindowNotificationManager notificationManager;
 
         private PartEditState? partEditState;
+        private UChordRegion? chordRegionDrag;
+        private UChordRegion? chordRegionDragBefore;
+        private bool chordRegionLoopDrag;
+        private int chordRegionPointerTick;
 
         // Time range selection state
         private bool isSelectingRange;
@@ -1297,11 +1301,22 @@ namespace OpenUtau.App.Views {
             var point = args.GetCurrentPoint(control);
             var sourceControl = args.Source as Control;
             var hitPartControl = sourceControl?.FindAncestorOfType<PartControl>(includeSelf: true);
+            var chordHit = partsCanvas.HitTestChordRegion(point.Position);
 
             if (partEditState != null) {
                 return;
             }
             if (point.Properties.IsLeftButtonPressed) {
+                if (chordHit != null) {
+                    chordRegionDrag = chordHit.Value.Region;
+                    chordRegionDragBefore = chordRegionDrag.Clone(false);
+                    chordRegionLoopDrag = chordHit.Value.LoopHandle;
+                    chordRegionPointerTick = viewModel.TracksViewModel.PointToTick(point.Position);
+                    args.Pointer.Capture(control);
+                    Cursor = chordRegionLoopDrag ? ViewConstants.cursorSizeWE : ViewConstants.cursorSizeAll;
+                    args.Handled = true;
+                    return;
+                }
                 if (args.KeyModifiers == cmdKey) {
                     partEditState = new PartSelectionEditState(control, viewModel, SelectionBox);
                     Cursor = ViewConstants.cursorCross;
@@ -1343,6 +1358,11 @@ namespace OpenUtau.App.Views {
                     }
                 }
             } else if (point.Properties.IsRightButtonPressed) {
+                if (viewModel.TracksViewModel.PointToTrackNo(point.Position) == 0) {
+                    OpenChordRegionMenu(control, point.Position, chordHit?.Region);
+                    args.Handled = true;
+                    return;
+                }
                 if (hitPartControl != null) {
                     if (!viewModel.TracksViewModel.SelectedParts.Contains(hitPartControl.part)) {
                         viewModel.TracksViewModel.DeselectParts();
@@ -1393,6 +1413,20 @@ namespace OpenUtau.App.Views {
         public void PartsCanvasPointerMoved(object sender, PointerEventArgs args) {
             var control = (Control)sender;
             var point = args.GetCurrentPoint(control);
+            if (chordRegionDrag != null && chordRegionDragBefore != null) {
+                int tick = viewModel.TracksViewModel.PointToTick(point.Position);
+                int delta = tick - chordRegionPointerTick;
+                viewModel.TracksViewModel.TickToLineTick(
+                    chordRegionLoopDrag ? chordRegionDragBefore.End + delta : chordRegionDragBefore.position + delta,
+                    out int snapped, out _);
+                if (chordRegionLoopDrag) {
+                    chordRegionDrag.duration = Math.Max(1, snapped - chordRegionDrag.position);
+                } else {
+                    chordRegionDrag.position = Math.Max(0, snapped);
+                }
+                MessageBus.Current.SendMessage(new PartRefreshEvent(DocManager.Inst.Project.ChordsPart));
+                return;
+            }
             if (partEditState != null) {
                 partEditState.Update(point.Pointer, point.Position);
                 return;
@@ -1423,6 +1457,19 @@ namespace OpenUtau.App.Views {
         }
 
         public void PartsCanvasPointerReleased(object sender, PointerReleasedEventArgs args) {
+            if (chordRegionDrag != null && chordRegionDragBefore != null) {
+                var region = chordRegionDrag;
+                var before = chordRegionDragBefore;
+                var after = region.Clone(false);
+                region.CopyFrom(before);
+                DocManager.Inst.StartUndoGroup();
+                DocManager.Inst.ExecuteCmd(new ChangeChordRegionCommand(DocManager.Inst.Project.ChordsPart, region, after));
+                DocManager.Inst.EndUndoGroup();
+                chordRegionDrag = chordRegionDragBefore = null;
+                args.Pointer.Capture(null);
+                Cursor = null;
+                return;
+            }
             if (partEditState?.MouseButton != args.InitialPressMouseButton) {
                 return;
             }
@@ -1440,10 +1487,16 @@ namespace OpenUtau.App.Views {
             }
 
             var point = args.GetPosition(canvas);
+            var chordHit = partsCanvas.HitTestChordRegion(point);
             var visuals = canvas.GetVisualsAt(point);
             var hitPartControl = visuals
                 .Select(v => v.FindAncestorOfType<PartControl>(includeSelf: true))
                 .FirstOrDefault(pc => pc != null);
+            if (chordHit != null) {
+                hitPartControl = canvas.GetVisualsAt(point)
+                    .Select(v => v.FindAncestorOfType<PartControl>(includeSelf: true))
+                    .FirstOrDefault(pc => pc?.part is UVoicePart { IsChordPart: true });
+            }
             if (hitPartControl?.part is UVoicePart) {
                 if (pianoRoll == null) {
                     LoadingWindow.BeginLoading(this);
@@ -1480,6 +1533,60 @@ namespace OpenUtau.App.Views {
                 DocManager.Inst.ExecuteCmd(new LoadPartNotification(hitPartControl.part, DocManager.Inst.Project, tick));
                 pianoRoll.AttachExpressions();
             }
+        }
+
+        void OpenChordRegionMenu(Control target, Point point, UChordRegion? region) {
+            var menu = new ContextMenu { PlacementTarget = target };
+            var items = new List<object>();
+            if (region == null) {
+                items.Add(new MenuItem { Header = "Create Chord Region", Command = ReactiveCommand.Create(() => {
+                    viewModel.TracksViewModel.PointToLineTick(point, out int left, out _);
+                    var project = DocManager.Inst.Project;
+                    project.timeAxis.TickPosToBarBeat(left, out int bar, out _, out _);
+                    int length = Math.Max(1, project.timeAxis.BarBeatToTickPos(bar + 1, 0) - left);
+                    var created = new UChordRegion { position = left, sourceDuration = length, duration = length };
+                    DocManager.Inst.StartUndoGroup();
+                    DocManager.Inst.ExecuteCmd(new AddChordRegionCommand(project.ChordsPart, created));
+                    DocManager.Inst.EndUndoGroup();
+                }) });
+            } else {
+                items.Add(new MenuItem { Header = "Loop", IsEnabled = !region.IsLooped,
+                    Command = ReactiveCommand.Create(() => ChangeRegion(region, changed => changed.duration = checked(changed.sourceDuration * 2))) });
+                items.Add(new MenuItem { Header = "Remove Loop", IsEnabled = region.IsLooped,
+                    Command = ReactiveCommand.Create(() => ChangeRegion(region, changed => changed.duration = changed.sourceDuration)) });
+                items.Add(new MenuItem { Header = "Break Loop", IsEnabled = region.IsLooped,
+                    Command = ReactiveCommand.Create(() => BreakChordLoop(region)) });
+                items.Add(new Separator());
+                items.Add(new MenuItem { Header = "Delete", Command = ReactiveCommand.Create(() => {
+                    DocManager.Inst.StartUndoGroup();
+                    DocManager.Inst.ExecuteCmd(new RemoveChordRegionCommand(DocManager.Inst.Project.ChordsPart, region));
+                    DocManager.Inst.EndUndoGroup();
+                }) });
+            }
+            menu.ItemsSource = items;
+            menu.Open();
+        }
+
+        void ChangeRegion(UChordRegion region, Action<UChordRegion> change) {
+            var changed = region.Clone(false); change(changed);
+            if (!changed.Normalize(DocManager.Inst.Project.Is31Edo)) return;
+            DocManager.Inst.StartUndoGroup();
+            DocManager.Inst.ExecuteCmd(new ChangeChordRegionCommand(DocManager.Inst.Project.ChordsPart, region, changed));
+            DocManager.Inst.EndUndoGroup();
+        }
+
+        void BreakChordLoop(UChordRegion region) {
+            long count = (region.duration + (long)region.sourceDuration - 1) / region.sourceDuration;
+            if (!ChordRegionExpander.TryBreak(region, out var pieces)) {
+                DocManager.Inst.ExecuteCmd(new ErrorMessageNotification(new InvalidDataException(
+                    $"Cannot break a chord loop into {count} regions; the safe limit is {ChordRegionExpander.MaxBreakRegions}.")));
+                return;
+            }
+            var part = DocManager.Inst.Project.ChordsPart;
+            DocManager.Inst.StartUndoGroup();
+            DocManager.Inst.ExecuteCmd(new RemoveChordRegionCommand(part, region));
+            foreach (var piece in pieces) DocManager.Inst.ExecuteCmd(new AddChordRegionCommand(part, piece));
+            DocManager.Inst.EndUndoGroup();
         }
 
         public void SetPianoRollAttachment() {

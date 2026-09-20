@@ -71,12 +71,22 @@ namespace OpenUtau.Core.SignalChain {
                 }
                 float trackScale = PlaybackManager.DecibelToVolume(track.Volume);
                 (float panLeft, float panRight) = MusicMath.PanToChannelVolumes((float)track.Pan);
-                foreach (var helper in part.chordHelpers) {
+                var occurrences = part.chordRegions.Count == 0
+                    ? part.chordHelpers.Select(helper => new ChordOccurrence(
+                        new UChordRegion { position = part.position, sourceDuration = int.MaxValue, duration = int.MaxValue },
+                        helper, 0, part.position + helper.position, part.position + helper.End))
+                    : part.chordRegions.SelectMany(region => ChordRegionExpander.Enumerate(
+                        region, 0, region.End)).Select(item => item with {
+                            StartTick = item.StartTick + part.position,
+                            EndTick = item.EndTick + part.position,
+                        });
+                foreach (var occurrence in occurrences) {
+                    var helper = occurrence.Helper;
                     if (helper.mute || helper.tones.Count == 0) {
                         continue;
                     }
-                    int startTick = part.position + helper.position;
-                    int endTick = startTick + helper.duration;
+                    int startTick = occurrence.StartTick;
+                    int endTick = occurrence.EndTick;
                     int startSample = ToStereoSample(project.timeAxis.TickPosToMsPos(startTick));
                     int endSample = Math.Max(startSample + Channels,
                         ToStereoSample(project.timeAxis.TickPosToMsPos(endTick)));
@@ -113,7 +123,7 @@ namespace OpenUtau.Core.SignalChain {
                         project.ToneToFrequency(is31Edo ? gridTone * Edo31.StepTone : gridTone)))
                         .ToArray();
                     events.Add(new ChordHelperPlaybackEvent(
-                        helper.PlaybackId, startSample, endSample, tones,
+                        occurrence.PlaybackId, startSample, endSample, tones,
                         trackScale, panLeft, panRight));
                 }
             }

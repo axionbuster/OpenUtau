@@ -217,12 +217,14 @@ namespace OpenUtau.App.Controls {
                     Core.DocManager.Inst.Project.tracks[part.trackNo].TrackColor).AccentColor
                 : Selected ? ThemeManager.AccentBrush2 : ThemeManager.AccentBrush1;
             // Background
-            context.DrawRectangle(backgroundBrush, null, new Rect(1, 0, Width - 1, Height - 1), 4, 4);
+            if (!isChordPart) {
+                context.DrawRectangle(backgroundBrush, null, new Rect(1, 0, Width - 1, Height - 1), 4, 4);
+            }
 
             // Text
             var textLayout = TextLayoutCache.Get(
                 Text, isChordPart ? new SolidColorBrush(Color.Parse("#27231D")) : Brushes.White, 12);
-            using (var state = context.PushTransform(Matrix.CreateTranslation(3, 2))) {
+            if (!isChordPart) using (var state = context.PushTransform(Matrix.CreateTranslation(3, 2))) {
                 context.DrawRectangle(backgroundBrush, null, new Rect(new Point(0, 0), new Size(textLayout.Width, textLayout.Height)));
                 textLayout.Draw(context, new Point());
             }
@@ -231,6 +233,10 @@ namespace OpenUtau.App.Controls {
                 return;
             }
             if (part is UVoicePart voicePart) {
+                if (isChordPart) {
+                    RenderChordRegions(context, voicePart, backgroundBrush);
+                    return;
+                }
                 // Notes
                 if (voicePart.notes.Count > 0) {
                     int maxTone = voicePart.notes.Max(note => note.GridTone);
@@ -290,6 +296,31 @@ namespace OpenUtau.App.Controls {
                 if (wavePart.fadeout > 0) {
                     context.DrawLine(fadePen, new Point(Width - 1, Height - 2), new Point(FadeOut, 2));
                 }
+            }
+        }
+
+        void RenderChordRegions(DrawingContext context, UVoicePart part, IBrush brush) {
+            var border = new Pen(ThemeManager.NeutralAccentBrush, 1.5);
+            var separator = new Pen(new SolidColorBrush(Color.FromArgb(150, 255, 255, 255)), 1);
+            foreach (var region in part.chordRegions) {
+                double x = region.position * TickWidth;
+                double width = Math.Max(1, region.duration * TickWidth);
+                var rect = new Rect(x + 1, 2, Math.Max(1, width - 2), Math.Max(1, Height - 5));
+                context.DrawRectangle(brush, border, rect, 4, 4);
+                if (region.IsLooped) {
+                    for (long tick = (long)region.position + region.sourceDuration;
+                            tick < region.End; tick += region.sourceDuration) {
+                        double sx = tick * TickWidth;
+                        context.DrawLine(separator, new Point(sx, 3), new Point(sx, Height - 4));
+                    }
+                }
+                string label = region.IsLooped ? "Chords  ↻" : "Chords";
+                var text = TextLayoutCache.Get(label, new SolidColorBrush(Color.Parse("#27231D")), 11);
+                using var state = context.PushTransform(Matrix.CreateTranslation(x + 5, 4));
+                text.Draw(context, new Point());
+                // Upper-right loop handle.
+                context.DrawRectangle(ThemeManager.NeutralAccentBrush, null,
+                    new Rect(Math.Max(x + 2, x + width - 9), 3, 6, 6), 2, 2);
             }
         }
 

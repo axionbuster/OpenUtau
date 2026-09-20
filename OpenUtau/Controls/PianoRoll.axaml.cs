@@ -772,12 +772,13 @@ namespace OpenUtau.App.Controls {
             int divisions = notesVm.Is31Edo ? 31 : 12;
             int absoluteTick = notesVm.Part.position + notesVm.PointToTick(point);
             int step = notesVm.PointToTone(point);
-            var candidates = ChordHelperViewModel.VisibleHelpers(DocManager.Inst.Project)
+            var candidates = ChordHelperViewModel.VisibleOccurrences(DocManager.Inst.Project,
+                    absoluteTick - 1, absoluteTick + 1)
                 .Where(item => ChordHelperViewModel.IsOwnedByEditorTrack(notesVm.Part, item.Part))
                 .OrderByDescending(item => ReferenceEquals(item.Helper, ViewModel.ChordHelpers.SelectedHelper));
             foreach (var item in candidates) {
-                int start = item.Part.position + item.Helper.position;
-                int end = start + item.Helper.duration;
+                int start = item.Start;
+                int end = item.End;
                 if (absoluteTick < start || absoluteTick > end) {
                     continue;
                 }
@@ -799,12 +800,12 @@ namespace OpenUtau.App.Controls {
             var hit = HitTestChordHelper(point.Position);
             if (hit == null) {
                 notesVm.PointToLineTick(point.Position, out int left, out int right);
-                int position = Math.Max(0, currentPart.position + left);
+                int absolutePosition = Math.Max(0, currentPart.position + left);
                 int duration = Math.Max(projectResolution(), right - left);
                 int divisions = notesVm.Is31Edo ? 31 : 12;
                 int rootTone = notesVm.PointToTone(point.Position);
                 var helper = new UChordHelper {
-                    position = position,
+                    position = 0,
                     duration = duration,
                     root = Edo31.Mod(rootTone, divisions),
                     rootTone = rootTone,
@@ -812,7 +813,16 @@ namespace OpenUtau.App.Controls {
                 };
                 helper.Normalize(notesVm.Is31Edo);
                 DocManager.Inst.StartUndoGroup();
-                DocManager.Inst.ExecuteCmd(new AddChordHelperCommand(chordPart, helper));
+                var region = chordPart.chordRegions.LastOrDefault(item =>
+                    absolutePosition >= item.position && absolutePosition < item.position + item.sourceDuration);
+                if (region == null) {
+                    int sourceDuration = Math.Max(duration, DocManager.Inst.Project.resolution * 4);
+                    region = new UChordRegion { position = absolutePosition,
+                        sourceDuration = sourceDuration, duration = sourceDuration };
+                    DocManager.Inst.ExecuteCmd(new AddChordRegionCommand(chordPart, region));
+                }
+                helper.position = Math.Max(0, absolutePosition - region.position) % region.sourceDuration;
+                DocManager.Inst.ExecuteCmd(new AddChordHelperCommand(chordPart, helper, region));
                 DocManager.Inst.EndUndoGroup();
                 ViewModel.ChordHelpers.TrySelect(currentPart, chordPart, helper);
                 notesVm.ShowNoteParams = true;

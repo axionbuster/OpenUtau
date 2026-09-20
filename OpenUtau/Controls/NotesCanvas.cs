@@ -441,13 +441,14 @@ namespace OpenUtau.App.Controls {
             var project = DocManager.Inst.Project;
             int divisions = project.Is31Edo ? 31 : 12;
             IEnumerable<int> rows = viewModel.DisplayRows ?? Enumerable.Range(0, viewModel.TrackCount);
-            foreach (var (owner, helper) in ChordHelperViewModel.VisibleHelpers(project)) {
+            foreach (var (owner, region, helper, absoluteStart, absoluteEnd) in
+                    ChordHelperViewModel.VisibleOccurrences(project,
+                        (int)(Part!.position + leftTick), (int)(Part.position + rightTick))) {
                 if (!ChordHelperViewModel.IsOwnedByEditorTrack(Part, owner)) {
                     continue;
                 }
-                int ownerOffset = owner.position - Part!.position;
-                double start = ownerOffset + helper.position;
-                double end = start + helper.duration;
+                double start = absoluteStart - Part!.position;
+                double end = absoluteEnd - Part.position;
                 if (start >= rightTick || end <= leftTick || helper.tones.Count == 0) {
                     continue;
                 }
@@ -466,7 +467,7 @@ namespace OpenUtau.App.Controls {
                         continue;
                     }
                     var topLeft = viewModel.TickToneToPoint(start, viewModel.GridToTone(step));
-                    double width = Math.Max(1, helper.duration * TickWidth);
+                    double width = Math.Max(1, (end - start) * TickWidth);
                     var rect = new Rect(topLeft.X + 0.75, Math.Round(topLeft.Y + 0.75),
                         Math.Max(0.5, width - 1.5), Math.Max(0.5, TrackHeight - 1.5));
                     context.DrawRectangle(helper.highlightRoot && interval == 0 ? rootFill : fill,
@@ -479,10 +480,11 @@ namespace OpenUtau.App.Controls {
             var project = DocManager.Inst.Project;
             int divisions = project.Is31Edo ? 31 : 12;
             IEnumerable<int> rows = viewModel.DisplayRows ?? Enumerable.Range(0, viewModel.TrackCount);
-            foreach (var (owner, helper) in ChordHelperViewModel.VisibleHelpers(project)) {
-                int ownerOffset = owner.position - Part!.position;
-                double start = ownerOffset + helper.position;
-                double end = start + helper.duration;
+            foreach (var (owner, region, helper, absoluteStart, absoluteEnd) in
+                    ChordHelperViewModel.VisibleOccurrences(project,
+                        (int)(Part!.position + leftTick), (int)(Part.position + rightTick))) {
+                double start = absoluteStart - Part!.position;
+                double end = absoluteEnd - Part.position;
                 if (start >= rightTick || end <= leftTick || helper.tones.Count == 0) {
                     continue;
                 }
@@ -509,7 +511,7 @@ namespace OpenUtau.App.Controls {
                         continue;
                     }
                     var topLeft = viewModel.TickToneToPoint(start, viewModel.GridToTone(step));
-                    double width = Math.Max(1, helper.duration * TickWidth);
+                    double width = Math.Max(1, (end - start) * TickWidth);
                     var rect = new Rect(topLeft.X + 0.75, Math.Round(topLeft.Y + 0.75),
                         Math.Max(0.5, width - 1.5), Math.Max(0.5, TrackHeight - 1.5));
                     context.DrawRectangle(null,

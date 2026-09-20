@@ -227,5 +227,15 @@ namespace OpenUtau.App.Controls {
                 control.InvalidateVisual();
             }
         }
+
+        public (UChordRegion Region, bool LoopHandle)? HitTestChordRegion(Point point) {
+            if (TrackLayout.TrackNoAt(point.Y, TrackOffset, TrackHeight) != 0 || TickWidth <= 0) return null;
+            int tick = (int)Math.Floor(TickOffset + point.X / TickWidth);
+            var part = Core.DocManager.Inst.Project.ChordsPart;
+            var region = part.chordRegions.LastOrDefault(item => tick >= item.position && tick < item.End);
+            if (region == null) return null;
+            bool handle = point.Y <= 12 && Math.Abs(point.X - (region.End - TickOffset) * TickWidth) <= 12;
+            return (region, handle);
+        }
     }
 }

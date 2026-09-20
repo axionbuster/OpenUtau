@@ -222,7 +222,19 @@ namespace OpenUtau.App.ViewModels {
 
         public static IEnumerable<(UVoicePart Part, UChordHelper Helper)> VisibleHelpers(UProject project) =>
             project.parts.OfType<UVoicePart>()
-                .SelectMany(part => part.chordHelpers.Select(helper => (part, helper)));
+                .SelectMany(part => part.chordHelpers.Concat(
+                    part.chordRegions.SelectMany(region => region.chordHelpers)).Select(helper => (part, helper)));
+
+        public static IEnumerable<(UVoicePart Part, UChordRegion? Region, UChordHelper Helper, int Start, int End)> VisibleOccurrences(
+                UProject project, int queryStart, int queryEnd) =>
+            project.parts.OfType<UVoicePart>().SelectMany(part =>
+                part.chordRegions.Count == 0
+                    ? part.chordHelpers.Select(helper => (part, (UChordRegion?)null, helper,
+                        part.position + helper.position, part.position + helper.End))
+                    : part.chordRegions.SelectMany(region => ChordRegionExpander.Enumerate(
+                        region, queryStart - part.position, queryEnd - part.position)
+                        .Select(item => (part, (UChordRegion?)region, item.Helper,
+                            part.position + item.StartTick, part.position + item.EndTick))));
 
         public static bool IsOwnedByEditorTrack(UVoicePart? editorPart, UVoicePart ownerPart) =>
             editorPart != null && (ownerPart.IsChordPart || editorPart.trackNo == ownerPart.trackNo);

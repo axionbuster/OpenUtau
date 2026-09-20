@@ -97,6 +97,108 @@ namespace OpenUtau.Core.Ustx {
         }
     }
 
+    public sealed class UChordRegion {
+        public Guid id = Guid.NewGuid();
+        public int position;
+        public int sourceDuration = 1920;
+        public int duration = 1920;
+        public List<UChordHelper> chordHelpers = new List<UChordHelper>();
+
+        [YamlIgnore] public int End => (int)Math.Min(int.MaxValue, (long)position + duration);
+        [YamlIgnore] public bool IsLooped => duration > sourceDuration;
+
+        public UChordRegion Clone(bool newId = true) => new UChordRegion {
+            id = newId ? Guid.NewGuid() : id,
+            position = position,
+            sourceDuration = sourceDuration,
+            duration = duration,
+            chordHelpers = chordHelpers.Select(helper => helper.Clone()).ToList(),
+        };
+
+        public void CopyFrom(UChordRegion other) {
+            id = other.id;
+            position = other.position;
+            sourceDuration = other.sourceDuration;
+            duration = other.duration;
+            chordHelpers = other.chordHelpers.Select(helper => helper.Clone()).ToList();
+        }
+
+        public bool Normalize(bool is31Edo) {
+            if (id == Guid.Empty) id = Guid.NewGuid();
+            if (position < 0 || sourceDuration <= 0 || duration <= 0 ||
+                (long)position + duration > int.MaxValue) return false;
+            chordHelpers ??= new List<UChordHelper>();
+            foreach (var helper in chordHelpers) helper.Normalize(is31Edo);
+            return true;
+        }
+    }
+
+    public readonly record struct ChordOccurrence(
+        UChordRegion Region, UChordHelper Helper, int Iteration,
+        int StartTick, int EndTick) {
+        public Guid PlaybackId => ChordRegionPlaybackId.Create(Region.id, Helper.PlaybackId, Iteration);
+    }
+
+    public static class ChordRegionPlaybackId {
+        public static Guid Create(Guid region, Guid helper, int iteration) {
+            Span<byte> bytes = stackalloc byte[16];
+            region.TryWriteBytes(bytes);
+            Span<byte> helperBytes = stackalloc byte[16];
+            helper.TryWriteBytes(helperBytes);
+            for (int i = 0; i < 16; i++) bytes[i] ^= helperBytes[i];
+            BitConverter.TryWriteBytes(bytes.Slice(12), iteration);
+            return new Guid(bytes);
+        }
+    }
+
+    public static class ChordRegionExpander {
+        public const int MaxBreakRegions = 10000;
+
+        public static IEnumerable<ChordOccurrence> Enumerate(
+                UChordRegion region, int queryStart, int queryEnd) {
+            if (queryEnd <= queryStart || region.sourceDuration <= 0 || region.duration <= 0) yield break;
+            long regionStart = region.position;
+            long regionEnd = Math.Min(int.MaxValue, regionStart + region.duration);
+            long left = Math.Max(queryStart, regionStart);
+            long right = Math.Min(queryEnd, regionEnd);
+            if (right <= left) yield break;
+            long firstIteration = Math.Max(0, (left - regionStart) / region.sourceDuration);
+            long lastIteration = Math.Min((region.duration - 1L) / region.sourceDuration,
+                (right - 1 - regionStart) / region.sourceDuration);
+            for (long iteration = firstIteration; iteration <= lastIteration; iteration++) {
+                long cycleStart = regionStart + iteration * region.sourceDuration;
+                long cycleEnd = Math.Min(regionEnd, cycleStart + region.sourceDuration);
+                foreach (var helper in region.chordHelpers) {
+                    long start = cycleStart + helper.position;
+                    long end = Math.Min(cycleEnd, start + Math.Max(0, helper.duration));
+                    if (start < cycleEnd && end > start && start < right && end > left) {
+                        yield return new ChordOccurrence(region, helper, (int)iteration, (int)start, (int)end);
+                    }
+                }
+            }
+        }
+
+        public static bool TryBreak(UChordRegion region, out List<UChordRegion> pieces) {
+            pieces = new List<UChordRegion>();
+            if (region.sourceDuration <= 0 || region.duration <= region.sourceDuration) return false;
+            long count = (region.duration + (long)region.sourceDuration - 1) / region.sourceDuration;
+            if (count > MaxBreakRegions) return false;
+            for (int i = 0; i < count; i++) {
+                int length = (int)Math.Min(region.sourceDuration, region.duration - (long)i * region.sourceDuration);
+                pieces.Add(new UChordRegion {
+                    position = checked(region.position + i * region.sourceDuration),
+                    sourceDuration = length, duration = length,
+                    chordHelpers = region.chordHelpers.Select(helper => {
+                        var clone = helper.Clone();
+                        clone.duration = Math.Min(clone.duration, Math.Max(0, length - clone.position));
+                        return clone;
+                    }).Where(helper => helper.position < length && helper.duration > 0).ToList(),
+                });
+            }
+            return true;
+        }
+    }
+
     public sealed class ChordHelperPreset {
         public string Name { get; }
         public IReadOnlyList<UChordInterval> Tones { get; }

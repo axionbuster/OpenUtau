@@ -52,6 +52,8 @@ namespace OpenUtau.Core.Ustx {
         public List<UCurve> curves = new List<UCurve>();
         [YamlMember(Alias = "chord_helpers", Order = 102, ApplyNamingConventions = false)]
         public List<UChordHelper> chordHelpers = new List<UChordHelper>();
+        [YamlMember(Alias = "chord_regions", Order = 103, ApplyNamingConventions = false)]
+        public List<UChordRegion> chordRegions = new List<UChordRegion>();
 
         [YamlIgnore] public List<UPhoneme> phonemes = new List<UPhoneme>();
         [YamlIgnore] public int phonemesRevision = 0;
@@ -72,6 +74,7 @@ namespace OpenUtau.Core.Ustx {
         }
         public int GetMinDurTickForNoteEdit(UProject project, int noteEnd) {
             noteEnd = Math.Max(noteEnd, chordHelpers.Select(helper => helper.End).DefaultIfEmpty(1).Max());
+            noteEnd = Math.Max(noteEnd, chordRegions.Select(region => region.End).DefaultIfEmpty(1).Max());
             // Round up to the containing beat, without reserving an extra bar.
             project.timeAxis.TickPosToBarBeat(position + Math.Max(1, noteEnd) - 1, out int bar, out int beat, out int remainingTicks);
             return project.timeAxis.BarBeatToTickPos(bar, beat + 1) - position;
@@ -81,6 +84,7 @@ namespace OpenUtau.Core.Ustx {
             int firstContentPosition = new[] {
                 notes.FirstOrDefault()?.position ?? int.MaxValue,
                 chordHelpers.Select(helper => helper.position).DefaultIfEmpty(int.MaxValue).Min(),
+                chordRegions.Select(region => region.position).DefaultIfEmpty(int.MaxValue).Min(),
             }.Min();
             int maxStartTick = position + (firstContentPosition == int.MaxValue ? Duration : firstContentPosition);
             project.timeAxis.TickPosToBarBeat(maxStartTick, out int bar, out int beat, out int remainingTicks);
@@ -95,8 +99,23 @@ namespace OpenUtau.Core.Ustx {
 
         public override void AfterLoad(UProject project, UTrack track) {
             chordHelpers ??= new List<UChordHelper>();
+            chordRegions ??= new List<UChordRegion>();
             foreach (var helper in chordHelpers) {
                 helper.Normalize(project.Is31Edo);
+            }
+            chordRegions.RemoveAll(region => !region.Normalize(project.Is31Edo));
+            if (IsChordPart && chordRegions.Count == 0 && chordHelpers.Count > 0) {
+                int start = chordHelpers.Min(helper => helper.position);
+                int end = chordHelpers.Max(helper => helper.End);
+                chordRegions.Add(new UChordRegion {
+                    position = start,
+                    sourceDuration = Math.Max(1, end - start),
+                    duration = Math.Max(1, end - start),
+                    chordHelpers = chordHelpers.Select(helper => {
+                        var clone = helper.Clone(); clone.position -= start; return clone;
+                    }).ToList(),
+                });
+                chordHelpers.Clear();
             }
             foreach (var note in notes) {
                 note.AfterLoad(project, track, this);
@@ -407,6 +426,7 @@ namespace OpenUtau.Core.Ustx {
                 notes = new SortedSet<UNote>(notes.Select(note => note.Clone())),
                 curves = curves.Select(c => c.Clone()).ToList(),
                 chordHelpers = chordHelpers.Select(helper => helper.Clone()).ToList(),
+                chordRegions = chordRegions.Select(region => region.Clone()).ToList(),
                 Duration = Duration,
             };
         }

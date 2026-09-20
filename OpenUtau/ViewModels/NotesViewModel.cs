@@ -1369,6 +1369,9 @@ namespace OpenUtau.App.ViewModels {
                         }
                     }
                 }
+            } else if (cmd is ChordHelperCommand) {
+                ExtendEditorTimeline();
+                MessageBus.Current.SendMessage(new NotesRefreshEvent());
             } else if (cmd is ExpCommand) {
                 MessageBus.Current.SendMessage(new NotesRefreshEvent());
             } else if (cmd is TrackCommand) {

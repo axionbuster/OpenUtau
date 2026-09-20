@@ -72,6 +72,9 @@ namespace OpenUtau.Core {
                         curve.xs[i] += deltaDur;
                     }
                 }
+                foreach (var helper in part.chordHelpers) {
+                    helper.position += deltaDur;
+                }
             } else {
                 part.Duration += deltaDur;
             }
@@ -87,6 +90,9 @@ namespace OpenUtau.Core {
                     for (var i = 0; i < curve.xs.Count; i++) {
                         curve.xs[i] -= deltaDur;
                     }
+                }
+                foreach (var helper in part.chordHelpers) {
+                    helper.position -= deltaDur;
                 }
             } else {
                 part.Duration -= deltaDur;

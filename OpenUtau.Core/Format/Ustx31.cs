@@ -182,6 +182,12 @@ namespace OpenUtau.Core.Format {
                     note.tuning = (int)Math.Round((target - note.tone) * 100);
                 }
             }
+            foreach (var helper in (copy.voiceParts ?? new()).SelectMany(p => p.chordHelpers)) {
+                helper.root = to31
+                    ? Edo31.NearestStepForTwelveTetPitchClass(Edo31.Mod(helper.root, 12))
+                    : (int)Math.Round(Edo31.Mod(helper.root, 31) * 12.0 / 31) % 12;
+                helper.Normalize(to31);
+            }
             copy.Is31Edo = to31;
             copy.PitchReference31 = Edo31PitchReference.Default;
             copy.FilePath = string.Empty;

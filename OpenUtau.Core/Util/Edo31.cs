@@ -130,5 +130,7 @@ namespace OpenUtau.Core.Util {
             Mod(step - tonicFifths * 18, 31);
         public static string ScaleDegreeLabel(int step, int tonicFifths) =>
             ScaleDegreeLabels[ScaleColorIndex(step, tonicFifths)];
+        public static string RelativeScaleDegreeLabel(int relativeStep) =>
+            ScaleDegreeLabels[Mod(relativeStep, Divisions)];
     }
 }

@@ -499,6 +499,10 @@ namespace OpenUtau.App.ViewModels {
                     MessageBus.Current.SendMessage(new PartRefreshEvent(noteCommand.Part));
                 }
                 MessageBus.Current.SendMessage(new PartRedrawEvent(noteCommand.Part));
+            } else if (cmd is ChordHelperCommand helperCommand) {
+                MessageBus.Current.SendMessage(new PartRefreshEvent(helperCommand.Part));
+                MessageBus.Current.SendMessage(new PartRedrawEvent(helperCommand.Part));
+                Notify();
             } else if (cmd is PartCommand partCommand) {
                 if (partCommand is AddPartCommand) {
                     if (!isUndo) {

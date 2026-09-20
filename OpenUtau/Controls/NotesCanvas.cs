@@ -173,6 +173,8 @@ namespace OpenUtau.App.Controls {
 
         private bool showGhostNotes = true;
         private List<UPart> otherPartsInView = new List<UPart>();
+        private UChordHelper? selectedChordHelper;
+        private UVoicePart? selectedChordPart;
 
         public NotesCanvas() {
             ClipToBounds = true;
@@ -194,6 +196,12 @@ namespace OpenUtau.App.Controls {
                 });
             MessageBus.Current.Listen<PartRefreshEvent>()
                 .Subscribe(_ => RefreshGhostNotes());
+            MessageBus.Current.Listen<ChordHelperSelectionEvent>()
+                .Subscribe(e => {
+                    selectedChordPart = e.Part;
+                    selectedChordHelper = e.Helper;
+                    InvalidateVisual();
+                });
             this.WhenAnyValue(x => x.Part)
                 .OfType<UVoicePart>()
                 .Subscribe(_ => {
@@ -398,12 +406,14 @@ namespace OpenUtau.App.Controls {
                     }
                 }
 
+                RenderChordHelperFills(leftTick, rightTick, viewModel, context);
                 foreach (var note in Part.notes) {
                     if (note.LeftBound >= rightTick || note.RightBound <= leftTick) {
                         continue;
                     }
                     RenderNoteBody(note, viewModel, context);
                 }
+                RenderChordHelpers(leftTick, rightTick, viewModel, context);
                 if (ShowFinalPitch && !hidePitch) {
                     RenderFinalPitch(leftTick, rightTick, viewModel, context);
                 }
@@ -424,6 +434,93 @@ namespace OpenUtau.App.Controls {
                 }
             } finally {
                 renderPassActive = false;
+            }
+        }
+
+        void RenderChordHelperFills(double leftTick, double rightTick, NotesViewModel viewModel, DrawingContext context) {
+            var project = DocManager.Inst.Project;
+            int divisions = project.Is31Edo ? 31 : 12;
+            IEnumerable<int> rows = viewModel.DisplayRows ?? Enumerable.Range(0, viewModel.TrackCount);
+            foreach (var (owner, helper) in ChordHelperViewModel.VisibleHelpers(project)) {
+                if (!ChordHelperViewModel.IsOwnedByEditorTrack(Part, owner)) {
+                    continue;
+                }
+                int ownerOffset = owner.position - Part!.position;
+                double start = ownerOffset + helper.position;
+                double end = start + helper.duration;
+                if (start >= rightTick || end <= leftTick || helper.tones.Count == 0) {
+                    continue;
+                }
+                Color color;
+                try { color = Color.Parse(helper.color); }
+                catch { color = Color.Parse("#35A7D8"); }
+                var fill = new ImmutableSolidColorBrush(Color.FromArgb(190, color.R, color.G, color.B));
+                var rootFill = new ImmutableSolidColorBrush(Color.FromArgb(205, 194, 158, 37));
+                var tones = helper.tones
+                    .Select(tone => Edo31.Mod(tone.Offset(project.Is31Edo), divisions))
+                    .ToHashSet();
+                foreach (int step in rows) {
+                    int interval = Edo31.Mod(step - helper.root, divisions);
+                    if (!tones.Contains(interval)) {
+                        continue;
+                    }
+                    var topLeft = viewModel.TickToneToPoint(start, viewModel.GridToTone(step));
+                    double width = Math.Max(1, helper.duration * TickWidth);
+                    var rect = new Rect(topLeft.X + 0.75, Math.Round(topLeft.Y + 0.75),
+                        Math.Max(0.5, width - 1.5), Math.Max(0.5, TrackHeight - 1.5));
+                    context.DrawRectangle(helper.highlightRoot && interval == 0 ? rootFill : fill,
+                        null, rect, 2, 2);
+                }
+            }
+        }
+
+        void RenderChordHelpers(double leftTick, double rightTick, NotesViewModel viewModel, DrawingContext context) {
+            var project = DocManager.Inst.Project;
+            int divisions = project.Is31Edo ? 31 : 12;
+            IEnumerable<int> rows = viewModel.DisplayRows ?? Enumerable.Range(0, viewModel.TrackCount);
+            foreach (var (owner, helper) in ChordHelperViewModel.VisibleHelpers(project)) {
+                int ownerOffset = owner.position - Part!.position;
+                double start = ownerOffset + helper.position;
+                double end = start + helper.duration;
+                if (start >= rightTick || end <= leftTick || helper.tones.Count == 0) {
+                    continue;
+                }
+                Color color;
+                try { color = Color.Parse(helper.color); }
+                catch { color = Color.Parse("#35A7D8"); }
+                bool selected = ReferenceEquals(owner, selectedChordPart) && ReferenceEquals(helper, selectedChordHelper);
+                var brush = new ImmutableSolidColorBrush(Color.FromArgb(selected ? (byte)245 : (byte)190, color.R, color.G, color.B));
+                var pen = new Pen(brush, selected ? 2.4 : 1.2) { LineJoin = PenLineJoin.Round };
+                var rootPen = new Pen(new ImmutableSolidColorBrush(
+                    Color.FromArgb(selected ? (byte)255 : (byte)230, 255, 224, 92)), selected ? 3.2 : 2.0) {
+                    LineJoin = PenLineJoin.Round,
+                };
+                var tones = helper.tones
+                    .GroupBy(tone => Edo31.Mod(tone.Offset(project.Is31Edo), divisions))
+                    .ToDictionary(group => group.Key, group => group.First());
+                foreach (int step in rows) {
+                    int interval = Edo31.Mod(step - helper.root, divisions);
+                    if (!tones.TryGetValue(interval, out var tone)) {
+                        continue;
+                    }
+                    var topLeft = viewModel.TickToneToPoint(start, viewModel.GridToTone(step));
+                    double width = Math.Max(1, helper.duration * TickWidth);
+                    var rect = new Rect(topLeft.X + 0.75, Math.Round(topLeft.Y + 0.75),
+                        Math.Max(0.5, width - 1.5), Math.Max(0.5, TrackHeight - 1.5));
+                    context.DrawRectangle(null,
+                        helper.highlightRoot && interval == 0 ? rootPen : pen,
+                        rect, 2, 2);
+                    if (selected && TrackHeight >= 9 && width >= 12) {
+                        var layout = TextLayoutCache.Get(tone.Label, Brushes.White, 9);
+                        double x = rect.X + 3;
+                        double y = rect.Y + Math.Max(0, (rect.Height - layout.Height) / 2);
+                        var background = new Rect(x - 1.5, y - 0.5, layout.Width + 3, layout.Height + 1);
+                        context.DrawRectangle(new ImmutableSolidColorBrush(Color.FromArgb(205, 28, 31, 36)), null,
+                            background, 2, 2);
+                        using var state = context.PushTransform(Matrix.CreateTranslation(x, y));
+                        layout.Draw(context, new Point());
+                    }
+                }
             }
         }
 

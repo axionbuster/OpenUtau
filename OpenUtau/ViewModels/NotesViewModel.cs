@@ -42,8 +42,9 @@ namespace OpenUtau.App.ViewModels {
 
         private void ExtendEditorTimeline() {
             // Browsing space belongs to the editor, never to the saved part.
-            int contentEnd = Math.Max(Part?.Duration ?? 0,
-                Part?.notes.Select(note => note.End).DefaultIfEmpty(0).Max() ?? 0);
+            int contentEnd = Math.Max(Part?.Duration ?? 0, Math.Max(
+                Part?.notes.Select(note => note.End).DefaultIfEmpty(0).Max() ?? 0,
+                Part?.chordHelpers.Select(helper => helper.End).DefaultIfEmpty(0).Max() ?? 0));
             int visibleEnd = (int)Math.Ceiling(TickOffset + ViewportTicks);
             int padding = Project.resolution * 4 * 2;
             editorTickCount = Math.Max(editorTickCount, Math.Max(contentEnd, visibleEnd) + padding);

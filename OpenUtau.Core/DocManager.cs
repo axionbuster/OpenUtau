@@ -394,15 +394,23 @@ namespace OpenUtau.Core {
             // Grow only from the final note positions, as part of the same undo step.
             // Dragging out and back, deleting, or moving notes earlier never shrinks a part.
             var editedParts = undoGroup.Commands
-                .Where(cmd => cmd is AddNoteCommand || cmd is MoveNoteCommand || cmd is ResizeNoteCommand)
-                .Cast<NoteCommand>().Select(cmd => cmd.Part).Distinct().ToArray();
+                .Select(cmd => cmd switch {
+                    AddNoteCommand note => note.Part,
+                    MoveNoteCommand note => note.Part,
+                    ResizeNoteCommand note => note.Part,
+                    ChordHelperCommand helper => helper.Part,
+                    _ => null,
+                })
+                .Where(part => part != null).Cast<UVoicePart>().Distinct().ToArray();
             foreach (var part in editedParts) {
                 if (!Project.parts.Contains(part)) {
                     continue;
                 }
-                int noteEnd = part.notes.Select(note => note.End).DefaultIfEmpty(0).Max();
-                if (noteEnd > part.Duration) {
-                    int duration = part.GetMinDurTickForNoteEdit(Project, noteEnd);
+                int contentEnd = Math.Max(
+                    part.notes.Select(note => note.End).DefaultIfEmpty(0).Max(),
+                    part.chordHelpers.Select(helper => helper.End).DefaultIfEmpty(0).Max());
+                if (contentEnd > part.Duration) {
+                    int duration = part.GetMinDurTickForNoteEdit(Project, contentEnd);
                     ExecuteCmd(new ResizeVoicePartCommand(Project, part, duration - part.Duration, false));
                 }
             }

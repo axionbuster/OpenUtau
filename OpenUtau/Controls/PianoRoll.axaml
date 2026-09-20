@@ -168,7 +168,7 @@
                          TickOffset="{Binding TickOffset, Mode=OneWay}"
                          ShowWaveform="{Binding ShowWaveform, Mode=OneWay}"/>
       </Border>
-      <c:NotesCanvas Grid.Row="3" Grid.Column="1"
+      <c:NotesCanvas Name="NotesCanvas" Grid.Row="3" Grid.Column="1"
                      TickWidth="{Binding NotesViewModel.TickWidth}"
                      TrackHeight="{Binding NotesViewModel.TrackHeight}"
                      TickOffset="{Binding NotesViewModel.TickOffset}"
@@ -443,6 +443,11 @@
                   <ListBoxItem Classes="toolbar pitchSmoothenTool" ToolTip.Tip="{DynamicResource pianoroll.tool.pitchsmoothen}"/>
                 </ListBox.Items>
             </ListBox>
+            <ToggleButton Name="ChordHelperTool" Classes="toolbar" Margin="4,0,0,0" Padding="1" Height="20" Width="28"
+                          IsChecked="{Binding ChordHelperMode, Mode=TwoWay}"
+                          ToolTip.Tip="Chord helper: create, select, move, and resize silent harmonic guides">
+              <TextBlock Text="Ch" FontSize="10" FontWeight="Bold" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+            </ToggleButton>
             <ToggleButton Classes="toolbar" Margin="0" Padding="1" Height="20" Width="20" IsChecked="{Binding PitchOverwrite}"
                     ToolTip.Tip="{DynamicResource pianoroll.toggle.overwritepitch}">
               <Grid Width="18" Height="18">
@@ -703,7 +708,81 @@
               IsEnabled="{Binding NotesViewModel.ShowNoteParams}"
               IsVisible="{Binding NotesViewModel.ShowNoteParams}"
               Background="{DynamicResource SystemRegionBrush}" Padding="0">
-        <c:NotePropertiesControl/>
+        <Grid>
+          <Border IsVisible="{Binding !ChordHelpers.HasSelection}">
+            <c:NotePropertiesControl/>
+          </Border>
+          <ScrollViewer Name="ChordHelperPanel" Width="400"
+                        IsVisible="{Binding ChordHelpers.HasSelection}"
+                        HorizontalScrollBarVisibility="Disabled"
+                        VerticalScrollBarVisibility="Auto">
+            <StackPanel Margin="12,8" Spacing="8">
+              <Grid ColumnDefinitions="*,Auto">
+                <TextBlock Text="Chord helper" FontSize="16" FontWeight="SemiBold"
+                           VerticalAlignment="Center"/>
+                <Button Grid.Column="1" Content="Delete" Command="{Binding ChordHelpers.DeleteCommand}"/>
+              </Grid>
+
+              <Grid ColumnDefinitions="110,*" RowDefinitions="Auto,Auto,Auto,Auto,Auto">
+                <TextBlock Text="Quality" VerticalAlignment="Center"/>
+                <ComboBox Name="ChordQuality" Grid.Column="1"
+                          ItemsSource="{Binding ChordHelpers.QualityChoices}"
+                          SelectedItem="{Binding ChordHelpers.SelectedQuality, Mode=TwoWay}"/>
+                <TextBlock Grid.Row="1" Text="Root" VerticalAlignment="Center"/>
+                <ComboBox Name="ChordRoot" Grid.Row="1" Grid.Column="1"
+                          ItemsSource="{Binding ChordHelpers.RootChoices}"
+                          SelectedItem="{Binding ChordHelpers.SelectedRoot, Mode=TwoWay}"/>
+                <TextBlock Grid.Row="2" Text="Inversion / bass" VerticalAlignment="Center"/>
+                <ComboBox Name="ChordBass" Grid.Row="2" Grid.Column="1"
+                          ItemsSource="{Binding ChordHelpers.BassChoices}"
+                          SelectedItem="{Binding ChordHelpers.SelectedBass, Mode=TwoWay}"
+                          ToolTip.Tip="Names the bass (for example C/E); chord-tone rows remain unchanged."/>
+                <TextBlock Grid.Row="3" Text="Onset (ticks)" VerticalAlignment="Center"/>
+                <NumericUpDown Name="ChordOnset" Grid.Row="3" Grid.Column="1"
+                               Height="32" Padding="4,0" VerticalContentAlignment="Center"
+                               Minimum="0" Maximum="100000000" Increment="1" FormatString="0"
+                               Value="{Binding ChordHelpers.Position, Mode=TwoWay}"/>
+                <TextBlock Grid.Row="4" Text="Duration (ticks)" VerticalAlignment="Center"/>
+                <NumericUpDown Name="ChordDuration" Grid.Row="4" Grid.Column="1"
+                               Height="32" Padding="4,0" VerticalContentAlignment="Center"
+                               Minimum="1" Maximum="100000000" Increment="1" FormatString="0"
+                               Value="{Binding ChordHelpers.Duration, Mode=TwoWay}"/>
+              </Grid>
+
+              <Grid ColumnDefinitions="Auto,*"
+                    ToolTip.Tip="The root remains the harmonic reference when its degree button is off; no root row is drawn then.">
+                <CheckBox Name="ChordHighlightRoot"
+                          IsChecked="{Binding ChordHelpers.HighlightRoot, Mode=TwoWay}"/>
+                <TextBlock Grid.Column="1" Margin="6,0,0,0" Text="Highlight root" VerticalAlignment="Center"/>
+              </Grid>
+              <TextBlock Text="Harmonic seventh is the 31-TET approximation of 7:4 and uses ♯6 (25 steps)."
+                         IsVisible="{Binding NotesViewModel.Is31Edo}" FontSize="10" Opacity="0.75"
+                         TextWrapping="Wrap"/>
+              <TextBlock Text="Degrees" FontWeight="SemiBold"/>
+              <ItemsControl Width="{Binding ChordHelpers.DegreeGridWidth}" HorizontalAlignment="Left"
+                            ItemsSource="{Binding ChordHelpers.Degrees}">
+                <ItemsControl.ItemsPanel>
+                  <ItemsPanelTemplate>
+                    <UniformGrid Columns="{Binding ChordHelpers.DegreeColumns}"/>
+                  </ItemsPanelTemplate>
+                </ItemsControl.ItemsPanel>
+                <ItemsControl.ItemTemplate>
+                  <DataTemplate x:DataType="vm:ChordDegreeViewModel">
+                    <Button Width="46" Height="32" Margin="2" Padding="2"
+                            Content="{Binding ButtonText}" Background="{Binding Background}"
+                            BorderBrush="{DynamicResource SystemControlForegroundBaseHighBrush}"
+                            BorderThickness="1"
+                            ToolTip.Tip="At least one degree stays enabled; unison is a valid helper."
+                            Command="{Binding $parent[UserControl].DataContext.ChordHelpers.ToggleDegreeCommand}"
+                            CommandParameter="{Binding}"/>
+                  </DataTemplate>
+                </ItemsControl.ItemTemplate>
+              </ItemsControl>
+              <TextBlock Text="All helpers remain visible. Helpers owned by the selected track are filled and editable; other tracks stay outline-only. Use the Ch tool to create, select, move, or resize."
+                         FontSize="10" Opacity="0.75" TextWrapping="Wrap"/>
+            </StackPanel>
+          </ScrollViewer>
+        </Grid>
       </Border>
 
       <Button Grid.Row="0" Grid.Column="0" Grid.ColumnSpan="4"

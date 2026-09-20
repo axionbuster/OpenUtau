@@ -39,6 +39,11 @@ namespace OpenUtau.App.Controls {
         private NoteEditState? editState;
         private Point valueTipPointerPosition;
         private bool shouldOpenNotesContextMenu;
+        private UVoicePart? chordDragPart;
+        private UChordHelper? chordDragHelper;
+        private UChordHelper? chordDragBefore;
+        private int chordDragStartLineTick;
+        private bool chordDragResize;
 
         private bool isSelectingRange;
         private Point rangeSelectStartPoint = default;
@@ -722,6 +727,11 @@ namespace OpenUtau.App.Controls {
             }
             var control = (Control)sender;
             var point = args.GetCurrentPoint(control);
+            if (ViewModel.ChordHelperMode && point.Properties.IsLeftButtonPressed) {
+                BeginChordHelperEdit(control, point);
+                args.Handled = true;
+                return;
+            }
             if (editState != null) {
                 // Finalize pitch curve in adjusting phase before starting a new edit
                 if (editState is PitchCurveState pcs2 && pcs2.IsInAdjustingPhase) {
@@ -752,6 +762,96 @@ namespace OpenUtau.App.Controls {
                 editState.Begin(point.Pointer, point.Position);
                 editState.Update(point.Pointer, point.Position);
             }
+        }
+
+        (UVoicePart Part, UChordHelper Helper, bool Resize)? HitTestChordHelper(Point point) {
+            var notesVm = ViewModel.NotesViewModel;
+            if (notesVm.Part == null) {
+                return null;
+            }
+            int divisions = notesVm.Is31Edo ? 31 : 12;
+            int absoluteTick = notesVm.Part.position + notesVm.PointToTick(point);
+            int step = notesVm.PointToTone(point);
+            var candidates = ChordHelperViewModel.VisibleHelpers(DocManager.Inst.Project)
+                .Where(item => ChordHelperViewModel.IsOwnedByEditorTrack(notesVm.Part, item.Part))
+                .OrderByDescending(item => ReferenceEquals(item.Helper, ViewModel.ChordHelpers.SelectedHelper));
+            foreach (var item in candidates) {
+                int start = item.Part.position + item.Helper.position;
+                int end = start + item.Helper.duration;
+                if (absoluteTick < start || absoluteTick > end) {
+                    continue;
+                }
+                int relative = Edo31.Mod(step - item.Helper.root, divisions);
+                if (!item.Helper.tones.Any(tone =>
+                    Edo31.Mod(tone.Offset(notesVm.Is31Edo), divisions) == relative)) {
+                    continue;
+                }
+                bool resize = Math.Abs((end - notesVm.Part.position - notesVm.TickOffset) * notesVm.TickWidth - point.X) <= 7;
+                return (item.Part, item.Helper, resize);
+            }
+            return null;
+        }
+
+        void BeginChordHelperEdit(Control control, PointerPoint point) {
+            var notesVm = ViewModel.NotesViewModel;
+            var currentPart = notesVm.Part!;
+            var hit = HitTestChordHelper(point.Position);
+            if (hit == null) {
+                notesVm.PointToLineTick(point.Position, out int left, out int right);
+                int position = Math.Max(0, left);
+                int duration = Math.Max(projectResolution(), right - left);
+                int divisions = notesVm.Is31Edo ? 31 : 12;
+                var helper = new UChordHelper {
+                    position = position,
+                    duration = duration,
+                    root = Edo31.Mod(notesVm.PointToTone(point.Position), divisions),
+                    tones = ChordHelperTheory.CreatePreset("Major"),
+                };
+                helper.Normalize(notesVm.Is31Edo);
+                DocManager.Inst.StartUndoGroup();
+                DocManager.Inst.ExecuteCmd(new AddChordHelperCommand(currentPart, helper));
+                DocManager.Inst.EndUndoGroup();
+                ViewModel.ChordHelpers.TrySelect(currentPart, currentPart, helper);
+                notesVm.ShowNoteParams = true;
+                return;
+            }
+            chordDragPart = hit.Value.Part;
+            chordDragHelper = hit.Value.Helper;
+            chordDragBefore = chordDragHelper.Clone();
+            chordDragResize = hit.Value.Resize;
+            notesVm.PointToLineTick(point.Position, out chordDragStartLineTick, out _);
+            ViewModel.ChordHelpers.TrySelect(currentPart, chordDragPart, chordDragHelper);
+            notesVm.ShowNoteParams = true;
+            point.Pointer.Capture(control);
+            Cursor = chordDragResize ? ViewConstants.cursorSizeWE : ViewConstants.cursorSizeAll;
+
+            int projectResolution() => Math.Max(1, DocManager.Inst.Project.resolution);
+        }
+
+        void UpdateChordHelperEdit(Point point) {
+            if (chordDragHelper == null || chordDragBefore == null) {
+                return;
+            }
+            ViewModel.NotesViewModel.PointToLineTick(point, out int lineTick, out _);
+            int delta = lineTick - chordDragStartLineTick;
+            if (chordDragResize) {
+                chordDragHelper.duration = Math.Max(1, chordDragBefore.duration + delta);
+            } else {
+                chordDragHelper.position = Math.Max(0, chordDragBefore.position + delta);
+            }
+            MessageBus.Current.SendMessage(new NotesRefreshEvent());
+        }
+
+        void EndChordHelperEdit(IPointer pointer) {
+            if (chordDragPart != null && chordDragHelper != null && chordDragBefore != null) {
+                ViewModel.ChordHelpers.CommitSnapshot(chordDragPart, chordDragHelper, chordDragBefore);
+            }
+            chordDragPart = null;
+            chordDragHelper = null;
+            chordDragBefore = null;
+            chordDragResize = false;
+            pointer.Capture(null);
+            Cursor = null;
         }
 
         private void NotesCanvasLeftPointerPressed(Control control, PointerPoint point, PointerPressedEventArgs args) {
@@ -1021,6 +1121,17 @@ namespace OpenUtau.App.Controls {
             if (ValueTipCanvas != null) {
                 valueTipPointerPosition = args.GetCurrentPoint(ValueTipCanvas!).Position;
             }
+            if (chordDragHelper != null) {
+                UpdateChordHelperEdit(point.Position);
+                return;
+            }
+            if (ViewModel.ChordHelperMode) {
+                var hit = HitTestChordHelper(point.Position);
+                Cursor = hit == null ? ViewConstants.cursorCross :
+                    hit.Value.Resize ? ViewConstants.cursorSizeWE : ViewConstants.cursorSizeAll;
+                ViewModel.NotesViewModel.SelectableNote = null;
+                return;
+            }
             // Edit Status update (while dragging)
             if (editState != null) {
                 editState.altShiftHeld = args.KeyModifiers == (KeyModifiers.Alt | KeyModifiers.Shift);
@@ -1077,6 +1188,12 @@ namespace OpenUtau.App.Controls {
         }
 
         public void NotesCanvasPointerReleased(object sender, PointerReleasedEventArgs args) {
+            if (chordDragHelper != null) {
+                UpdateChordHelperEdit(args.GetPosition((Control)sender));
+                EndChordHelperEdit(args.Pointer);
+                args.Handled = true;
+                return;
+            }
             if (editState == null) {
                 return;
             }
@@ -1116,6 +1233,9 @@ namespace OpenUtau.App.Controls {
         }
 
         public void NotesCanvasDoubleTapped(object sender, TappedEventArgs args) {
+            if (ViewModel.ChordHelperMode) {
+                return;
+            }
             if (!(sender is Control control)) {
                 return;
             }
@@ -1897,6 +2017,10 @@ namespace OpenUtau.App.Controls {
                 case Key.Delete:
                 case Key.Back:
                     if (isNone) {
+                        if (ViewModel.ChordHelpers.HasSelection && ViewModel.ChordHelperMode) {
+                            ViewModel.ChordHelpers.DeleteCommand.Execute().Subscribe();
+                            return true;
+                        }
                         notesVm.DeleteSelectedNotes();
                         return true;
                     }

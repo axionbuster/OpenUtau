@@ -47,6 +47,8 @@ namespace OpenUtau.App.ViewModels {
         [Reactive] public partial NotesViewModel NotesViewModel { get; set; }
         [Reactive] public partial PlaybackViewModel? PlaybackViewModel { get; set; }
         [Reactive] public partial CurveViewModel CurveViewModel { get; set; }
+        public ChordHelperViewModel ChordHelpers { get; }
+        [Reactive] public partial bool ChordHelperMode { get; set; }
 
         public double Width => Preferences.Default.PianorollWindowSize.Width;
         public double Height => Preferences.Default.PianorollWindowSize.Height;
@@ -121,9 +123,15 @@ namespace OpenUtau.App.ViewModels {
         public PianoRollViewModel() {
             NotesViewModel = new NotesViewModel();
             CurveViewModel = new CurveViewModel();
+            ChordHelpers = new ChordHelperViewModel();
+            NotesViewModel.WhenAnyValue(vm => vm.Part)
+                .Subscribe(ChordHelpers.HandleEditorPartChanged);
 
             this.WhenAnyValue(vm => vm.ToolIndex)
-                .Subscribe(index => EditTool.BaseTool = index);
+                .Subscribe(index => {
+                    EditTool.BaseTool = index;
+                    ChordHelperMode = false;
+                });
             this.WhenAnyValue(vm => vm.PenToolIndex)
                 .Subscribe(index => EditTool.PenToolVariation = index);
             this.WhenAnyValue(vm => vm.PitchOverwrite)
@@ -312,6 +320,7 @@ namespace OpenUtau.App.ViewModels {
         #region ICmdSubscriber
 
         public void OnNext(UCommand cmd, bool isUndo) {
+            ChordHelpers.OnCommand(cmd);
             if (cmd is ProgressBarNotification progressBarNotification) {
                 if (PianoRollDetached) {
                     Dispatcher.UIThread.InvokeAsync(() => {

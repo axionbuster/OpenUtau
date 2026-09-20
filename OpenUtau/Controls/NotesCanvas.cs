@@ -451,9 +451,10 @@ namespace OpenUtau.App.Controls {
                 if (start >= rightTick || end <= leftTick || helper.tones.Count == 0) {
                     continue;
                 }
-                Color color;
-                try { color = Color.Parse(helper.color); }
-                catch { color = Color.Parse("#35A7D8"); }
+                var chordTrack = project.tracks.FirstOrDefault(track => track.IsChordsTrack);
+                Color color = chordTrack != null
+                    ? ThemeManager.GetTrackColor(chordTrack.TrackColor).AccentColor.Color
+                    : Color.Parse(helper.color);
                 var fill = new ImmutableSolidColorBrush(Color.FromArgb(190, color.R, color.G, color.B));
                 var rootFill = new ImmutableSolidColorBrush(Color.FromArgb(205, 194, 158, 37));
                 var tones = helper.tones
@@ -485,9 +486,10 @@ namespace OpenUtau.App.Controls {
                 if (start >= rightTick || end <= leftTick || helper.tones.Count == 0) {
                     continue;
                 }
-                Color color;
-                try { color = Color.Parse(helper.color); }
-                catch { color = Color.Parse("#35A7D8"); }
+                var chordTrack = project.tracks.FirstOrDefault(track => track.IsChordsTrack);
+                Color color = chordTrack != null
+                    ? ThemeManager.GetTrackColor(chordTrack.TrackColor).AccentColor.Color
+                    : Color.Parse(helper.color);
                 bool selected = ReferenceEquals(owner, selectedChordPart) && ReferenceEquals(helper, selectedChordHelper);
                 var brush = new ImmutableSolidColorBrush(Color.FromArgb(selected ? (byte)245 : (byte)190, color.R, color.G, color.B));
                 var pen = new Pen(brush, selected ? 2.4 : 1.2) { LineJoin = PenLineJoin.Round };

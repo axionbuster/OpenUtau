@@ -70,6 +70,10 @@ namespace OpenUtau.Core.Ustx {
     }
 
     public class UTrack {
+        public const string VoiceRole = "voice";
+        public const string ChordsRole = "chords";
+        public string TrackRole { get; set; } = VoiceRole;
+        [YamlIgnore] public bool IsChordsTrack => TrackRole == ChordsRole;
         public string singer;
         public string phonemizer;
         public URenderSettings RendererSettings { get; set; } = new URenderSettings();
@@ -121,6 +125,11 @@ namespace OpenUtau.Core.Ustx {
         public UTrack(string trackName) {
             TrackName = trackName;
         }
+
+        public static UTrack CreateChordsTrack() => new UTrack("Chords") {
+            TrackRole = ChordsRole,
+            TrackColor = "Orange",
+        };
 
         public bool TryGetExpDescriptor(UProject project, string abbr, out UExpressionDescriptor descriptor) {
             if (abbr == Format.Ustx.CLR && VoiceColorExp != null) {

@@ -42,6 +42,8 @@ namespace OpenUtau.Core.Ustx {
     }
 
     public class UVoicePart : UPart {
+        public bool isChordPart;
+        [YamlIgnore] public bool IsChordPart => isChordPart;
         public int duration;
 
         [YamlMember(Order = 100)]

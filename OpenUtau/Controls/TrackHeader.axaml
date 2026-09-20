@@ -122,6 +122,9 @@
           <Button Classes="clear" Grid.Row="0" Grid.Column="2" Grid.ColumnSpan="2" Margin="1" Padding="2,1,0,0" Height="17"
                   HorizontalAlignment="Stretch" HorizontalContentAlignment="Left" Focusable="False"
                   Content="{Binding TrackName}" Click="TrackNameButtonClicked"/>
+          <Button Classes="clear" Margin="1" Padding="2,1,0,0" Height="17" IsVisible="{Binding IsChordsTrack}"
+                  HorizontalAlignment="Stretch" HorizontalContentAlignment="Left" Focusable="False"
+                  Content="Open chord editor" Click="TrackNameButtonClicked" ToolTip.Tip="Edit the project's chords"/>
           <Button Classes="clear" Margin="1" Padding="2,1,0,0" Height="17" IsVisible="{Binding IsSingerVisible}"
                   HorizontalAlignment="Stretch" HorizontalContentAlignment="Left" Focusable="False"
                   Content="{Binding Singer, TargetNullValue={StaticResource tracks.selectsinger}}" Click="SingerButtonClicked"
@@ -175,7 +178,7 @@
                   FontFamily="monospace" KeyDown="VolumeOrPanTextBoxKeyDown" LostFocus="VolumeOrPanTextBoxLostFocus"/>
         </Grid>
         <Button Grid.Column="1" Grid.Row="0" Classes="clear" Height="17" Width="17" Margin="1" Padding="0"
-                VerticalAlignment="Top" Content="⋯" IsVisible="{Binding !IsRendererVisible}">
+                VerticalAlignment="Top" Content="⋯" IsVisible="{Binding IsVoiceTrack}">
           <Button.Flyout>
             <Flyout>
               <StackPanel Spacing="2">

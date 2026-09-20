@@ -21,6 +21,8 @@ using Serilog;
 namespace OpenUtau.App.ViewModels {
     public partial class TrackHeaderViewModel : ViewModelBase, IActivatableViewModel {
         public int TrackNo => track.TrackNo + 1;
+        public bool IsChordsTrack => track.IsChordsTrack;
+        public bool IsVoiceTrack => !track.IsChordsTrack;
         public USinger Singer => track.Singer;
         public Phonemizer Phonemizer => track.Phonemizer;
         public string PhonemizerTag => track.Phonemizer.Tag;
@@ -538,12 +540,22 @@ namespace OpenUtau.App.ViewModels {
         }
 
         public void Remove() {
+            if (track.IsChordsTrack) return;
             DocManager.Inst.StartUndoGroup("command.track.delete");
             DocManager.Inst.ExecuteCmd(new RemoveTrackCommand(DocManager.Inst.Project, track));
             DocManager.Inst.EndUndoGroup();
         }
 
+        public void OpenChords() {
+            if (!track.IsChordsTrack) return;
+            var project = DocManager.Inst.Project;
+            DocManager.Inst.ExecuteCmd(new LoadPartNotification(project.ChordsPart, project, 0));
+        }
+
         public void MoveUp() {
+            if (track.IsChordsTrack || track.TrackNo <= 1) {
+                return;
+            }
             if (track == DocManager.Inst.Project.tracks.First()) {
                 return;
             }
@@ -553,6 +565,7 @@ namespace OpenUtau.App.ViewModels {
         }
 
         public void MoveDown() {
+            if (track.IsChordsTrack) return;
             if (track == DocManager.Inst.Project.tracks.Last()) {
                 return;
             }
@@ -562,6 +575,7 @@ namespace OpenUtau.App.ViewModels {
         }
 
         public void Rename() {
+            if (track.IsChordsTrack) return;
             var dialog = new TypeInDialog();
             dialog.Title = ThemeManager.GetString("tracks.rename");
             dialog.SetText(track.TrackName);
@@ -593,6 +607,7 @@ namespace OpenUtau.App.ViewModels {
         }
 
         public void Duplicate() {
+            if (track.IsChordsTrack) return;
             DocManager.Inst.StartUndoGroup("command.track.duplicate");
             var newTrack = new UTrack(track.TrackName + "_copy") {
                 TrackNo = track.TrackNo + 1,
@@ -619,6 +634,7 @@ namespace OpenUtau.App.ViewModels {
         }
 
         public void DuplicateSettings() {
+            if (track.IsChordsTrack) return;
             DocManager.Inst.StartUndoGroup("command.track.duplicate");
             DocManager.Inst.ExecuteCmd(new AddTrackCommand(DocManager.Inst.Project, new UTrack(track.TrackName + "_copy") {
                 TrackNo = track.TrackNo + 1,

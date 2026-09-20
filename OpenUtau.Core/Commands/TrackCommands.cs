@@ -31,11 +31,18 @@ namespace OpenUtau.Core {
         public AddTrackCommand(UProject project, UTrack track) { this.project = project; this.track = track; }
         public override string ToString() { return "Add track"; }
         public override void Execute() {
+            if (track.IsChordsTrack && project.tracks.Any(existing => existing.IsChordsTrack)) return;
+            if (!track.IsChordsTrack && track.TrackNo == 0 && project.tracks.FirstOrDefault()?.IsChordsTrack == true) {
+                track.TrackNo = 1;
+            }
             if (track.TrackNo < project.tracks.Count) project.tracks.Insert(track.TrackNo, track);
             else project.tracks.Add(track);
             UpdateTrackNo();
         }
-        public override void Unexecute() { project.tracks.Remove(track); UpdateTrackNo(); }
+        public override void Unexecute() {
+            if (track.IsChordsTrack) return;
+            project.tracks.Remove(track); UpdateTrackNo();
+        }
     }
 
     public class RemoveTrackCommand : TrackCommand {
@@ -50,6 +57,7 @@ namespace OpenUtau.Core {
         }
         public override string ToString() { return "Remove track"; }
         public override void Execute() {
+            if (track.IsChordsTrack) return;
             project.tracks.Remove(track);
             foreach (var part in removedParts) {
                 project.parts.Remove(part);
@@ -58,6 +66,7 @@ namespace OpenUtau.Core {
             UpdateTrackNo();
         }
         public override void Unexecute() {
+            if (track.IsChordsTrack) return;
             if (track.TrackNo < project.tracks.Count)
                 project.tracks.Insert(track.TrackNo, track);
             else
@@ -78,10 +87,12 @@ namespace OpenUtau.Core {
         }
         public override string ToString() => "Move track";
         public override void Execute() {
+            if (track.IsChordsTrack || index < 1) return;
             project.tracks.Reverse(index, 2);
             UpdateTrackNo();
         }
         public override void Unexecute() {
+            if (track.IsChordsTrack || index < 1) return;
             project.tracks.Reverse(index, 2);
             UpdateTrackNo();
         }
@@ -98,12 +109,14 @@ namespace OpenUtau.Core {
         }
         public override string ToString() => "Set track number";
         public override void Execute() {
+            if (track.IsChordsTrack || newIndex == 0) return;
             UTrack item = project.tracks[oldIndex];
             project.tracks.RemoveAt(oldIndex);
             project.tracks.Insert(newIndex, item);
             UpdateTrackNo();
         }
         public override void Unexecute() {
+            if (track.IsChordsTrack || newIndex == 0) return;
             UTrack item = project.tracks[newIndex];
             project.tracks.RemoveAt(newIndex);
             project.tracks.Insert(oldIndex, item);
@@ -120,8 +133,8 @@ namespace OpenUtau.Core {
             oldName = track.TrackName;
         }
         public override string ToString() => "Rename track";
-        public override void Execute() => track.TrackName = newName;
-        public override void Unexecute() => track.TrackName = oldName;
+        public override void Execute() { if (!track.IsChordsTrack) track.TrackName = newName; }
+        public override void Unexecute() { if (!track.IsChordsTrack) track.TrackName = oldName; }
     }
 
     public class ChangeTrackColorCommand : TrackCommand {
@@ -146,8 +159,8 @@ namespace OpenUtau.Core {
             this.oldSinger = track.Singer;
         }
         public override string ToString() { return "Change singer"; }
-        public override void Execute() { track.Singer = newSinger; }
-        public override void Unexecute() { track.Singer = oldSinger; }
+        public override void Execute() { if (!track.IsChordsTrack) track.Singer = newSinger; }
+        public override void Unexecute() { if (!track.IsChordsTrack) track.Singer = oldSinger; }
     }
 
     public class TrackChangePhonemizerCommand : TrackCommand {
@@ -160,9 +173,11 @@ namespace OpenUtau.Core {
         }
         public override string ToString() { return "Change phonemizer"; }
         public override void Execute() {
+            if (track.IsChordsTrack) return;
             track.Phonemizer = newPhonemizer;
         }
         public override void Unexecute() {
+            if (track.IsChordsTrack) return;
             track.Phonemizer = oldPhonemizer;
         }
     }
@@ -178,10 +193,12 @@ namespace OpenUtau.Core {
         }
         public override string ToString() { return "Change render setting"; }
         public override void Execute() {
+            if (track.IsChordsTrack) return;
             track.RendererSettings = newSettings.Clone();
             track.RendererSettings.Validate(track);
         }
         public override void Unexecute() {
+            if (track.IsChordsTrack) return;
             track.RendererSettings = oldSettings.Clone();
             track.RendererSettings.Validate(track);
         }

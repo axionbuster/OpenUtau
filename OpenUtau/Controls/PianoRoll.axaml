@@ -718,7 +718,7 @@
                         VerticalScrollBarVisibility="Auto">
             <StackPanel Margin="12,8" Spacing="8">
               <Grid ColumnDefinitions="*,Auto">
-                <TextBlock Text="Chord helper" FontSize="16" FontWeight="SemiBold"
+                <TextBlock Text="Chord event · Chords track" FontSize="16" FontWeight="SemiBold"
                            VerticalAlignment="Center"/>
                 <Button Grid.Column="1" Content="Delete" Command="{Binding ChordHelpers.DeleteCommand}"/>
               </Grid>
@@ -751,10 +751,10 @@
               <Grid ColumnDefinitions="Auto,*" RowDefinitions="Auto,Auto">
                 <CheckBox Name="ChordHighlightRoot"
                           IsChecked="{Binding ChordHelpers.HighlightRoot, Mode=TwoWay}"/>
-                <TextBlock Grid.Column="1" Margin="6,0,0,0" Text="Highlight root" VerticalAlignment="Center"/>
+                <TextBlock Grid.Column="1" Margin="6,0,0,0" Text="Highlight this event's root" VerticalAlignment="Center"/>
                 <CheckBox Name="ChordMute" Grid.Row="1"
                           IsChecked="{Binding ChordHelpers.Muted, Mode=TwoWay}"/>
-                <TextBlock Grid.Row="1" Grid.Column="1" Margin="6,0,0,0" Text="Mute" VerticalAlignment="Center"/>
+                <TextBlock Grid.Row="1" Grid.Column="1" Margin="6,0,0,0" Text="Mute this chord event" VerticalAlignment="Center"/>
               </Grid>
               <TextBlock Text="Degrees" FontWeight="SemiBold"/>
               <ItemsControl Width="{Binding ChordHelpers.DegreeGridWidth}" HorizontalAlignment="Left"

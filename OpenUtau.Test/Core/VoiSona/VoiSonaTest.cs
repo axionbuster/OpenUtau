@@ -248,6 +248,7 @@ namespace OpenUtau.Core {
             project.tempos.Clear(); project.tempos.Add(new UTempo(0, 120)); project.tempos.Add(new UTempo(1440, 80));
             project.timeAxis.BuildSegments(project);
             project.tracks.Clear();
+            project.parts.Clear();
             var track = new UTrack { TrackNo = 0, Singer = singer };
             track.RendererSettings.renderer = Renderers.VOISONA;
             track.RendererSettings.Validate(track); project.tracks.Add(track);

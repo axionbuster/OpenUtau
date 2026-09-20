@@ -83,8 +83,8 @@ namespace OpenUtau.Core.Ustx {
         public UProject() {
             timeSignatures = new List<UTimeSignature> { new UTimeSignature(0, 4, 4) };
             tempos = new List<UTempo> { new UTempo(0, 120) };
-            tracks = new List<UTrack>() { new UTrack("Track1") };
-            parts = new List<UPart>();
+            tracks = new List<UTrack>() { UTrack.CreateChordsTrack(), new UTrack("Track1") };
+            parts = new List<UPart> { CreateChordPart(0) };
             timeAxis.BuildSegments(this);
         }
 
@@ -205,9 +205,94 @@ namespace OpenUtau.Core.Ustx {
                 parts.AddRange(waveParts);
                 waveParts = null;
             }
+            EnsureChordsTrack();
             foreach (var part in parts) {
                 part.AfterLoad(this, tracks[part.trackNo]);
             }
+        }
+
+        static UVoicePart CreateChordPart(int trackNo) => new UVoicePart {
+            name = "Chords",
+            trackNo = trackNo,
+            position = 0,
+            duration = 1,
+            isChordPart = true,
+        };
+
+        [YamlIgnore] public UTrack ChordsTrack => tracks.First(track => track.IsChordsTrack);
+        [YamlIgnore] public UVoicePart ChordsPart => parts.OfType<UVoicePart>().First(part => part.IsChordPart);
+
+        public void EnsureChordsTrack() {
+            tracks ??= new List<UTrack>();
+            parts ??= new List<UPart>();
+            var owners = parts.ToDictionary(
+                part => part,
+                part => part.trackNo >= 0 && part.trackNo < tracks.Count ? tracks[part.trackNo] : null);
+            var roleTracks = tracks.Where(track => track.IsChordsTrack).ToList();
+            var chordTrack = roleTracks.FirstOrDefault() ?? UTrack.CreateChordsTrack();
+            var chordParts = parts.OfType<UVoicePart>()
+                .Where(part => part.IsChordPart || (part.trackNo >= 0 && part.trackNo < tracks.Count && tracks[part.trackNo].IsChordsTrack))
+                .ToList();
+            var destination = chordParts.FirstOrDefault() ?? CreateChordPart(0);
+            var recoveryTrack = tracks.FirstOrDefault(track => !track.IsChordsTrack);
+            foreach (var malformed in chordParts.Where(part => part.notes.Count > 0 || part.curves.Count > 0)) {
+                if (recoveryTrack == null) {
+                    recoveryTrack = new UTrack("Recovered vocals");
+                    tracks.Add(recoveryTrack);
+                }
+                var recovered = new UVoicePart {
+                    name = malformed.name == "Chords" ? "Recovered vocals" : malformed.name,
+                    comment = malformed.comment,
+                    trackNo = tracks.IndexOf(recoveryTrack),
+                    position = malformed.position,
+                    duration = malformed.duration,
+                    notes = malformed.notes,
+                    curves = malformed.curves,
+                };
+                malformed.notes = new SortedSet<UNote>();
+                malformed.curves = new List<UCurve>();
+                parts.Add(recovered);
+                owners[recovered] = recoveryTrack;
+            }
+            var helpers = parts.OfType<UVoicePart>()
+                .SelectMany(part => part.chordHelpers.Select((helper, index) => (part, helper, index)))
+                .OrderBy(item => item.part.position + item.helper.position)
+                .ThenBy(item => item.part.trackNo)
+                .ThenBy(item => item.index)
+                .ToList();
+            destination.chordHelpers.Clear();
+            foreach (var item in helpers) {
+                item.helper.position += item.part.position;
+                destination.chordHelpers.Add(item.helper);
+                if (!ReferenceEquals(item.part, destination)) {
+                    item.part.chordHelpers.Remove(item.helper);
+                }
+            }
+            foreach (var extra in chordParts.Where(part => !ReferenceEquals(part, destination))) {
+                parts.Remove(extra);
+            }
+            foreach (var extra in roleTracks.Where(track => !ReferenceEquals(track, chordTrack))) {
+                int removed = tracks.IndexOf(extra);
+                tracks.RemoveAt(removed);
+                foreach (var part in parts.Where(part => part.trackNo > removed)) part.trackNo--;
+            }
+            tracks.Remove(chordTrack);
+            tracks.Insert(0, chordTrack);
+            for (int i = 0; i < tracks.Count; i++) tracks[i].TrackNo = i;
+            foreach (var part in parts.Where(part => !ReferenceEquals(part, destination))) {
+                if (owners.TryGetValue(part, out var owner) && owner != null && tracks.Contains(owner)) {
+                    part.trackNo = tracks.IndexOf(owner);
+                }
+            }
+            destination.isChordPart = true;
+            chordTrack.TrackName = "Chords";
+            destination.name = "Chords";
+            destination.position = 0;
+            destination.trackNo = 0;
+            destination.notes.Clear();
+            destination.curves.Clear();
+            destination.duration = Math.Max(1, destination.chordHelpers.Select(helper => helper.End).DefaultIfEmpty(1).Max());
+            if (!parts.Contains(destination)) parts.Add(destination);
         }
 
         public void Validate(ValidateOptions options) {

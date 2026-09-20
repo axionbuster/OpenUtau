@@ -224,7 +224,7 @@ namespace OpenUtau.App.ViewModels {
                 .SelectMany(part => part.chordHelpers.Select(helper => (part, helper)));
 
         public static bool IsOwnedByEditorTrack(UVoicePart? editorPart, UVoicePart ownerPart) =>
-            editorPart != null && editorPart.trackNo == ownerPart.trackNo;
+            editorPart != null && (ownerPart.IsChordPart || editorPart.trackNo == ownerPart.trackNo);
 
         public void HandleEditorPartChanged(UVoicePart? editorPart) {
             if (selectedPart != null && !IsOwnedByEditorTrack(editorPart, selectedPart)) {

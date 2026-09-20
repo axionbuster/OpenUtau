@@ -39,8 +39,7 @@ namespace OpenUtau.Classic {
                             var project = Ust.Load(reader, entry.Key);
                             project.AfterLoad();
                             project.ValidateFull();
-                            Assert.Single(project.parts);
-                            var part = project.parts[0] as UVoicePart;
+                            var part = Assert.Single(project.parts.OfType<UVoicePart>(), part => !part.IsChordPart);
                             Assert.True(part.notes.Count > 0);
                         }
                     }
@@ -74,8 +73,7 @@ PBY=-20.7,
                     var project = Ust.Load(reader, "test.ust");
                     project.AfterLoad();
                     project.ValidateFull();
-                    Assert.Single(project.parts);
-                    var part = project.parts[0] as UVoicePart;
+                    var part = Assert.Single(project.parts.OfType<UVoicePart>(), part => !part.IsChordPart);
                     Assert.Single(part.notes);
                     Assert.Equal("A==B[C=D],EFG", part.notes.First().lyric);
                     Assert.Equal(60, part.notes.First().tone);

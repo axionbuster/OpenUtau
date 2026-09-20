@@ -795,10 +795,11 @@ namespace OpenUtau.App.Controls {
         void BeginChordHelperEdit(Control control, PointerPoint point) {
             var notesVm = ViewModel.NotesViewModel;
             var currentPart = notesVm.Part!;
+            var chordPart = DocManager.Inst.Project.ChordsPart;
             var hit = HitTestChordHelper(point.Position);
             if (hit == null) {
                 notesVm.PointToLineTick(point.Position, out int left, out int right);
-                int position = Math.Max(0, left);
+                int position = Math.Max(0, currentPart.position + left);
                 int duration = Math.Max(projectResolution(), right - left);
                 int divisions = notesVm.Is31Edo ? 31 : 12;
                 int rootTone = notesVm.PointToTone(point.Position);
@@ -811,9 +812,9 @@ namespace OpenUtau.App.Controls {
                 };
                 helper.Normalize(notesVm.Is31Edo);
                 DocManager.Inst.StartUndoGroup();
-                DocManager.Inst.ExecuteCmd(new AddChordHelperCommand(currentPart, helper));
+                DocManager.Inst.ExecuteCmd(new AddChordHelperCommand(chordPart, helper));
                 DocManager.Inst.EndUndoGroup();
-                ViewModel.ChordHelpers.TrySelect(currentPart, currentPart, helper);
+                ViewModel.ChordHelpers.TrySelect(currentPart, chordPart, helper);
                 notesVm.ShowNoteParams = true;
                 return;
             }

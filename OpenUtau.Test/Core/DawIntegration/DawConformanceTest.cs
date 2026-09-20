@@ -95,6 +95,7 @@ namespace OpenUtau.Core.DawIntegration {
             built.RegisterExpression(new UExpressionDescriptor("attack", "atk", 0, 100, 100));
             built.RegisterExpression(new UExpressionDescriptor("decay", "dec", 0, 100, 100));
             built.tracks.Clear();
+            built.parts.Clear();
             built.tracks.Add(new UTrack("Lead") { TrackNo = 0, Volume = -3, Pan = -20 });
             // v1.2: the singer/engine informational fields travel on updateTracks. The values
             // are read straight off the track, so plain assignments exercise the wire format

@@ -140,7 +140,7 @@ namespace OpenUtau.Core.Ustx {
         [InlineData(true)]
         public void RoundTripCloneAndSilenceSeparation(bool native) {
             var project = Fixture(native);
-            var part = project.parts.OfType<UVoicePart>().Single();
+            var part = project.parts.OfType<UVoicePart>().Single(part => !part.IsChordPart);
             part.chordHelpers.Add(new UChordHelper {
                 position = 240,
                 duration = 960,
@@ -160,21 +160,21 @@ namespace OpenUtau.Core.Ustx {
 
             var loaded = Ustx31.Deserialize(SaveText(project));
             loaded.AfterLoad();
-            var actual = loaded.parts.OfType<UVoicePart>().Single().chordHelpers.Single();
-            Assert.Equal(240, actual.position);
+            var actual = loaded.ChordsPart.chordHelpers.Single();
+            Assert.Equal(1200, actual.position);
             Assert.Equal(960, actual.duration);
             Assert.Equal(native ? 15 : 6, actual.root);
             Assert.Equal(native ? 170 : 66, actual.rootTone);
             Assert.Equal("♯4", actual.tones[1].Label);
             Assert.False(actual.highlightRoot);
             Assert.True(actual.mute);
-            Assert.Empty(loaded.parts.OfType<UVoicePart>().Single().notes);
+            Assert.Empty(loaded.ChordsPart.notes);
         }
 
         [Fact]
         public void PartTimingIncludesHelpersAndMovesAbsoluteTimeOnce() {
             var project = Fixture(true);
-            var part = project.parts.OfType<UVoicePart>().Single();
+            var part = project.parts.OfType<UVoicePart>().Single(part => !part.IsChordPart);
             var helper = new UChordHelper { position = 120, duration = 960 };
             part.chordHelpers.Add(helper);
             Assert.True(part.GetMinDurTickForNoteEdit(project, 1) >= helper.End);
@@ -189,7 +189,7 @@ namespace OpenUtau.Core.Ustx {
 
         [Fact]
         public void CommandsUndoAddChangeAndRemoveWithoutTouchingNotes() {
-            var part = Fixture(false).parts.OfType<UVoicePart>().Single();
+            var part = Fixture(false).parts.OfType<UVoicePart>().Single(part => !part.IsChordPart);
             var helper = new UChordHelper();
             var add = new AddChordHelperCommand(part, helper);
             add.Execute();
@@ -220,15 +220,15 @@ namespace OpenUtau.Core.Ustx {
                 rootTone = 66,
                 tones = ChordHelperTheory.CreatePreset("Diminished seventh"),
             };
-            ordinary.parts.OfType<UVoicePart>().Single().chordHelpers.Add(helper);
+            ordinary.parts.OfType<UVoicePart>().Single(part => !part.IsChordPart).chordHelpers.Add(helper);
             var native = Ustx31.ConvertCopy(ordinary, true);
-            var converted = native.parts.OfType<UVoicePart>().Single().chordHelpers.Single();
+            var converted = native.ChordsPart.chordHelpers.Single();
             Assert.Equal(16, converted.root);
             Assert.Equal(171, converted.rootTone);
             Assert.Equal(new[] { 0, 8, 16, 24 }, converted.tones.Select(t => t.Offset(true)));
             Assert.Equal("Diminished seventh", ChordHelperTheory.QualityName(converted.tones, true));
             var back = Ustx31.ConvertCopy(native, false);
-            var roundTripped = back.parts.OfType<UVoicePart>().Single().chordHelpers.Single();
+            var roundTripped = back.ChordsPart.chordHelpers.Single();
             Assert.Equal(66, roundTripped.rootTone);
             Assert.Equal(new[] { "1", "♭3", "♭5", "♭♭7" }, roundTripped.tones.Select(t => t.Label));
             Assert.Equal(new[] { 0, 3, 6, 9 }, roundTripped.tones.Select(t => t.Offset(false)));

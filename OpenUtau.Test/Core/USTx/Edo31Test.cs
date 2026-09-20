@@ -12,7 +12,7 @@ namespace OpenUtau.Core.Ustx {
         static UProject Fixture(bool native) {
             var project = Format.Ustx.Create();
             project.Is31Edo = native;
-            var part = new UVoicePart { trackNo = 0, position = 0 };
+            var part = new UVoicePart { trackNo = project.tracks.Single(track => !track.IsChordsTrack).TrackNo, position = 0 };
             project.parts.Add(part);
             var note = project.CreateGridNote(native ? 156 : 60, 0, 480);
             note.tuning = 7;
@@ -88,7 +88,7 @@ namespace OpenUtau.Core.Ustx {
             Assert.Contains("pitch_reference:", text);
             Assert.Contains("frequency: 440", text);
             var project = Ustx31.Deserialize(text);
-            var note = Assert.Single(Assert.Single(project.voiceParts).notes);
+            var note = Assert.Single(project.voiceParts.Single(part => !part.IsChordPart).notes);
             Assert.True(project.Is31Edo);
             Assert.Equal(156, note.tone31);
             Assert.Equal(7, note.tuning);
@@ -107,7 +107,7 @@ namespace OpenUtau.Core.Ustx {
             Assert.DoesNotContain("features", actual);
             var loaded = Ustx31.Deserialize(actual);
             Assert.False(loaded.Is31Edo);
-            Assert.Equal(7, loaded.voiceParts[0].notes.First().tuning);
+            Assert.Equal(7, loaded.voiceParts.Single(part => !part.IsChordPart).notes.First().tuning);
         }
         [Theory]
         [InlineData("format_revision: 2", "format_revision: 3")]
@@ -180,13 +180,13 @@ namespace OpenUtau.Core.Ustx {
                 Assert.Equal(ProjectFormats.Ustx, Formats.DetectProjectFormat(path));
                 var loaded = Format.Ustx.Load(path);
                 Assert.True(loaded.Is31Edo);
-                Assert.Equal(156, loaded.parts.OfType<UVoicePart>().Single().notes.First().tone31);
+                Assert.Equal(156, loaded.parts.OfType<UVoicePart>().Single(part => !part.IsChordPart).notes.First().tone31);
             } finally { File.Delete(path); }
         }
         [Fact]
         public void MoveUndoAndClonePreserveNativePitch() {
             var project = Fixture(true);
-            var part = (UVoicePart)project.parts[0];
+            var part = project.parts.OfType<UVoicePart>().Single(part => !part.IsChordPart);
             var note = part.notes.First();
             var command = new MoveNoteCommand(part, note, 0, 1);
             command.Execute();
@@ -199,7 +199,7 @@ namespace OpenUtau.Core.Ustx {
         [Fact]
         public void InvalidMoveDoesNotRemoveOrPartiallyMoveNotes() {
             var project = Fixture(true);
-            var part = (UVoicePart)project.parts[0];
+            var part = project.parts.OfType<UVoicePart>().Single(part => !part.IsChordPart);
             var first = part.notes.First();
             var last = project.CreateGridNote(340, 480, 480);
             part.notes.Add(last);
@@ -218,15 +218,15 @@ namespace OpenUtau.Core.Ustx {
             var copy = Ustx31.ConvertCopy(source, false);
             Assert.Equal(original, SaveText(source));
             Assert.False(copy.Is31Edo);
-            var note = copy.parts.OfType<UVoicePart>().Single().notes.First();
+            var note = copy.parts.OfType<UVoicePart>().Single(part => !part.IsChordPart).notes.First();
             Assert.Null(note.tone31);
             double sourceFrequency = source.ToneToFrequency(
-                source.parts.OfType<UVoicePart>().Single().notes.First().PreciseAdjustedTone);
+                source.parts.OfType<UVoicePart>().Single(part => !part.IsChordPart).notes.First().PreciseAdjustedTone);
             double copyFrequency = copy.ToneToFrequency(note.PreciseAdjustedTone);
             Assert.InRange(Math.Abs(1200 * Math.Log2(copyFrequency / sourceFrequency)), 0, 0.501);
             Assert.DoesNotContain("features", SaveText(copy));
             var native = Ustx31.ConvertCopy(copy, true);
-            Assert.Equal(156, native.parts.OfType<UVoicePart>().Single().notes.First().tone31);
+            Assert.Equal(156, native.parts.OfType<UVoicePart>().Single(part => !part.IsChordPart).notes.First().tone31);
             Assert.False(native.Saved);
             Assert.Equal("", native.FilePath);
         }
@@ -237,7 +237,7 @@ namespace OpenUtau.Core.Ustx {
             Assert.ThrowsAny<Exception>(() => Ustx31.CheckSavePath("song.ustx", native));
             Assert.ThrowsAny<Exception>(() => Ustx31.CheckSavePath("song.ustx31", ordinary));
             Assert.ThrowsAny<Exception>(() => Formats.ImportTracks(ordinary, new[] { native }));
-            Assert.Single(ordinary.tracks);
+            Assert.Single(ordinary.tracks.Where(track => !track.IsChordsTrack));
             Assert.True(native.CloneAsTemplate().Is31Edo);
             var differentlyAnchored = Fixture(true);
             differentlyAnchored.PitchReference31 = Edo31PitchReference.LegacyC;
@@ -251,7 +251,7 @@ namespace OpenUtau.Core.Ustx {
             var native = Ustx31.ConvertCopy(source, true);
             Assert.Null(source.ustxVersion);
             Assert.True(native.Is31Edo);
-            Assert.Equal(155, native.parts.OfType<UVoicePart>().Single().notes.First().tone31);
+            Assert.Equal(155, native.parts.OfType<UVoicePart>().Single(part => !part.IsChordPart).notes.First().tone31);
         }
 
         [Theory]
@@ -284,7 +284,7 @@ namespace OpenUtau.Core.Ustx {
                 Assert.NotNull(recovery);
                 Assert.Equal(native, recovery.Is31Edo);
                 Assert.Equal(original, recovery.FilePath);
-                Assert.Equal(native, recovery.parts.OfType<UVoicePart>().Single().notes.First().tone31.HasValue);
+                Assert.Equal(native, recovery.parts.OfType<UVoicePart>().Single(part => !part.IsChordPart).notes.First().tone31.HasValue);
                 if (!native) { Assert.DoesNotContain("features:", File.ReadAllText(autosave)); }
             } finally {
                 DocManager.Inst.CommandSink = sink;

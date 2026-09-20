@@ -17,6 +17,8 @@ namespace OpenUtau.Core {
     public class VoiSonaChunkTest {
         static UProject Fixture(int count = 44, bool tempoChange = true, VoiSonaSinger? singer = null, int restAfter = -1) {
             var project = Format.Ustx.Create(); project.Is31Edo = true;
+            project.tracks.Clear(); project.parts.Clear();
+            project.tracks.Add(new UTrack("Voice") { TrackNo = 0 });
             project.tempos[0].bpm = 120;
             if (tempoChange) project.tempos.Add(new UTempo(7 * 480, 137));
             var track = project.tracks[0];

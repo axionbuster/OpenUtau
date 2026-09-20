@@ -29,6 +29,7 @@ namespace OpenUtau.Core {
         }
         public override string ToString() { return "Add note"; }
         public override void Execute() {
+            if (Part.IsChordPart) return;
             lock (Part) {
                 foreach (var note in Notes) {
                     Part.notes.Add(note);
@@ -36,6 +37,7 @@ namespace OpenUtau.Core {
             }
         }
         public override void Unexecute() {
+            if (Part.IsChordPart) return;
             lock (Part) {
                 foreach (var note in Notes) {
                     Part.notes.Remove(note);

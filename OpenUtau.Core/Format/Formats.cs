@@ -186,6 +186,7 @@ namespace OpenUtau.Core.Format {
                     part.trackNo += trackCount;
                 }
             }
+            project.EnsureChordsTrack();
             if (importTempo) {
                 var loaded = loadedProjects[0];
                 project.timeSignatures.Clear();
@@ -193,10 +194,10 @@ namespace OpenUtau.Core.Format {
                 project.tempos.Clear();
                 project.tempos.AddRange(loaded.tempos);
             }
-            for (int i = initialTracks; i < project.tracks.Count; i++) {
+            for (int i = 0; i < project.tracks.Count; i++) {
                 project.tracks[i].AfterLoad(project);
             }
-            for (int i = initialParts; i < project.parts.Count; i++) {
+            for (int i = 0; i < project.parts.Count; i++) {
                 var part = project.parts[i];
                 part.AfterLoad(project, project.tracks[part.trackNo]);
             }

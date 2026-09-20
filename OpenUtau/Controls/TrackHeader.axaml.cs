@@ -81,9 +81,9 @@ namespace OpenUtau.App.Controls {
             Canvas.SetLeft(this, 0);
             Canvas.SetTop(this, Offset.Y + (track?.TrackNo ?? 0) * trackHeight);
             if (ViewModel != null) {
-                ViewModel.IsSingerVisible = trackHeight >= ViewConstants.TrackHeightDelta * 3;
-                ViewModel.IsPhonemizerVisible = trackHeight >= ViewConstants.TrackHeightDelta * 4;
-                ViewModel.IsRendererVisible = trackHeight >= ViewConstants.TrackHeightDelta * 5;
+                ViewModel.IsSingerVisible = track?.IsChordsTrack != true && trackHeight >= ViewConstants.TrackHeightDelta * 3;
+                ViewModel.IsPhonemizerVisible = track?.IsChordsTrack != true && trackHeight >= ViewConstants.TrackHeightDelta * 4;
+                ViewModel.IsRendererVisible = track?.IsChordsTrack != true && trackHeight >= ViewConstants.TrackHeightDelta * 5;
             }
         }
 
@@ -103,7 +103,8 @@ namespace OpenUtau.App.Controls {
         }
 
         void TrackNameButtonClicked(object sender, RoutedEventArgs args) {
-            ViewModel?.Rename();
+            if (track?.IsChordsTrack == true) ViewModel?.OpenChords();
+            else ViewModel?.Rename();
             args.Handled = true;
         }
 

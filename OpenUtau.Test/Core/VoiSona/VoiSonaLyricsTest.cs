@@ -18,7 +18,7 @@ namespace OpenUtau.Core {
             var previous = DocManager.Inst.TakeProjectForTest(project);
             try {
                 project.ValidateFull();
-                foreach (var part in project.parts.OfType<UVoicePart>()) {
+                foreach (var part in project.parts.OfType<UVoicePart>().Where(part => !part.IsChordPart)) {
                     var track = project.tracks[part.trackNo];
                     var notes = part.notes.ToArray();
                     var starts = Enumerable.Range(0, notes.Length).Where(i => notes[i].Extends == null).ToArray();
@@ -41,6 +41,8 @@ namespace OpenUtau.Core {
         }
         static UProject KoreanFixture() {
             var project = Format.Ustx.Create(); project.Is31Edo = true;
+            project.tracks.Clear(); project.parts.Clear();
+            project.tracks.Add(new UTrack("Voice") { TrackNo = 0 });
             var track = project.tracks[0];
             track.Singer = new VoiSonaSinger("ja_JP", "2.1.0", "/unused");
             track.Phonemizer = new KOtoJAPhonemizer(); track.RendererSettings.renderer = Renderers.VOISONA;

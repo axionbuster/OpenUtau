@@ -114,7 +114,9 @@ capture is rendered and size-checked even when no output directory is requested.
 Set `OPENUTAU_QA_OUTPUT` to an output directory to also save the keyboard PNGs.
 This path uses Avalonia's headless platform rather than a native macOS window, so
 it remains the appropriate renderer when the interactive session is unavailable
-or locked. Real voicebank synthesis and listening are separate verification steps.
+or locked. The automated test verifies that window-independent code path; an actual
+lock-screen run remains an environment-level check. Real voicebank synthesis and
+listening are separate verification steps.
 
 ```sh
 dotnet test OpenUtau.Test/OpenUtau.Test.csproj --filter 'FullyQualifiedName~Edo31'

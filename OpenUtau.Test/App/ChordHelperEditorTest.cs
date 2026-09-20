@@ -18,6 +18,21 @@ using Xunit;
 namespace OpenUtau.App {
     [Collection(RenderSingletonCollection.Name)]
     public class ChordHelperEditorTest {
+        static double RelativeLuminance(string hex) {
+            double Linear(int index) {
+                double value = Convert.ToInt32(hex.Substring(index, 2), 16) / 255.0;
+                return value <= 0.04045 ? value / 12.92 : Math.Pow((value + 0.055) / 1.055, 2.4);
+            }
+            return 0.2126 * Linear(1) + 0.7152 * Linear(3) + 0.0722 * Linear(5);
+        }
+
+        static double Contrast(string first, string second) {
+            double firstLuminance = RelativeLuminance(first);
+            double secondLuminance = RelativeLuminance(second);
+            return (Math.Max(firstLuminance, secondLuminance) + 0.05) /
+                (Math.Min(firstLuminance, secondLuminance) + 0.05);
+        }
+
         static (UProject Project, UVoicePart Current, UVoicePart SameTrack, UVoicePart Foreign) Fixture(bool is31Edo = false) {
             var project = Core.Format.Ustx.Create();
             project.Is31Edo = is31Edo;
@@ -147,6 +162,14 @@ namespace OpenUtau.App {
                 vm.ChordHelpers.CommitSnapshot(fixture.SameTrack, helper, helper.Clone());
                 Assert.Equal(0, commandCount);
                 Assert.Equal("Major", vm.ChordHelpers.SelectedQuality);
+                Assert.Equal(12, vm.ChordHelpers.Degrees.Select(degree => degree.Background).Distinct().Count());
+                Assert.All(vm.ChordHelpers.Degrees,
+                    degree => Assert.True(Contrast(degree.Background, degree.Foreground) >= 4.5));
+                var enabledRoot = new ChordDegreeViewModel(new UChordInterval(1), true);
+                var inactiveRoot = new ChordDegreeViewModel(new UChordInterval(1), false);
+                Assert.NotEqual(enabledRoot.Background, inactiveRoot.Background);
+                Assert.Equal(2d, enabledRoot.BorderThickness.Left);
+                Assert.Equal(1d, inactiveRoot.BorderThickness.Left);
                 vm.ChordHelpers.ToggleDegreeCommand.Execute(
                     vm.ChordHelpers.Degrees.Single(degree => degree.Label == "♭2")).Subscribe();
                 Assert.StartsWith("Custom (", vm.ChordHelpers.SelectedQuality);
@@ -279,6 +302,9 @@ namespace OpenUtau.App {
                 Dispatcher.UIThread.RunJobs();
                 Assert.Equal(31, vm.ChordHelpers.Degrees.Count);
                 Assert.Equal(6, vm.ChordHelpers.DegreeColumns);
+                Assert.Equal(31, vm.ChordHelpers.Degrees.Select(degree => degree.Background).Distinct().Count());
+                Assert.All(vm.ChordHelpers.Degrees,
+                    degree => Assert.True(Contrast(degree.Background, degree.Foreground) >= 4.5));
 
                 AvaloniaHeadlessPlatform.ForceRenderTimerTick();
                 using var frame = window.CaptureRenderedFrame();

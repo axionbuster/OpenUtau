@@ -26,39 +26,6 @@ namespace OpenUtau.App.Controls {
         // Equal OKLCH lightness/chroma (0.82/0.075), hues spaced 360/31 degrees apart.
         // Interval labels and tonic boundaries carry meaning independently of hue.
         static readonly IBrush ChromaticDegreeBrush = new SolidColorBrush(Color.Parse("#484848"));
-        static readonly IBrush[] MicrotoneBrushes = {
-            new SolidColorBrush(Color.Parse("#A0C8F4")),
-            new SolidColorBrush(Color.Parse("#A9C5F6")),
-            new SolidColorBrush(Color.Parse("#B4C1F6")),
-            new SolidColorBrush(Color.Parse("#BEBEF4")),
-            new SolidColorBrush(Color.Parse("#C8BBF0")),
-            new SolidColorBrush(Color.Parse("#D2B8EA")),
-            new SolidColorBrush(Color.Parse("#DAB5E3")),
-            new SolidColorBrush(Color.Parse("#E1B3DB")),
-            new SolidColorBrush(Color.Parse("#E7B1D1")),
-            new SolidColorBrush(Color.Parse("#ECB0C7")),
-            new SolidColorBrush(Color.Parse("#EFB0BC")),
-            new SolidColorBrush(Color.Parse("#F1B1B2")),
-            new SolidColorBrush(Color.Parse("#F1B2A8")),
-            new SolidColorBrush(Color.Parse("#EFB49F")),
-            new SolidColorBrush(Color.Parse("#ECB797")),
-            new SolidColorBrush(Color.Parse("#E7BA91")),
-            new SolidColorBrush(Color.Parse("#E1BE8D")),
-            new SolidColorBrush(Color.Parse("#D9C28C")),
-            new SolidColorBrush(Color.Parse("#D0C68D")),
-            new SolidColorBrush(Color.Parse("#C6C991")),
-            new SolidColorBrush(Color.Parse("#BBCC96")),
-            new SolidColorBrush(Color.Parse("#B1CF9E")),
-            new SolidColorBrush(Color.Parse("#A6D2A7")),
-            new SolidColorBrush(Color.Parse("#9CD3B1")),
-            new SolidColorBrush(Color.Parse("#93D4BB")),
-            new SolidColorBrush(Color.Parse("#8DD5C6")),
-            new SolidColorBrush(Color.Parse("#89D4D0")),
-            new SolidColorBrush(Color.Parse("#88D3DA")),
-            new SolidColorBrush(Color.Parse("#8AD1E3")),
-            new SolidColorBrush(Color.Parse("#8FCFEA")),
-            new SolidColorBrush(Color.Parse("#97CCF0")),
-        };
         public static readonly DirectProperty<TrackBackground, double> TrackHeightProperty =
             AvaloniaProperty.RegisterDirect<TrackBackground, double>(
                 nameof(TrackHeight),
@@ -191,7 +158,7 @@ namespace OpenUtau.App.Controls {
                     if (row < 0 || row >= (DisplayRows?.Length ?? Edo31.MaxStep)) { break; }
                     int step = DisplayRows == null ? row : DisplayRows[row];
                     int colorIndex = Edo31.ScaleColorIndex(step, Preferences.Default.PreferredKey31Fifths);
-                    var color = MicrotoneBrushes[colorIndex];
+                    var color = DegreeColorPalette.Brushes[colorIndex];
                     context.DrawRectangle(IsKeyboard ? color : Background, null, new Rect(0, (int)top, Bounds.Width, TrackHeight));
                     if (!IsKeyboard) {
                         // Tonic emphasis is permanent and survives the minimum eight-pixel row height.

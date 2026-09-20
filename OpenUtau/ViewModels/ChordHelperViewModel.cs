@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using Avalonia;
 using Avalonia.Media;
 using DynamicData.Binding;
 using OpenUtau.Core;
@@ -46,15 +47,26 @@ namespace OpenUtau.App.ViewModels {
         [Reactive] public partial bool IsEnabled { get; set; }
         public string Label => Interval.Label;
         public FontWeight Weight => IsEnabled ? FontWeight.Bold : FontWeight.Normal;
-        public string Background {
+        int PaletteIndex {
             get {
-                int step = Edo31.Mod(Interval.Offset(DocManager.Inst.Project.Is31Edo),
-                    DocManager.Inst.Project.Is31Edo ? 31 : 12);
-                string[] vivid = { "#3B82F6", "#8B5CF6", "#EC4899", "#F97316", "#EAB308", "#22C55E", "#06B6D4" };
-                string[] muted = { "#3E6FAE", "#7659AF", "#AC4F7D", "#B96428", "#A88B22", "#38945C", "#278C9E" };
-                return (IsEnabled ? vivid : muted)[step % vivid.Length];
+                bool is31Edo = DocManager.Inst.Project.Is31Edo;
+                int step = Edo31.Mod(Interval.Offset(is31Edo), is31Edo ? 31 : 12);
+                return DegreeColorPalette.IndexForInterval(step, is31Edo);
             }
         }
+        public string Background {
+            get {
+                return DegreeColorPalette.Hex(DegreeColorPalette.Background(PaletteIndex, IsEnabled));
+            }
+        }
+        public string Foreground {
+            get {
+                var background = DegreeColorPalette.Background(PaletteIndex, IsEnabled);
+                return DegreeColorPalette.Hex(DegreeColorPalette.Foreground(background));
+            }
+        }
+        public string Border => IsEnabled ? Foreground : "#64748B";
+        public Thickness BorderThickness => new Thickness(IsEnabled ? 2 : 1);
         public ChordDegreeViewModel(UChordInterval interval, bool enabled) {
             Interval = interval;
             IsEnabled = enabled;
@@ -62,6 +74,9 @@ namespace OpenUtau.App.ViewModels {
         public void Refresh() {
             this.RaisePropertyChanged(nameof(Weight));
             this.RaisePropertyChanged(nameof(Background));
+            this.RaisePropertyChanged(nameof(Foreground));
+            this.RaisePropertyChanged(nameof(Border));
+            this.RaisePropertyChanged(nameof(BorderThickness));
         }
     }
 
@@ -84,7 +99,7 @@ namespace OpenUtau.App.ViewModels {
         public ObservableCollectionExtended<ChordBassChoice> BassChoices { get; } = new();
         public ObservableCollectionExtended<ChordDegreeViewModel> Degrees { get; } = new();
         public int DegreeColumns => DocManager.Inst.Project.Is31Edo ? 6 : 4;
-        public double DegreeGridWidth => DegreeColumns * 50;
+        public double DegreeGridWidth => DegreeColumns * 46;
 
         public string? SelectedQuality {
             get => selectedQuality;

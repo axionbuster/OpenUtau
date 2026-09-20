@@ -763,11 +763,10 @@
                 </ItemsControl.ItemsPanel>
                 <ItemsControl.ItemTemplate>
                   <DataTemplate x:DataType="vm:ChordDegreeViewModel">
-                    <Button Width="46" Height="32" Margin="2" Padding="2"
+                    <Button Height="32" Margin="0" Padding="2" HorizontalAlignment="Stretch"
                             Content="{Binding Label}" Background="{Binding Background}"
-                            FontWeight="{Binding Weight}"
-                            BorderBrush="{DynamicResource SystemControlForegroundBaseHighBrush}"
-                            BorderThickness="1"
+                            Foreground="{Binding Foreground}" FontWeight="{Binding Weight}"
+                            BorderBrush="{Binding Border}" BorderThickness="{Binding BorderThickness}"
                             Command="{Binding $parent[UserControl].DataContext.ChordHelpers.ToggleDegreeCommand}"
                             CommandParameter="{Binding}"/>
                   </DataTemplate>

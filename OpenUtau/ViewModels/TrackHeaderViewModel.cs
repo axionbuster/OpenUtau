@@ -20,7 +20,7 @@ using Serilog;
 
 namespace OpenUtau.App.ViewModels {
     public partial class TrackHeaderViewModel : ViewModelBase, IActivatableViewModel {
-        public int TrackNo => track.TrackNo + 1;
+        public int TrackNo => track.IsChordsTrack ? 0 : track.TrackNo;
         public bool IsChordsTrack => track.IsChordsTrack;
         public bool IsVoiceTrack => !track.IsChordsTrack;
         public USinger Singer => track.Singer;
@@ -118,8 +118,9 @@ namespace OpenUtau.App.ViewModels {
 
             TrackName = track.TrackName;
             TrackAccentColor = ThemeManager.GetTrackColor(track.TrackColor).AccentColor;
-            TrackColor = track.IsChordsTrack || Preferences.Default.UseTrackColor
-                ? ThemeManager.GetTrackColor(track.TrackColor)
+            TrackColor = track.IsChordsTrack
+                ? ThemeManager.GetControlTrackColor(track.TrackColor)
+                : Preferences.Default.UseTrackColor ? ThemeManager.GetTrackColor(track.TrackColor)
                 : ThemeManager.GetTrackColor("Blue");
             Volume = track.Volume;
             Pan = track.Pan;
@@ -517,8 +518,9 @@ namespace OpenUtau.App.ViewModels {
         public void ManuallyRaise() {
             TrackName = track.TrackName;
             TrackAccentColor = ThemeManager.GetTrackColor(track.TrackColor).AccentColor;
-            TrackColor = track.IsChordsTrack || Preferences.Default.UseTrackColor
-                ? ThemeManager.GetTrackColor(track.TrackColor)
+            TrackColor = track.IsChordsTrack
+                ? ThemeManager.GetControlTrackColor(track.TrackColor)
+                : Preferences.Default.UseTrackColor ? ThemeManager.GetTrackColor(track.TrackColor)
                 : ThemeManager.GetTrackColor("Blue");
             RefreshSelectionStyle();
             this.RaisePropertyChanged(nameof(Singer));
@@ -599,8 +601,9 @@ namespace OpenUtau.App.ViewModels {
             if (Application.Current?.ApplicationLifetime is IClassicDesktopStyleApplicationLifetime desktop && desktop.MainWindow != null) {
                 await dialog.ShowDialog(desktop.MainWindow);
                 TrackAccentColor = ThemeManager.GetTrackColor(track.TrackColor).AccentColor;
-                TrackColor = track.IsChordsTrack || Preferences.Default.UseTrackColor
-                ? ThemeManager.GetTrackColor(track.TrackColor)
+                TrackColor = track.IsChordsTrack
+                ? ThemeManager.GetControlTrackColor(track.TrackColor)
+                : Preferences.Default.UseTrackColor ? ThemeManager.GetTrackColor(track.TrackColor)
                 : ThemeManager.GetTrackColor("Blue");
                 RefreshSelectionStyle();
             }

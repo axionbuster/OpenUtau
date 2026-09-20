@@ -289,6 +289,7 @@ namespace OpenUtau.Core.Ustx {
             }
             destination.isChordPart = true;
             chordTrack.TrackName = "Chords";
+            if (chordTrack.TrackColor == "Ivory") chordTrack.TrackColor = "Automatic (theme)";
             destination.name = "Chords";
             destination.position = 0;
             destination.trackNo = 0;

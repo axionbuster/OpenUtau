@@ -286,21 +286,27 @@ namespace OpenUtau.App.ViewModels {
         public void Undo() => DocManager.Inst.Undo();
         public void Redo() => DocManager.Inst.Redo();
         public void Cut() {
-            if (CurveViewModel.IsSelected(NotesViewModel.PrimaryKey)) {
+            if (ChordHelpers.HasSelection) {
+                ChordHelpers.CutSelected();
+            } else if (CurveViewModel.IsSelected(NotesViewModel.PrimaryKey)) {
                 CurveViewModel.Cut(NotesViewModel.Part!);
             } else {
                 NotesViewModel.CutNotes();
             }
         }
         public void Copy() {
-            if (CurveViewModel.IsSelected(NotesViewModel.PrimaryKey)) {
+            if (ChordHelpers.HasSelection) {
+                ChordHelpers.CopySelected();
+            } else if (CurveViewModel.IsSelected(NotesViewModel.PrimaryKey)) {
                 CurveViewModel.Copy(NotesViewModel.Part!);
             } else {
                 NotesViewModel.CopyNotes();
             }
         }
         public void Paste() {
-            if (DocManager.Inst.NotesClipboard != null && DocManager.Inst.NotesClipboard.Count > 0) {
+            if (DocManager.Inst.ChordsClipboard != null) {
+                ChordHelpers.Paste(DocManager.Inst.playPosTick, NotesViewModel.SnapDiv);
+            } else if (DocManager.Inst.NotesClipboard != null && DocManager.Inst.NotesClipboard.Count > 0) {
                 NotesViewModel.PasteNotes();
             } else if (DocManager.Inst.CurvesClipboard != null && NotesViewModel.Part != null) {
                 var track = NotesViewModel.Project.tracks[NotesViewModel.Part.trackNo];

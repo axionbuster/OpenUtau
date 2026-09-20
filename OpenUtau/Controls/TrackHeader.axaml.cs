@@ -79,7 +79,9 @@ namespace OpenUtau.App.Controls {
 
         private void SetPosition() {
             Canvas.SetLeft(this, 0);
-            Canvas.SetTop(this, Offset.Y + (track?.TrackNo ?? 0) * trackHeight);
+            Canvas.SetTop(this, TrackLayout.Top(track?.TrackNo ?? 0,
+                trackHeight == 0 ? 0 : -Offset.Y / trackHeight, trackHeight));
+            SetValue(Panel.ZIndexProperty, track?.IsChordsTrack == true ? 100 : 0);
             if (ViewModel != null) {
                 ViewModel.IsSingerVisible = track?.IsChordsTrack != true && trackHeight >= ViewConstants.TrackHeightDelta * 3;
                 ViewModel.IsPhonemizerVisible = track?.IsChordsTrack != true && trackHeight >= ViewConstants.TrackHeightDelta * 4;

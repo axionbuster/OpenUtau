@@ -993,6 +993,7 @@ namespace OpenUtau.App.ViewModels {
             if (Part != null && !Selection.IsEmpty) {
                 var selectedNotes = Selection.ToList();
                 DocManager.Inst.NotesClipboard = selectedNotes.Select(note => note.Clone()).ToList();
+                DocManager.Inst.ChordsClipboard = null;
                 DocManager.Inst.NotesClipboardPitchReference31 = Is31Edo
                     ? Project.PitchReference31.ValidatedCopy() : null;
             }
@@ -1002,6 +1003,7 @@ namespace OpenUtau.App.ViewModels {
             if (Part != null && !Selection.IsEmpty) {
                 var selectedNotes = Selection.ToList();
                 DocManager.Inst.NotesClipboard = selectedNotes.Select(note => note.Clone()).ToList();
+                DocManager.Inst.ChordsClipboard = null;
                 DocManager.Inst.NotesClipboardPitchReference31 = Is31Edo
                     ? Project.PitchReference31.ValidatedCopy() : null;
                 DocManager.Inst.StartUndoGroup("command.note.delete");
@@ -1012,6 +1014,11 @@ namespace OpenUtau.App.ViewModels {
 
         public void PasteNotes() {
             if (Part != null && DocManager.Inst.NotesClipboard != null && DocManager.Inst.NotesClipboard.Count > 0) {
+                if (Part.IsChordPart) {
+                    DocManager.Inst.ExecuteCmd(new ErrorMessageNotification(new InvalidOperationException(
+                        "Notes cannot be pasted into the Chords track.")));
+                    return;
+                }
                 if (DocManager.Inst.NotesClipboard.Any(n => n.tone31.HasValue != Is31Edo)) {
                     DocManager.Inst.ExecuteCmd(new ErrorMessageNotification(new FileFormatException("Convert a project copy before pasting between tuning systems.")));
                     return;
@@ -1059,6 +1066,11 @@ namespace OpenUtau.App.ViewModels {
             }
 
             if (Part != null && DocManager.Inst.NotesClipboard != null && DocManager.Inst.NotesClipboard.Count > 0) {
+                if (Part.IsChordPart) {
+                    DocManager.Inst.ExecuteCmd(new ErrorMessageNotification(new InvalidOperationException(
+                        "Notes cannot be pasted into the Chords track.")));
+                    return;
+                }
                 if (DocManager.Inst.NotesClipboard.Any(n => n.tone31.HasValue != Is31Edo)) {
                     DocManager.Inst.ExecuteCmd(new ErrorMessageNotification(new FileFormatException("Convert a project copy before pasting between tuning systems.")));
                     return;

@@ -57,7 +57,7 @@ namespace OpenUtau.App {
         public static IBrush ExpActiveNameBrush = Brushes.White;
 
         public static List<TrackColor> TrackColors = new List<TrackColor>(){
-                new TrackColor("Ivory", "#F5F1E8", "#D8D2C4", "#FFFDF7", "#EEE8DC"),
+                new TrackColor("Automatic (theme)", "#F5F1E8", "#D8D2C4", "#FFFDF7", "#EEE8DC"),
                 new TrackColor("Pink", "#F06292", "#EC407A", "#F48FB1", "#FAC7D8"),
                 new TrackColor("Red", "#EF5350", "#E53935", "#E57373", "#F2B9B9"),
                 new TrackColor("Orange", "#FF8A65", "#FF7043", "#FFAB91", "#FFD5C8"),
@@ -290,10 +290,36 @@ namespace OpenUtau.App {
         }
 
         public static TrackColor GetTrackColor(string name) {
+            if (name == "Automatic (theme)") {
+                return IsDarkMode
+                    ? new TrackColor(name, "#E7E2D8", "#C9C2B5", "#F5F1E8", "#EEE8DC")
+                    : new TrackColor(name, "#4E4A43", "#35322D", "#6A655C", "#E8E3D9");
+            }
             if (TrackColors.Any(c => c.Name == name)) {
                 return TrackColors.First(c => c.Name == name);
             }
             return TrackColors.First(c => c.Name == "Blue");
+        }
+
+        public static TrackColor GetControlTrackColor(string name) {
+            var color = GetTrackColor(name);
+            var background = BackgroundBrush is SolidColorBrush solid
+                ? solid.Color : (IsDarkMode ? Avalonia.Media.Colors.Black : Avalonia.Media.Colors.White);
+            return ContrastRatio(color.AccentColor.Color, background) >= 3
+                ? color : GetTrackColor("Automatic (theme)");
+        }
+
+        public static double ContrastRatio(Color first, Color second) {
+            static double Luminance(Color color) {
+                static double Channel(byte value) {
+                    double v = value / 255d;
+                    return v <= 0.04045 ? v / 12.92 : System.Math.Pow((v + 0.055) / 1.055, 2.4);
+                }
+                return 0.2126 * Channel(color.R) + 0.7152 * Channel(color.G) + 0.0722 * Channel(color.B);
+            }
+            double a = Luminance(first);
+            double b = Luminance(second);
+            return (System.Math.Max(a, b) + 0.05) / (System.Math.Min(a, b) + 0.05);
         }
     }
 

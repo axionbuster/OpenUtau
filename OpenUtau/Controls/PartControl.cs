@@ -11,6 +11,7 @@ using Avalonia.Media;
 using Avalonia.Media.Imaging;
 using NWaves.Signals;
 using OpenUtau.Core.Ustx;
+using OpenUtau.App.ViewModels;
 using ReactiveUI;
 using ReactiveUI.Primitives;
 using Serilog;
@@ -191,7 +192,9 @@ namespace OpenUtau.App.Controls {
 
         public void SetPosition() {
             Canvas.SetLeft(this, Offset.X + part.position * tickWidth);
-            Canvas.SetTop(this, Offset.Y + part.trackNo * trackHeight);
+            double ordinaryOffset = trackHeight == 0 ? 0 : -Offset.Y / trackHeight;
+            Canvas.SetTop(this, TrackLayout.Top(part.trackNo, ordinaryOffset, trackHeight));
+            SetValue(Panel.ZIndexProperty, part is UVoicePart { IsChordPart: true } ? 1600 : 0);
         }
 
         public void SetSize() {

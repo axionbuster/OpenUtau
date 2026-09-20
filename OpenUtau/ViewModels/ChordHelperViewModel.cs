@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 using Avalonia;
 using Avalonia.Media;
@@ -356,6 +357,50 @@ namespace OpenUtau.App.ViewModels {
             DocManager.Inst.ExecuteCmd(new RemoveChordHelperCommand(part, helper));
             DocManager.Inst.EndUndoGroup();
             Select(null, null);
+        }
+
+        public bool CopySelected() {
+            if (!HasSelection) {
+                return false;
+            }
+            var project = DocManager.Inst.Project;
+            DocManager.Inst.ChordsClipboard = new ChordClipboardPayload(
+                new[] { selectedHelper! }, project.Is31Edo,
+                project.Is31Edo ? project.PitchReference31 : null);
+            DocManager.Inst.NotesClipboard = null;
+            DocManager.Inst.CurvesClipboard = null;
+            return true;
+        }
+
+        public bool CutSelected() {
+            if (!CopySelected()) {
+                return false;
+            }
+            DeleteSelected();
+            return true;
+        }
+
+        public bool Paste(int playPosTick, int snapDiv) {
+            var payload = DocManager.Inst.ChordsClipboard;
+            var project = DocManager.Inst.Project;
+            if (payload == null || project.ChordsPart == null) {
+                return false;
+            }
+            int snapUnit = Math.Max(1, project.resolution * 4 / Math.Max(1, snapDiv));
+            int targetTick = Math.Max(0, playPosTick / snapUnit * snapUnit);
+            var helpers = payload.CloneForPaste(project, targetTick);
+            if (helpers == null) {
+                DocManager.Inst.ExecuteCmd(new ErrorMessageNotification(new FileFormatException(
+                    "Match the project tuning and 31-TET pitch reference before pasting chords.")));
+                return false;
+            }
+            DocManager.Inst.StartUndoGroup();
+            foreach (var helper in helpers) {
+                DocManager.Inst.ExecuteCmd(new AddChordHelperCommand(project.ChordsPart, helper));
+            }
+            DocManager.Inst.EndUndoGroup();
+            Select(project.ChordsPart, helpers[0]);
+            return true;
         }
 
         public void CommitSnapshot(UVoicePart part, UChordHelper helper, UChordHelper before) {

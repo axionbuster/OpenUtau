@@ -61,7 +61,8 @@ namespace OpenUtau.App.Controls {
 
         private void SetPosition() {
             Canvas.SetLeft(this, 0);
-            Canvas.SetTop(this, Offset.Y + TrackNo * trackHeight);
+            Canvas.SetTop(this, TrackLayout.Top(TrackNo,
+                trackHeight == 0 ? 0 : -Offset.Y / trackHeight, trackHeight));
         }
 
         private void ButtonClicked(object sender, RoutedEventArgs e) {

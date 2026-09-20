@@ -71,6 +71,7 @@ namespace OpenUtau.Core {
         public List<UPart>? PartsClipboard { get; set; }
         public bool? PartsClipboardIs31Edo { get; set; }
         public Edo31PitchReference? PartsClipboardPitchReference31 { get; set; }
+        public ChordClipboardPayload? ChordsClipboard { get; set; }
         public List<UNote>? NotesClipboard { get; set; }
         public Edo31PitchReference? NotesClipboardPitchReference31 { get; set; }
         public CurveSelection? CurvesClipboard { get; set; }

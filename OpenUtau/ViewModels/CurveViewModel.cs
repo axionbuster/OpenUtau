@@ -80,6 +80,7 @@ namespace OpenUtau.ViewModels {
         public void Copy(UVoicePart part) {
             if (part != null && selection.HasValue()) {
                 DocManager.Inst.CurvesClipboard = selection.Clone();
+                DocManager.Inst.ChordsClipboard = null;
                 MessageBus.Current.SendMessage(new CurveCopyEvent());
             }
         }
@@ -87,6 +88,7 @@ namespace OpenUtau.ViewModels {
         public void Cut(UVoicePart part) {
             if (part != null && selection.HasValue()) {
                 DocManager.Inst.CurvesClipboard = selection.Clone();
+                DocManager.Inst.ChordsClipboard = null;
                 MessageBus.Current.SendMessage(new CurveCopyEvent());
 
                 DocManager.Inst.StartUndoGroup("command.exp.reset");

@@ -5,6 +5,7 @@ using System.Collections.Specialized;
 using System.Linq;
 using Avalonia;
 using Avalonia.Controls;
+using Avalonia.Media;
 using OpenUtau.App.ViewModels;
 using OpenUtau.Core.Ustx;
 using ReactiveUI;
@@ -110,8 +111,19 @@ namespace OpenUtau.App.Controls {
         private double _pianoRollViewViewportTicks;
 
         Dictionary<UPart, PartControl> partControls = new Dictionary<UPart, PartControl>();
+        readonly Border pinnedLane = new Border {
+            BorderThickness = new Thickness(0, 0, 0, 2),
+            IsHitTestVisible = true,
+        };
 
         public PartsCanvas() {
+            Canvas.SetLeft(pinnedLane, 0);
+            Canvas.SetTop(pinnedLane, 0);
+            pinnedLane.SetValue(Panel.ZIndexProperty, 1500);
+            pinnedLane.Bind(HeightProperty, this.GetObservable(TrackHeightProperty));
+            pinnedLane.Bind(WidthProperty, this.WhenAnyValue(x => x.Bounds).Select(bounds => bounds.Width));
+            RefreshPinnedLane();
+            Children.Add(pinnedLane);
             MessageBus.Current.Listen<TracksRefreshEvent>()
                 .Subscribe(_ => {
                     foreach (var (part, control) in partControls) {
@@ -146,7 +158,15 @@ namespace OpenUtau.App.Controls {
                     }
                 });
             MessageBus.Current.Listen<ThemeChangedEvent>()
-                .Subscribe(_ => InvalidateVisual());
+                .Subscribe(_ => { RefreshPinnedLane(); InvalidateVisual(); });
+            MessageBus.Current.Listen<TracksRefreshEvent>()
+                .Subscribe(_ => RefreshPinnedLane());
+        }
+
+        void RefreshPinnedLane() {
+            var color = ThemeManager.GetTrackColor(Core.DocManager.Inst.Project.ChordsTrack.TrackColor);
+            pinnedLane.Background = color.AccentColorLightSemi;
+            pinnedLane.BorderBrush = ThemeManager.NeutralAccentBrush;
         }
 
         protected override void OnPropertyChanged(AvaloniaPropertyChangedEventArgs change) {

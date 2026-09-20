@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using Avalonia;
+using Avalonia.Media;
 using DynamicData.Binding;
 using OpenUtau.Core;
 using OpenUtau.Core.Ustx;
@@ -265,13 +266,13 @@ namespace OpenUtau.App.ViewModels {
         }
 
         public int PointToTrackNo(Point point) {
-            return (int)(point.Y / TrackHeight + TrackOffset);
+            return TrackLayout.TrackNoAt(point.Y, TrackOffset, TrackHeight);
         }
 
         public Point TickTrackToPoint(int tick, int trackNo) {
             return new Point(
                 (tick - TickOffset) * TickWidth,
-                (trackNo - TrackOffset) * TrackHeight);
+                TrackLayout.Top(trackNo, TrackOffset, TrackHeight));
         }
 
         public Size TickTrackToSize(int ticks, int tracks) {
@@ -288,7 +289,7 @@ namespace OpenUtau.App.ViewModels {
         public UPart? MaybeAddPart(Point point) {
             int trackNo = PointToTrackNo(point);
             var project = DocManager.Inst.Project;
-            if (trackNo >= project.tracks.Count) {
+            if (trackNo <= 0 || trackNo >= project.tracks.Count) {
                 return null;
             }
             PointToLineTick(point, out int left, out int right);
@@ -395,6 +396,9 @@ namespace OpenUtau.App.ViewModels {
             if (SelectedParts.Count <= 0) {
                 return;
             }
+            if (SelectedParts.OfType<UVoicePart>().Any(part => part.IsChordPart)) {
+                return;
+            }
             DocManager.Inst.StartUndoGroup("command.part.delete");
             var selectedParts = SelectedParts.ToArray();
             foreach (var part in selectedParts) {
@@ -406,7 +410,11 @@ namespace OpenUtau.App.ViewModels {
 
         public void CopyParts() {
             if (SelectedParts.Count > 0) {
+                if (SelectedParts.OfType<UVoicePart>().Any(part => part.IsChordPart)) {
+                    return;
+                }
                 DocManager.Inst.PartsClipboard = SelectedParts.Select(part => part.Clone()).ToList();
+                DocManager.Inst.ChordsClipboard = null;
                 DocManager.Inst.PartsClipboardIs31Edo = Project.Is31Edo;
                 DocManager.Inst.PartsClipboardPitchReference31 = Project.Is31Edo
                     ? Project.PitchReference31.ValidatedCopy() : null;
@@ -415,7 +423,11 @@ namespace OpenUtau.App.ViewModels {
 
         public void CutParts() {
             if (SelectedParts.Count > 0) {
+                if (SelectedParts.OfType<UVoicePart>().Any(part => part.IsChordPart)) {
+                    return;
+                }
                 DocManager.Inst.PartsClipboard = SelectedParts.Select(part => part.Clone()).ToList();
+                DocManager.Inst.ChordsClipboard = null;
                 DocManager.Inst.PartsClipboardIs31Edo = Project.Is31Edo;
                 DocManager.Inst.PartsClipboardPitchReference31 = Project.Is31Edo
                     ? Project.PitchReference31.ValidatedCopy() : null;
@@ -431,6 +443,9 @@ namespace OpenUtau.App.ViewModels {
 
         public void PasteParts() {
             if (DocManager.Inst.PartsClipboard == null || DocManager.Inst.PartsClipboard.Count == 0) {
+                return;
+            }
+            if (DocManager.Inst.PartsClipboard.OfType<UVoicePart>().Any(part => part.IsChordPart)) {
                 return;
             }
             if (DocManager.Inst.PartsClipboard.Any(part => part is UVoicePart) &&

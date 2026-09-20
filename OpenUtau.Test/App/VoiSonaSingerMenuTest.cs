@@ -36,7 +36,7 @@ namespace OpenUtau.App {
                 manager.Singers.Clear(); manager.SingerGroups.Clear();
                 manager.Singers.Add(jp.Id, jp); manager.Singers.Add(en.Id, en);
                 manager.SingerGroups.Add(USingerType.VoiSona, new() {jp, en});
-                var track = project.tracks[0]; track.Singer = jp;
+                var track = project.tracks.First(candidate => !candidate.IsChordsTrack); track.Singer = jp;
                 var vm = new TrackHeaderViewModel(track);
                 header = new TrackHeader {DataContext = vm, ViewModel = vm, TrackHeight = 104};
                 window = new Window {Width = 500, Height = 300, Content = header};

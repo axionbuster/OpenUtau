@@ -214,7 +214,7 @@ namespace OpenUtau.App.Controls {
             bool isChordPart = part is UVoicePart { IsChordPart: true };
             var backgroundBrush = isChordPart
                 ? ThemeManager.GetTrackColor(
-                    Core.DocManager.Inst.Project.tracks[part.trackNo].TrackColor).AccentColor
+                    Core.DocManager.Inst.Project.tracks[part.trackNo].TrackColor).AccentColorLight
                 : Selected ? ThemeManager.AccentBrush2 : ThemeManager.AccentBrush1;
             // Background
             if (!isChordPart) {

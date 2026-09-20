@@ -1612,7 +1612,7 @@ namespace OpenUtau.App.Views {
                 }) });
             }
             menu.ItemsSource = items;
-            menu.Open();
+            menu.Open(target);
         }
 
         void CopyChordRegion(UChordRegion region) {

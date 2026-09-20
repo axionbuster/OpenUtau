@@ -57,6 +57,7 @@ namespace OpenUtau.App {
         public static IBrush ExpActiveNameBrush = Brushes.White;
 
         public static List<TrackColor> TrackColors = new List<TrackColor>(){
+                new TrackColor("Ivory", "#F5F1E8", "#D8D2C4", "#FFFDF7", "#EEE8DC"),
                 new TrackColor("Pink", "#F06292", "#EC407A", "#F48FB1", "#FAC7D8"),
                 new TrackColor("Red", "#EF5350", "#E53935", "#E57373", "#F2B9B9"),
                 new TrackColor("Orange", "#FF8A65", "#FF7043", "#FFAB91", "#FFD5C8"),

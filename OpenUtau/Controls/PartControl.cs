@@ -208,12 +208,17 @@ namespace OpenUtau.App.Controls {
         }
 
         public override void Render(DrawingContext context) {
-            var backgroundBrush = Selected ? ThemeManager.AccentBrush2 : ThemeManager.AccentBrush1;
+            bool isChordPart = part is UVoicePart { IsChordPart: true };
+            var backgroundBrush = isChordPart
+                ? ThemeManager.GetTrackColor(
+                    Core.DocManager.Inst.Project.tracks[part.trackNo].TrackColor).AccentColor
+                : Selected ? ThemeManager.AccentBrush2 : ThemeManager.AccentBrush1;
             // Background
             context.DrawRectangle(backgroundBrush, null, new Rect(1, 0, Width - 1, Height - 1), 4, 4);
 
             // Text
-            var textLayout = TextLayoutCache.Get(Text, Brushes.White, 12);
+            var textLayout = TextLayoutCache.Get(
+                Text, isChordPart ? new SolidColorBrush(Color.Parse("#27231D")) : Brushes.White, 12);
             using (var state = context.PushTransform(Matrix.CreateTranslation(3, 2))) {
                 context.DrawRectangle(backgroundBrush, null, new Rect(new Point(0, 0), new Size(textLayout.Width, textLayout.Height)));
                 textLayout.Draw(context, new Point());

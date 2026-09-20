@@ -128,7 +128,7 @@ namespace OpenUtau.Core.Ustx {
 
         public static UTrack CreateChordsTrack() => new UTrack("Chords") {
             TrackRole = ChordsRole,
-            TrackColor = "Orange",
+            TrackColor = "Ivory",
         };
 
         public bool TryGetExpDescriptor(UProject project, string abbr, out UExpressionDescriptor descriptor) {

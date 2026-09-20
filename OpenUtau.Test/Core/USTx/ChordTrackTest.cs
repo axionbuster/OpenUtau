@@ -10,6 +10,7 @@ namespace OpenUtau.Core.Ustx {
         [InlineData(true)]
         public void NewProjectRoundTripKeepsOneConfiguredChordTrack(bool native) {
             var project = Format.Ustx.Create();
+            Assert.Equal(new[] { 0, 1 }, project.tracks.Select(track => track.TrackNo));
             project.Is31Edo = native;
             project.ChordsTrack.TrackColor = "Pink";
             project.ChordsTrack.Mute = true;

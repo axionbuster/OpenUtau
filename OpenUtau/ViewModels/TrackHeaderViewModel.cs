@@ -118,7 +118,7 @@ namespace OpenUtau.App.ViewModels {
 
             TrackName = track.TrackName;
             TrackAccentColor = ThemeManager.GetTrackColor(track.TrackColor).AccentColor;
-            TrackColor = Preferences.Default.UseTrackColor
+            TrackColor = track.IsChordsTrack || Preferences.Default.UseTrackColor
                 ? ThemeManager.GetTrackColor(track.TrackColor)
                 : ThemeManager.GetTrackColor("Blue");
             Volume = track.Volume;
@@ -517,7 +517,7 @@ namespace OpenUtau.App.ViewModels {
         public void ManuallyRaise() {
             TrackName = track.TrackName;
             TrackAccentColor = ThemeManager.GetTrackColor(track.TrackColor).AccentColor;
-            TrackColor = Preferences.Default.UseTrackColor
+            TrackColor = track.IsChordsTrack || Preferences.Default.UseTrackColor
                 ? ThemeManager.GetTrackColor(track.TrackColor)
                 : ThemeManager.GetTrackColor("Blue");
             RefreshSelectionStyle();
@@ -599,7 +599,7 @@ namespace OpenUtau.App.ViewModels {
             if (Application.Current?.ApplicationLifetime is IClassicDesktopStyleApplicationLifetime desktop && desktop.MainWindow != null) {
                 await dialog.ShowDialog(desktop.MainWindow);
                 TrackAccentColor = ThemeManager.GetTrackColor(track.TrackColor).AccentColor;
-                TrackColor = Preferences.Default.UseTrackColor
+                TrackColor = track.IsChordsTrack || Preferences.Default.UseTrackColor
                 ? ThemeManager.GetTrackColor(track.TrackColor)
                 : ThemeManager.GetTrackColor("Blue");
                 RefreshSelectionStyle();

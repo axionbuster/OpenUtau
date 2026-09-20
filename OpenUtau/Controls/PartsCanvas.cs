@@ -164,7 +164,9 @@ namespace OpenUtau.App.Controls {
         }
 
         void RefreshPinnedLane() {
-            var color = ThemeManager.GetTrackColor(Core.DocManager.Inst.Project.ChordsTrack.TrackColor);
+            var chordTrack = Core.DocManager.Inst.Project.tracks.FirstOrDefault(track => track.IsChordsTrack);
+            if (chordTrack == null) return;
+            var color = ThemeManager.GetTrackColor(chordTrack.TrackColor);
             pinnedLane.Background = color.AccentColorLightSemi;
             pinnedLane.BorderBrush = ThemeManager.NeutralAccentBrush;
         }

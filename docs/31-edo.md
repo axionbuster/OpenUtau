@@ -30,6 +30,8 @@ independently of selection and playback. Perfect fourth and fifth rows have fain
 permanent highlights in every scale view, while the tonic remains strongest. When rows are too short for ordinary text,
 large bold 1, 4, and 5 labels identify the tonic, perfect fourth, and perfect fifth.
 They occupy separate columns so they remain legible even on adjacent folded rows.
+Drag the right edge of the piano keyboard to resize its full column from 72 to 320 pixels.
+The chosen width persists across launches and applies to both 31-TET and 12-TET projects.
 
 The **Tonic** menu beside the Major/Minor checkboxes selects the reference for colors, scale-degree labels, and note names.
 It is an application preference, persists across launches, and defaults to **D** when unset. Changing it
@@ -98,10 +100,10 @@ The optional Liquid Glass icon is not required for the standard icon to work.
 
 ## Fork version
 
-The local fork identifies itself as `0.1.570-tet31.34 [31-TET]`, based on the
+The local fork identifies itself as `0.1.570-tet31.35 [31-TET]`, based on the
 upstream 0.1.570 development line. The application title uses the informational
 version, preserving the fork suffix without the assembly's trailing zero. macOS
-uses numeric bundle version `0.1.570.34` and short version `0.1.570`. These build
+uses numeric bundle version `0.1.570.35` and short version `0.1.570`. These build
 versions are independent of the native project format revision.
 
 ## Image-scaling regression check

@@ -12,7 +12,7 @@
     <StyleInclude Source="/Styles/PianoRollStyles.axaml"/>
   </UserControl.Styles>
   <Border>
-    <Grid Margin="{Binding $parent[1].OffScreenMargin}" PointerMoved="BackgroundPointerMoved">
+    <Grid Name="PianoRollGrid" Margin="{Binding $parent[1].OffScreenMargin}" PointerMoved="BackgroundPointerMoved">
       <Grid.RowDefinitions>
         <RowDefinition Height="24"/>
         <RowDefinition Height="24"/>
@@ -25,7 +25,7 @@
         <RowDefinition Height="4"/>
       </Grid.RowDefinitions>
       <Grid.ColumnDefinitions>
-        <ColumnDefinition Width="96"/>
+        <ColumnDefinition Width="96" MinWidth="72" MaxWidth="320"/>
         <ColumnDefinition Width="*"/>
         <ColumnDefinition Width="24"/>
         <ColumnDefinition Width="Auto"/>
@@ -755,6 +755,13 @@
               PointerWheelChanged="ViewScalerPointerWheelChanged">
         <c:ViewScaler Name="VScaler" DataContext="{Binding NotesViewModel}" Value="{Binding TrackHeight}" Min="{Binding TrackHeightMin}" Max="{Binding TrackHeightMax}"/>
       </Border>
+      <GridSplitter Name="KeyboardColumnSplitter"
+                    Grid.Row="1" Grid.RowSpan="5" Grid.Column="0"
+                    Width="6" HorizontalAlignment="Right" VerticalAlignment="Stretch"
+                    Background="Transparent" ResizeDirection="Columns" ResizeBehavior="CurrentAndNext"
+                    DragCompleted="KeyboardColumnSplitterDragCompleted"
+                    Focusable="False" Cursor="SizeWestEast"
+                    ToolTip.Tip="Drag to resize the piano keyboard and label column"/>
       <Canvas Name="ValueTipCanvas" Grid.Column="1" Grid.Row="2" Grid.RowSpan="4" IsHitTestVisible="False">
         <Border Name="ValueTip" BorderThickness="1"
                 BorderBrush="{DynamicResource NeutralAccentBrush}"

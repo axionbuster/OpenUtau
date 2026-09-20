@@ -27,6 +27,7 @@ namespace OpenUtau.Core.Ustx {
         [Fact]
         public void AllSpellingsRoundTripAndColorsFollowTonic() {
             Assert.Equal(2, new Preferences.SerializablePreferences().PreferredKey31Fifths);
+            Assert.Equal(96, new Preferences.SerializablePreferences().PianoRollKeyboardWidth);
             for (int key = -15; key <= 15; key++) {
                 Assert.Equal(31, Enumerable.Range(0, 31).Select(s => Edo31.FifthsForStep(s, key)).Distinct().Count());
                 for (int step = 0; step < Edo31.MaxStep; step++) {

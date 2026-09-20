@@ -39,6 +39,7 @@ namespace OpenUtau.App {
             bool? oldMinor = Preferences.Default.FoldMinor31;
             bool oldLegacyFold = Preferences.Default.FoldDiatonic31;
             string oldTheme = Preferences.Default.ThemeName;
+            double oldKeyboardWidth = Preferences.Default.PianoRollKeyboardWidth;
             string prefsPath = PathManager.Inst.PrefsFilePath;
             byte[]? prefs = File.Exists(prefsPath) ? File.ReadAllBytes(prefsPath) : null;
             Window? window = null;
@@ -47,6 +48,7 @@ namespace OpenUtau.App {
                 Preferences.Default.FoldDiatonic31 = true;
                 Preferences.Default.FoldMajor31 = null;
                 Preferences.Default.FoldMinor31 = null;
+                Preferences.Default.PianoRollKeyboardWidth = 176;
                 DocManager.Inst.SearchAllLegacyPlugins();
                 var vm = new PianoRollViewModel();
                 Assert.True(vm.NotesViewModel.FoldMajor31);
@@ -54,6 +56,14 @@ namespace OpenUtau.App {
                 vm.NotesViewModel.FoldMajor31 = false;
                 vm.NotesViewModel.FoldMinor31 = false;
                 var editor = new PianoRoll(vm);
+                var pianoRollGrid = editor.FindControl<Grid>("PianoRollGrid");
+                var keyboardColumn = pianoRollGrid.ColumnDefinitions[0];
+                var keyboardSplitter = editor.FindControl<GridSplitter>("KeyboardColumnSplitter");
+                Assert.Equal(176, keyboardColumn.Width.Value);
+                Assert.Equal(72, keyboardColumn.MinWidth);
+                Assert.Equal(320, keyboardColumn.MaxWidth);
+                Assert.Equal(GridResizeDirection.Columns, keyboardSplitter.ResizeDirection);
+                Assert.Equal(GridResizeBehavior.CurrentAndNext, keyboardSplitter.ResizeBehavior);
                 window = new Window { Width = 1100, Height = 900, Content = editor };
                 window.Show();
                 vm.NotesViewModel.OnNext(new LoadPartNotification(part, project, 0), false);
@@ -212,6 +222,7 @@ namespace OpenUtau.App {
                 Preferences.Default.FoldMinor31 = oldMinor;
                 Preferences.Default.FoldDiatonic31 = oldLegacyFold;
                 Preferences.Default.ThemeName = oldTheme;
+                Preferences.Default.PianoRollKeyboardWidth = oldKeyboardWidth;
                 App.SetTheme();
                 if (prefs != null) { File.WriteAllBytes(prefsPath, prefs); }
                 else if (File.Exists(prefsPath)) { File.Delete(prefsPath); }

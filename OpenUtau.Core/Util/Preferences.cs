@@ -295,6 +295,7 @@ errors.txt
 ";
             public string RecoveryPath = string.Empty;
             public bool DetachPianoRoll = true;
+            public double PianoRollKeyboardWidth = 96;
 
             // ----- Mix FX (post-processing) -----
             // Per-track FX state lives in UTrack.MixFx and the project ustx.

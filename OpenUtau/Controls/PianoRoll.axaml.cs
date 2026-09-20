@@ -43,6 +43,7 @@ namespace OpenUtau.App.Controls {
         private bool isSelectingRange;
         private Point rangeSelectStartPoint = default;
         private const double RangeSelectThreshold = 5; // pixels
+        private ColumnDefinition KeyboardColumn => PianoRollGrid.ColumnDefinitions[0];
 
         private ReactiveCommand<RxVoid, RxVoid>? lyricsDialogCommand;
         private ReactiveCommand<RxVoid, RxVoid>? noteDefaultsCommand;
@@ -52,6 +53,11 @@ namespace OpenUtau.App.Controls {
 
         public PianoRoll(PianoRollViewModel model) {
             InitializeComponent();
+            var savedKeyboardWidth = Preferences.Default.PianoRollKeyboardWidth;
+            KeyboardColumn.Width = new GridLength(Math.Clamp(
+                double.IsFinite(savedKeyboardWidth) ? savedKeyboardWidth : 96,
+                KeyboardColumn.MinWidth,
+                KeyboardColumn.MaxWidth));
             foreach (string name in new[] { "MajorScaleToggle", "MinorScaleToggle" }) {
                 this.FindControl<CheckBox>(name)!.AddHandler(PointerReleasedEvent,
                     OnScaleTogglePointerReleased, RoutingStrategies.Bubble, handledEventsToo: true);
@@ -61,6 +67,11 @@ namespace OpenUtau.App.Controls {
             SetPenToolIcon();
             penTool.AddHandler(PointerPressedEvent, OnToolButtonPointerPressed, RoutingStrategies.Tunnel | RoutingStrategies.Bubble, true);
             this.LayoutUpdated += PianoRollLayoutUpdated;
+        }
+
+        private void KeyboardColumnSplitterDragCompleted(object? sender, VectorEventArgs e) {
+            Preferences.Default.PianoRollKeyboardWidth = KeyboardColumn.ActualWidth;
+            Preferences.Save();
         }
 
         private void PianoRollLayoutUpdated(object? sender, EventArgs e) {

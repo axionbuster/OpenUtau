@@ -30,27 +30,33 @@ namespace OpenUtau.Core.Ustx {
     }
 
     /// <summary>
-    /// Silent harmonic annotation owned by a voice part. Position is relative
-    /// to the part, just like notes and curves; it is never a performed note.
+    /// Harmonic annotation owned by a voice part. Position is relative to the
+    /// part, like notes and curves. Transport preview stays separate from singer
+    /// notes, phonemization, rendering, and export.
     /// </summary>
     public sealed class UChordHelper {
         public int position;
         public int duration = 480;
         public int root;
+        public int? rootTone;
         public List<UChordInterval> tones = ChordHelperTheory.CreatePreset("Major");
         public UChordInterval? bass;
         public bool highlightRoot = true;
+        public bool mute;
         public string color = "#35A7D8";
 
         [YamlIgnore] public int End => position + duration;
+        [YamlIgnore] public Guid PlaybackId { get; } = Guid.NewGuid();
 
         public UChordHelper Clone() => new UChordHelper {
             position = position,
             duration = duration,
             root = root,
+            rootTone = rootTone,
             tones = tones.Select(tone => tone.Clone()).ToList(),
             bass = bass?.Clone(),
             highlightRoot = highlightRoot,
+            mute = mute,
             color = color,
         };
 
@@ -58,9 +64,11 @@ namespace OpenUtau.Core.Ustx {
             position = other.position;
             duration = other.duration;
             root = other.root;
+            rootTone = other.rootTone;
             tones = other.tones.Select(tone => tone.Clone()).ToList();
             bass = other.bass?.Clone();
             highlightRoot = other.highlightRoot;
+            mute = other.mute;
             color = other.color;
         }
 
@@ -69,6 +77,10 @@ namespace OpenUtau.Core.Ustx {
             position = Math.Max(0, position);
             duration = Math.Max(1, duration);
             root = Edo31.Mod(root, divisions);
+            if (rootTone.HasValue) {
+                int octave = (int)Math.Floor(rootTone.Value / (double)divisions);
+                rootTone = Math.Clamp(octave, 0, 10) * divisions + root;
+            }
             tones ??= new List<UChordInterval>();
             tones = tones
                 .Where(tone => tone != null && tone.degree > 0)
@@ -120,6 +132,12 @@ namespace OpenUtau.Core.Ustx {
             new ChordHelperPreset("Minor seventh", I(1), I(3, -1), I(5), I(7, -1)),
             new ChordHelperPreset("Half-diminished seventh", I(1), I(3, -1), I(5, -1), I(7, -1)),
             new ChordHelperPreset("Diminished seventh", I(1), I(3, -1), I(5, -1), I(7, -2)),
+            new ChordHelperPreset("Add ninth", I(1), I(3), I(5), I(9)),
+            new ChordHelperPreset("Dominant ninth", I(1), I(3), I(5), I(7, -1), I(9)),
+            new ChordHelperPreset("Major ninth", I(1), I(3), I(5), I(7), I(9)),
+            new ChordHelperPreset("Minor ninth", I(1), I(3, -1), I(5), I(7, -1), I(9)),
+            new ChordHelperPreset("Dominant eleventh", I(1), I(3), I(5), I(7, -1), I(9), I(11)),
+            new ChordHelperPreset("Dominant thirteenth", I(1), I(3), I(5), I(7, -1), I(9), I(11), I(13)),
             new ChordHelperPreset("Harmonic seventh", I(1), I(3), I(5), I(6, 1)),
         };
 
@@ -151,6 +169,31 @@ namespace OpenUtau.Core.Ustx {
             return ParseLabel(Edo31.RelativeScaleDegreeLabel(pitchClass));
         }
 
+        public static UChordInterval DisplayInterval(
+            UChordInterval interval, IEnumerable<UChordInterval> chordTones, bool is31Edo) {
+            var display = interval.Clone();
+            if (display.degree > 7) {
+                return display;
+            }
+            int divisions = is31Edo ? 31 : 12;
+            int pitchClass = Edo31.Mod(display.Offset(is31Edo), divisions);
+            if (is31Edo && display.degree == 1 && display.alteration < 0 && pitchClass >= 27) {
+                display.degree = 8;
+                return display;
+            }
+            bool hasThird = chordTones.Any(tone => SimpleDegree(tone.degree) == 3);
+            bool hasSeventh = chordTones.Any(tone => SimpleDegree(tone.degree) == 7);
+            int simpleDegree = SimpleDegree(display.degree);
+            if (hasThird && simpleDegree is 2 or 4) {
+                display.degree += 7;
+            } else if (hasSeventh && simpleDegree == 6) {
+                display.degree += 7;
+            }
+            return display;
+        }
+
+        static int SimpleDegree(int degree) => Edo31.Mod(degree - 1, 7) + 1;
+
         static UChordInterval ParseLabel(string label) {
             int alteration = 0;
             int index = 0;
@@ -167,19 +210,20 @@ namespace OpenUtau.Core.Ustx {
         }
 
         public static string QualityName(IEnumerable<UChordInterval> tones, bool is31Edo) {
+            var toneList = tones.ToList();
             int divisions = is31Edo ? 31 : 12;
-            var mask = tones.Select(tone => Edo31.Mod(tone.Offset(is31Edo), divisions)).Distinct().Order().ToArray();
+            var mask = toneList.Select(tone => Edo31.Mod(tone.Offset(is31Edo), divisions)).Distinct().Order().ToArray();
             foreach (var preset in Presets) {
                 var presetMask = preset.Tones.Select(tone => Edo31.Mod(tone.Offset(is31Edo), divisions)).Distinct().Order().ToArray();
                 if (mask.SequenceEqual(presetMask)) {
                     return preset.Name;
                 }
             }
-            string members = string.Join(", ", tones
+            string members = string.Join(", ", toneList
                 .GroupBy(tone => Edo31.Mod(tone.Offset(is31Edo), divisions))
                 .Select(group => group.First())
                 .OrderBy(tone => Edo31.Mod(tone.Offset(is31Edo), divisions))
-                .Select(tone => tone.Label));
+                .Select(tone => DisplayInterval(tone, toneList, is31Edo).Label));
             return $"Custom ({members})";
         }
 
@@ -206,6 +250,12 @@ namespace OpenUtau.Core.Ustx {
                 "Minor seventh" => "m7",
                 "Half-diminished seventh" => "m7♭5",
                 "Diminished seventh" => "dim7",
+                "Add ninth" => "add9",
+                "Dominant ninth" => "9",
+                "Major ninth" => "maj9",
+                "Minor ninth" => "m9",
+                "Dominant eleventh" => "11",
+                "Dominant thirteenth" => "13",
                 "Harmonic seventh" => "7:4",
                 _ => "...",
             };

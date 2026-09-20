@@ -445,7 +445,7 @@
             </ListBox>
             <ToggleButton Name="ChordHelperTool" Classes="toolbar" Margin="4,0,0,0" Padding="1" Height="20" Width="28"
                           IsChecked="{Binding ChordHelperMode, Mode=TwoWay}"
-                          ToolTip.Tip="Chord helper: create, select, move, and resize silent harmonic guides">
+                          ToolTip.Tip="Chord helper: create, select, move, and resize harmonic guides">
               <TextBlock Text="Ch" FontSize="10" FontWeight="Bold" HorizontalAlignment="Center" VerticalAlignment="Center"/>
             </ToggleButton>
             <ToggleButton Classes="toolbar" Margin="0" Padding="1" Height="20" Width="20" IsChecked="{Binding PitchOverwrite}"
@@ -748,10 +748,13 @@
                                Value="{Binding ChordHelpers.Duration, Mode=TwoWay}"/>
               </Grid>
 
-              <Grid ColumnDefinitions="Auto,*">
+              <Grid ColumnDefinitions="Auto,*" RowDefinitions="Auto,Auto">
                 <CheckBox Name="ChordHighlightRoot"
                           IsChecked="{Binding ChordHelpers.HighlightRoot, Mode=TwoWay}"/>
                 <TextBlock Grid.Column="1" Margin="6,0,0,0" Text="Highlight root" VerticalAlignment="Center"/>
+                <CheckBox Name="ChordMute" Grid.Row="1"
+                          IsChecked="{Binding ChordHelpers.Muted, Mode=TwoWay}"/>
+                <TextBlock Grid.Row="1" Grid.Column="1" Margin="6,0,0,0" Text="Mute" VerticalAlignment="Center"/>
               </Grid>
               <TextBlock Text="Degrees" FontWeight="SemiBold"/>
               <ItemsControl Width="{Binding ChordHelpers.DegreeGridWidth}" HorizontalAlignment="Left"

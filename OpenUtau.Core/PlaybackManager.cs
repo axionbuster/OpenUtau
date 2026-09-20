@@ -26,6 +26,7 @@ namespace OpenUtau.Core {
         public double freq { get; set; }
 
         private int position;
+        private int phasePosition;
         private int releasePosition = 0;
         private float gain = 1;
 
@@ -37,6 +38,7 @@ namespace OpenUtau.Core {
             this.freq = freq;
             this.gain = gain;
             position = 0;
+            phasePosition = 0;
 
             // Number of samples the attack & release fades take
             attackSampleCount = (attackMs / 1000.0f) * waveFormat.SampleRate;
@@ -46,6 +48,13 @@ namespace OpenUtau.Core {
         public SineGenerator(double freq, float gain, int attackMs, int releaseMs, int startSampleOffset)
             : this(freq, gain, attackMs, releaseMs) {
             this.startSampleOffset = Math.Max(0, startSampleOffset);
+        }
+
+        internal SineGenerator(
+            double freq, float gain, int attackMs, int releaseMs,
+            int startSampleOffset, int initialPosition)
+            : this(freq, gain, attackMs, releaseMs, startSampleOffset) {
+            phasePosition = Math.Max(0, initialPosition);
         }
 
         public void SetGain(float gain) {
@@ -69,7 +78,7 @@ namespace OpenUtau.Core {
 
         private float GetNextSample() {
             double delta = 2 * Math.PI * freq / waveFormat.SampleRate;
-            double sample = GetOscillatorSample(position * delta);
+            double sample = GetOscillatorSample(phasePosition * delta);
 
             // Calculate attack envelope
             sample *= Math.Clamp(position / attackSampleCount, 0, 1);
@@ -88,6 +97,7 @@ namespace OpenUtau.Core {
             }
 
             position++;
+            phasePosition++;
             return (float)sample * gain;
         }
 
@@ -114,6 +124,11 @@ namespace OpenUtau.Core {
 
         public HarmonicGenerator(double freq, float gain, int attackMs, int releaseMs, int startSampleOffset)
             : base(freq, gain, attackMs, releaseMs, startSampleOffset) { }
+
+        internal HarmonicGenerator(
+            double freq, float gain, int attackMs, int releaseMs,
+            int startSampleOffset, int initialPosition)
+            : base(freq, gain, attackMs, releaseMs, startSampleOffset, initialPosition) { }
 
         protected override double GetOscillatorSample(double phase) {
             double sample = 0;
@@ -320,6 +335,11 @@ namespace OpenUtau.Core {
         // Tick where the current playback must end, -1 when unbounded (empty project).
         private int playbackEndTick = -1;
         private PlaybackMix playbackMix;
+        private ChordHelperPlaybackSource chordHelperSource;
+        private ChordHelperPlaybackSnapshot chordHelperSnapshot =
+            new ChordHelperPlaybackSnapshot(Array.Empty<ChordHelperPlaybackEvent>());
+        private UProject chordHelperProject;
+        private int chordHelperTrackNo = -1;
         private bool loopProjectOnPlaybackEnd;
 
         public Audio.IAudioOutput AudioOutput { get; set; } = new Audio.DummyAudioOutput();
@@ -450,6 +470,9 @@ namespace OpenUtau.Core {
 
         public void Play(UProject project, int tick, int endTick = -1, int trackNo = -1) {
             playbackEndTick = endTick == -1 ? project.EndTick : endTick;
+            chordHelperProject = project;
+            chordHelperTrackNo = trackNo;
+            RefreshChordHelperSnapshot();
             if (AudioOutput.PlaybackState == PlaybackState.Paused) {
                 PlayingMaster = true;
                 metronomeEngine.StartPlayback(project.timeAxis, DocManager.Inst.playPosTick);
@@ -464,6 +487,10 @@ namespace OpenUtau.Core {
 
         public void StopPlayback() {
             AudioOutput.Stop();
+            chordHelperSource?.StopAll();
+            chordHelperSource = null;
+            chordHelperProject = null;
+            chordHelperSnapshot = new ChordHelperPlaybackSnapshot(Array.Empty<ChordHelperPlaybackEvent>());
             StartingToPlay = false;
             masterMix = null;
             PlayingMaster = false;
@@ -513,7 +540,9 @@ namespace OpenUtau.Core {
                         focusPart: preRenderFocusPart,
                         focusTick: tick);
                     var result = engine.RenderMixdown(DocManager.Inst.MainScheduler, ref renderCancellation, wait: false, applyMixFx: true, planner: MixPlanner);
-                    playbackMix = new PlaybackMix(result.Item1, metronomeEngine);
+                    chordHelperSource = new ChordHelperPlaybackSource(Volatile.Read(ref chordHelperSnapshot));
+                    var liveMaster = new WaveMix(new ISignalSource[] { result.Item1, chordHelperSource });
+                    playbackMix = new PlaybackMix(liveMaster, metronomeEngine);
                     var playbackAdapter = new MasterAdapter(playbackMix);
                     // Hold mode: wait for pending phrases (today's behaviour), except
                     // in loop mode where a pending phrase must not stall the clock.
@@ -598,6 +627,15 @@ namespace OpenUtau.Core {
 
         public static float DecibelToVolume(double db) {
             return (db <= -24) ? 0 : (float)MusicMath.DecibelToLinear((db < -16) ? db * 2 + 16 : db);
+        }
+
+        private void RefreshChordHelperSnapshot() {
+            if (chordHelperProject == null) {
+                return;
+            }
+            var updated = ChordHelperPlaybackSnapshot.Create(chordHelperProject, chordHelperTrackNo);
+            Volatile.Write(ref chordHelperSnapshot, updated);
+            chordHelperSource?.Publish(updated);
         }
 
         // Exporting mixdown
@@ -690,11 +728,13 @@ namespace OpenUtau.Core {
                 if (faders != null && faders.Count > _cmd.TrackNo) {
                     faders[_cmd.TrackNo].Scale = DecibelToVolume(_cmd.Volume);
                 }
+                RefreshChordHelperSnapshot();
             } else if (cmd is PanChangeNotification) {
                 var _cmd = cmd as PanChangeNotification;
                 if (faders != null && faders.Count > _cmd!.TrackNo) {
                     faders[_cmd.TrackNo].Pan = (float)_cmd.Pan;
                 }
+                RefreshChordHelperSnapshot();
             } else if (cmd is BpmCommand ||
                 cmd is TimeSignatureCommand ||
                 cmd is AddTempoChangeCommand ||
@@ -704,6 +744,22 @@ namespace OpenUtau.Core {
                 if (PlayingMaster && Metronome) {
                     metronomeEngine.UpdateSchedule(DocManager.Inst.Project.timeAxis, DocManager.Inst.playPosTick);
                 }
+                if (cmd is BpmCommand || cmd is AddTempoChangeCommand || cmd is DelTempoChangeCommand) {
+                    // Command publication precedes project validation/time-axis rebuild.
+                    // Capture timing after the command finishes on the main scheduler.
+                    Task.Factory.StartNew(
+                        RefreshChordHelperSnapshot,
+                        CancellationToken.None,
+                        TaskCreationOptions.None,
+                        DocManager.Inst.MainScheduler);
+                }
+            } else if (cmd is ChordHelperCommand ||
+                cmd is AddPartCommand ||
+                cmd is RemovePartCommand ||
+                cmd is MovePartCommand ||
+                cmd is ResizeVoicePartCommand ||
+                cmd is PitchReference31Command) {
+                RefreshChordHelperSnapshot();
             } else if (cmd is LoadProjectNotification) {
                 StopPlayback();
                 renderCancellation?.Cancel();

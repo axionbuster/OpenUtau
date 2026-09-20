@@ -497,7 +497,8 @@ namespace OpenUtau.App.Controls {
                 };
                 var tones = helper.tones
                     .GroupBy(tone => Edo31.Mod(tone.Offset(project.Is31Edo), divisions))
-                    .ToDictionary(group => group.Key, group => group.First());
+                    .ToDictionary(group => group.Key, group => ChordHelperTheory.DisplayInterval(
+                        group.First(), helper.tones, project.Is31Edo));
                 string chordName = ChordHelperTheory.ChordName(
                     helper, project.Is31Edo, Preferences.Default.PreferredKey31Fifths);
                 foreach (int step in rows) {

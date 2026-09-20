@@ -171,7 +171,7 @@ namespace OpenUtau.App {
                 Assert.Equal(2d, enabledRoot.BorderThickness.Left);
                 Assert.Equal(1d, inactiveRoot.BorderThickness.Left);
                 vm.ChordHelpers.ToggleDegreeCommand.Execute(
-                    vm.ChordHelpers.Degrees.Single(degree => degree.Label == "♭2")).Subscribe();
+                    vm.ChordHelpers.Degrees.Single(degree => degree.Label == "♭9")).Subscribe();
                 Assert.StartsWith("Custom (", vm.ChordHelpers.SelectedQuality);
 
                 vm.ChordHelpers.SelectedQuality = "Diminished seventh";
@@ -190,6 +190,13 @@ namespace OpenUtau.App {
                 Assert.Equal(beforeFinalToggle, commandCount);
                 Assert.Single(helper.tones);
                 Assert.Equal("Unison", vm.ChordHelpers.SelectedQuality);
+
+                vm.ChordHelpers.Muted = true;
+                Assert.True(helper.mute);
+                Assert.NotNull(lastChange);
+                lastChange!.Unexecute();
+                vm.ChordHelpers.OnCommand(lastChange);
+                Assert.False(helper.mute);
             } finally {
                 DocManager.Inst.CommandSink = previousSink;
                 DocManager.Inst.TakeProjectForTest(previous);
@@ -209,7 +216,8 @@ namespace OpenUtau.App {
                 position = 120,
                 duration = 720,
                 root = 0,
-                tones = ChordHelperTheory.CreatePreset("Major seventh"),
+                rootTone = 155,
+                tones = ChordHelperTheory.CreatePreset("Dominant thirteenth"),
                 bass = new UChordInterval(3),
                 color = "#D99F28",
             };
@@ -219,6 +227,7 @@ namespace OpenUtau.App {
                 position = 960,
                 duration = 720,
                 root = 0,
+                rootTone = 155,
                 tones = customTones,
                 bass = new UChordInterval(3),
                 color = "#358ED8",

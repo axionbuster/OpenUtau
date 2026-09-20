@@ -88,6 +88,7 @@ namespace OpenUtau.App.ViewModels {
         ChordRootChoice? selectedRoot;
         ChordBassChoice? selectedBass;
         bool highlightRoot;
+        bool muted;
         int position;
         int duration;
 
@@ -127,7 +128,15 @@ namespace OpenUtau.App.ViewModels {
                 if (value == null || syncing || !HasSelection) {
                     return;
                 }
-                ApplyChange(helper => helper.root = value!.PitchClass);
+                ApplyChange(helper => {
+                    int divisions = DocManager.Inst.Project.Is31Edo ? 31 : 12;
+                    if (helper.rootTone.HasValue) {
+                        helper.rootTone = helper.rootTone.Value
+                            - Edo31.Mod(helper.rootTone.Value, divisions)
+                            + value!.PitchClass;
+                    }
+                    helper.root = value!.PitchClass;
+                });
             }
         }
 
@@ -154,6 +163,19 @@ namespace OpenUtau.App.ViewModels {
                 this.RaiseAndSetIfChanged(ref highlightRoot, value);
                 if (!syncing && HasSelection) {
                     ApplyChange(helper => helper.highlightRoot = value);
+                }
+            }
+        }
+
+        public bool Muted {
+            get => muted;
+            set {
+                if (muted == value) {
+                    return;
+                }
+                this.RaiseAndSetIfChanged(ref muted, value);
+                if (!syncing && HasSelection) {
+                    ApplyChange(helper => helper.mute = value);
                 }
             }
         }
@@ -252,6 +274,7 @@ namespace OpenUtau.App.ViewModels {
                     selectedRoot = null;
                     selectedBass = BassChoices[0];
                     highlightRoot = true;
+                    muted = false;
                     position = 0;
                     duration = 480;
                 } else {
@@ -264,12 +287,14 @@ namespace OpenUtau.App.ViewModels {
                     selectedRoot = RootChoices.First(choice =>
                         choice.PitchClass == Edo31.Mod(helper.root, divisions));
                     foreach (var tone in helper.tones) {
-                        BassChoices.Add(new ChordBassChoice(tone.Clone(), tone.Label));
+                        BassChoices.Add(new ChordBassChoice(tone.Clone(),
+                            ChordHelperTheory.DisplayInterval(tone, helper.tones, is31).Label));
                     }
                     selectedBass = helper.bass == null
                         ? BassChoices[0]
                         : BassChoices.FirstOrDefault(choice => choice.Interval?.Equals(helper.bass) == true) ?? BassChoices[0];
                     highlightRoot = helper.highlightRoot;
+                    muted = helper.mute;
                     position = helper.position;
                     duration = helper.duration;
                     var active = helper.tones
@@ -277,15 +302,18 @@ namespace OpenUtau.App.ViewModels {
                         .ToDictionary(group => group.Key, group => group.First());
                     for (int step = 0; step < divisions; step++) {
                         bool enabled = active.TryGetValue(step, out var storedTone);
-                        Degrees.Add(new ChordDegreeViewModel(enabled
+                        var interval = enabled
                             ? storedTone!.Clone()
-                            : ChordHelperTheory.CanonicalInterval(step, is31), enabled));
+                            : ChordHelperTheory.CanonicalInterval(step, is31);
+                        Degrees.Add(new ChordDegreeViewModel(
+                            ChordHelperTheory.DisplayInterval(interval, helper.tones, is31), enabled));
                     }
                 }
                 this.RaisePropertyChanged(nameof(SelectedQuality));
                 this.RaisePropertyChanged(nameof(SelectedRoot));
                 this.RaisePropertyChanged(nameof(SelectedBass));
                 this.RaisePropertyChanged(nameof(HighlightRoot));
+                this.RaisePropertyChanged(nameof(Muted));
                 this.RaisePropertyChanged(nameof(Position));
                 this.RaisePropertyChanged(nameof(Duration));
             } finally {
@@ -356,7 +384,8 @@ namespace OpenUtau.App.ViewModels {
 
         static bool Equivalent(UChordHelper left, UChordHelper right) =>
             left.position == right.position && left.duration == right.duration &&
-            left.root == right.root && left.highlightRoot == right.highlightRoot &&
+            left.root == right.root && left.rootTone == right.rootTone &&
+            left.highlightRoot == right.highlightRoot && left.mute == right.mute &&
             left.color == right.color && Equals(left.bass, right.bass) &&
             left.tones.SequenceEqual(right.tones);
 

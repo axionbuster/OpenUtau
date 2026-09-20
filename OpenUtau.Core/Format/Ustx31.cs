@@ -183,9 +183,17 @@ namespace OpenUtau.Core.Format {
                 }
             }
             foreach (var helper in (copy.voiceParts ?? new()).SelectMany(p => p.chordHelpers)) {
+                int sourceDivisions = to31 ? 12 : 31;
+                int targetDivisions = to31 ? 31 : 12;
+                int octave = helper.rootTone.HasValue
+                    ? (int)Math.Floor(helper.rootTone.Value / (double)sourceDivisions)
+                    : 0;
                 helper.root = to31
                     ? Edo31.NearestStepForTwelveTetPitchClass(Edo31.Mod(helper.root, 12))
                     : (int)Math.Round(Edo31.Mod(helper.root, 31) * 12.0 / 31) % 12;
+                if (helper.rootTone.HasValue) {
+                    helper.rootTone = octave * targetDivisions + helper.root;
+                }
                 helper.Normalize(to31);
             }
             copy.Is31Edo = to31;

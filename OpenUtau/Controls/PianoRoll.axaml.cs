@@ -801,10 +801,12 @@ namespace OpenUtau.App.Controls {
                 int position = Math.Max(0, left);
                 int duration = Math.Max(projectResolution(), right - left);
                 int divisions = notesVm.Is31Edo ? 31 : 12;
+                int rootTone = notesVm.PointToTone(point.Position);
                 var helper = new UChordHelper {
                     position = position,
                     duration = duration,
-                    root = Edo31.Mod(notesVm.PointToTone(point.Position), divisions),
+                    root = Edo31.Mod(rootTone, divisions),
+                    rootTone = rootTone,
                     tones = ChordHelperTheory.CreatePreset("Major"),
                 };
                 helper.Normalize(notesVm.Is31Edo);

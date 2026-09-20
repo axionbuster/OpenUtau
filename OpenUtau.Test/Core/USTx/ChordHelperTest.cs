@@ -44,9 +44,9 @@ namespace OpenUtau.Core.Ustx {
             var major = ChordHelperTheory.CreatePreset("Major");
             Assert.Equal("Major", ChordHelperTheory.QualityName(major, true));
             major.Add(new UChordInterval(4, 1));
-            Assert.Equal("Custom (1, 3, ♯4, 5)", ChordHelperTheory.QualityName(major, true));
+            Assert.Equal("Custom (1, 3, ♯11, 5)", ChordHelperTheory.QualityName(major, true));
             major.RemoveAll(t => t.degree == 1);
-            Assert.Equal("Custom (3, ♯4, 5)", ChordHelperTheory.QualityName(major, true));
+            Assert.Equal("Custom (3, ♯11, 5)", ChordHelperTheory.QualityName(major, true));
         }
 
         [Fact]
@@ -76,6 +76,52 @@ namespace OpenUtau.Core.Ustx {
         }
 
         [Fact]
+        public void CompoundDegreesFollowChordContextWithoutChangingPitchClass() {
+            var major = ChordHelperTheory.CreatePreset("Major");
+            Assert.Equal("9", ChordHelperTheory.DisplayInterval(new UChordInterval(2), major, false).Label);
+            Assert.Equal(2, Edo31.Mod(new UChordInterval(2).Offset(false), 12));
+            Assert.Equal(2, Edo31.Mod(new UChordInterval(9).Offset(false), 12));
+            Assert.Equal(5, Edo31.Mod(new UChordInterval(2).Offset(true), 31));
+            Assert.Equal(5, Edo31.Mod(new UChordInterval(9).Offset(true), 31));
+            Assert.Equal("♯11", ChordHelperTheory.DisplayInterval(new UChordInterval(4, 1), major, true).Label);
+
+            var sus2 = ChordHelperTheory.CreatePreset("Sus2");
+            var sus4 = ChordHelperTheory.CreatePreset("Sus4");
+            Assert.Equal("2", ChordHelperTheory.DisplayInterval(sus2[1], sus2, false).Label);
+            Assert.Equal("4", ChordHelperTheory.DisplayInterval(sus4[1], sus4, false).Label);
+
+            var sixth = ChordHelperTheory.CreatePreset("Sixth");
+            Assert.Equal("6", ChordHelperTheory.DisplayInterval(sixth[^1], sixth, false).Label);
+            var dominant = ChordHelperTheory.CreatePreset("Dominant seventh");
+            Assert.Equal("13", ChordHelperTheory.DisplayInterval(new UChordInterval(6), dominant, false).Label);
+
+            var diminished = ChordHelperTheory.CreatePreset("Diminished");
+            Assert.Equal("♭5", ChordHelperTheory.DisplayInterval(diminished[^1], diminished, true).Label);
+            var harmonic = ChordHelperTheory.CreatePreset("Harmonic seventh");
+            Assert.Equal("♯6", ChordHelperTheory.DisplayInterval(harmonic[^1], harmonic, true).Label);
+            Assert.Equal("♭♭8", ChordHelperTheory.DisplayInterval(
+                ChordHelperTheory.CanonicalInterval(27, true), major, true).Label);
+            Assert.Equal("♭8", ChordHelperTheory.DisplayInterval(
+                ChordHelperTheory.CanonicalInterval(29, true), major, true).Label);
+        }
+
+        [Fact]
+        public void ExtendedPresetsKeepExplicitDegreeIdentityAndNames() {
+            var add9 = new UChordHelper { tones = ChordHelperTheory.CreatePreset("Add ninth") };
+            Assert.Equal(new[] { "1", "3", "5", "9" }, add9.tones.Select(tone => tone.Label));
+            Assert.Equal("Add ninth", ChordHelperTheory.QualityName(add9.tones, false));
+            Assert.Equal("Cadd9", ChordHelperTheory.ChordName(add9, false, 0));
+
+            var ninth = new UChordHelper { tones = ChordHelperTheory.CreatePreset("Dominant ninth") };
+            Assert.Equal("C9", ChordHelperTheory.ChordName(ninth, false, 0));
+            Assert.Equal("C9", ChordHelperTheory.ChordName(ninth, true, 0));
+            var eleventh = new UChordHelper { tones = ChordHelperTheory.CreatePreset("Dominant eleventh") };
+            Assert.Equal("C11", ChordHelperTheory.ChordName(eleventh, false, 0));
+            var thirteenth = new UChordHelper { tones = ChordHelperTheory.CreatePreset("Dominant thirteenth") };
+            Assert.Equal("C13", ChordHelperTheory.ChordName(thirteenth, false, 0));
+        }
+
+        [Fact]
         public void InversionDoesNotChangeMembershipAndResetsWhenRemoved() {
             var helper = new UChordHelper {
                 tones = ChordHelperTheory.CreatePreset("Major"),
@@ -99,9 +145,11 @@ namespace OpenUtau.Core.Ustx {
                 position = 240,
                 duration = 960,
                 root = native ? 15 : 6,
+                rootTone = native ? 170 : 66,
                 tones = new() { new(1), new(4, 1), new(7, -1) },
                 bass = new UChordInterval(4, 1),
                 highlightRoot = false,
+                mute = true,
                 color = "#C04080",
             });
             var clone = (UVoicePart)part.Clone();
@@ -116,8 +164,10 @@ namespace OpenUtau.Core.Ustx {
             Assert.Equal(240, actual.position);
             Assert.Equal(960, actual.duration);
             Assert.Equal(native ? 15 : 6, actual.root);
+            Assert.Equal(native ? 170 : 66, actual.rootTone);
             Assert.Equal("♯4", actual.tones[1].Label);
             Assert.False(actual.highlightRoot);
+            Assert.True(actual.mute);
             Assert.Empty(loaded.parts.OfType<UVoicePart>().Single().notes);
         }
 
@@ -167,16 +217,19 @@ namespace OpenUtau.Core.Ustx {
             var ordinary = Fixture(false);
             var helper = new UChordHelper {
                 root = 6,
+                rootTone = 66,
                 tones = ChordHelperTheory.CreatePreset("Diminished seventh"),
             };
             ordinary.parts.OfType<UVoicePart>().Single().chordHelpers.Add(helper);
             var native = Ustx31.ConvertCopy(ordinary, true);
             var converted = native.parts.OfType<UVoicePart>().Single().chordHelpers.Single();
             Assert.Equal(16, converted.root);
+            Assert.Equal(171, converted.rootTone);
             Assert.Equal(new[] { 0, 8, 16, 24 }, converted.tones.Select(t => t.Offset(true)));
             Assert.Equal("Diminished seventh", ChordHelperTheory.QualityName(converted.tones, true));
             var back = Ustx31.ConvertCopy(native, false);
             var roundTripped = back.parts.OfType<UVoicePart>().Single().chordHelpers.Single();
+            Assert.Equal(66, roundTripped.rootTone);
             Assert.Equal(new[] { "1", "♭3", "♭5", "♭♭7" }, roundTripped.tones.Select(t => t.Label));
             Assert.Equal(new[] { 0, 3, 6, 9 }, roundTripped.tones.Select(t => t.Offset(false)));
         }

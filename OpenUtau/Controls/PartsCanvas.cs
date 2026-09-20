@@ -210,8 +210,11 @@ namespace OpenUtau.App.Controls {
                     }
                     break;
                 case NotifyCollectionChangedAction.Reset:
-                    foreach (var (part, _) in partControls) {
+                    foreach (var part in partControls.Keys.ToArray()) {
                         Remove(part);
+                    }
+                    if (Items != null) {
+                        foreach (var part in Items) Add(part);
                     }
                     break;
             }

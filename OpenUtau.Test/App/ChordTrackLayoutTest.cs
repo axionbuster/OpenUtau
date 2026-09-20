@@ -5,6 +5,7 @@ using Avalonia.Controls;
 using Avalonia.Headless.XUnit;
 using Avalonia.Threading;
 using Avalonia.VisualTree;
+using DynamicData.Binding;
 using OpenUtau.App.Controls;
 using OpenUtau.App.ViewModels;
 using OpenUtau.Core;
@@ -75,6 +76,24 @@ namespace OpenUtau.App {
             Assert.Contains(canvas.Children.OfType<PartControl>(), control => control.part == replacementPart);
             Assert.DoesNotContain(canvas.Children.OfType<PartControl>(), control =>
                 !replacement.Contains(control.part));
+        }
+
+        [AvaloniaFact]
+        public void PartsAddRangeResetRehydratesRenderedControls() {
+            var project = Core.Format.Ustx.Create();
+            project.ChordsPart.duration = 5760;
+            project.ChordsPart.chordRegions.Add(new UChordRegion {
+                sourceDuration = 1920, duration = 4800,
+            });
+            var items = new ObservableCollectionExtended<UPart>();
+            var canvas = new PartsCanvas { Items = items };
+            items.AddRange(project.parts);
+            var control = Assert.Single(canvas.Children.OfType<PartControl>(), child =>
+                child.part == project.ChordsPart);
+            Assert.Equal(5760, control.part.Duration);
+            Assert.Same(project.ChordsPart.chordRegions[0],
+                Assert.Single(((UVoicePart)control.part).chordRegions));
+            Assert.Equal(project.parts.Count, canvas.Children.OfType<PartControl>().Count());
         }
 
         static void AssertHeaderLayout(UProject project) {

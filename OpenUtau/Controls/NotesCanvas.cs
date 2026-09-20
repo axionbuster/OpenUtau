@@ -498,6 +498,8 @@ namespace OpenUtau.App.Controls {
                 var tones = helper.tones
                     .GroupBy(tone => Edo31.Mod(tone.Offset(project.Is31Edo), divisions))
                     .ToDictionary(group => group.Key, group => group.First());
+                string chordName = ChordHelperTheory.ChordName(
+                    helper, project.Is31Edo, Preferences.Default.PreferredKey31Fifths);
                 foreach (int step in rows) {
                     int interval = Edo31.Mod(step - helper.root, divisions);
                     if (!tones.TryGetValue(interval, out var tone)) {
@@ -510,8 +512,11 @@ namespace OpenUtau.App.Controls {
                     context.DrawRectangle(null,
                         helper.highlightRoot && interval == 0 ? rootPen : pen,
                         rect, 2, 2);
-                    if (selected && TrackHeight >= 9 && width >= 12) {
-                        var layout = TextLayoutCache.Get(tone.Label, Brushes.White, 9);
+                    string? label = interval == 0
+                        ? chordName
+                        : selected ? tone.Label : null;
+                    if (label != null && TrackHeight >= 9 && width >= 12) {
+                        var layout = TextLayoutCache.Get(label, Brushes.White, 9);
                         double x = rect.X + 3;
                         double y = rect.Y + Math.Max(0, (rect.Height - layout.Height) / 2);
                         var background = new Rect(x - 1.5, y - 0.5, layout.Width + 3, layout.Height + 1);

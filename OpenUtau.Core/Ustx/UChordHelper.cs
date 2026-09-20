@@ -97,6 +97,7 @@ namespace OpenUtau.Core.Ustx {
     public static class ChordHelperTheory {
         static readonly int[] Natural12 = { 0, 2, 4, 5, 7, 9, 11 };
         static readonly int[] Natural31 = { 0, 5, 10, 13, 18, 23, 28 };
+        static readonly int[] NaturalDegreeFifths = { 0, 2, 4, -1, 1, 3, 5 };
         static readonly string[] RelativeLabels12 = {
             "1", "♭2", "2", "♭3", "3", "4", "♯4", "5", "♭6", "6", "♭7", "7",
         };
@@ -180,6 +181,49 @@ namespace OpenUtau.Core.Ustx {
                 .OrderBy(tone => Edo31.Mod(tone.Offset(is31Edo), divisions))
                 .Select(tone => tone.Label));
             return $"Custom ({members})";
+        }
+
+        public static string ChordName(UChordHelper helper, bool is31Edo, int preferredFifths) {
+            int divisions = is31Edo ? 31 : 12;
+            int root = Edo31.Mod(helper.root, divisions);
+            string rootName = is31Edo
+                ? Edo31.FifthName(Edo31.FifthsForStep(root, preferredFifths))
+                : MusicMath.KeysInOctave[root].Item1;
+            string quality = QualityName(helper.tones, is31Edo);
+            string suffix = quality switch {
+                "Unison" => " (unison)",
+                "Fifth" => "5",
+                "Major" => string.Empty,
+                "Minor" => "m",
+                "Diminished" => "dim",
+                "Augmented" => "aug",
+                "Sus2" => "sus2",
+                "Sus4" => "sus4",
+                "Sixth" => "6",
+                "Minor sixth" => "m6",
+                "Dominant seventh" => "7",
+                "Major seventh" => "maj7",
+                "Minor seventh" => "m7",
+                "Half-diminished seventh" => "m7♭5",
+                "Diminished seventh" => "dim7",
+                "Harmonic seventh" => "7:4",
+                _ => "...",
+            };
+            string name = rootName + suffix;
+            if (helper.bass != null && Edo31.Mod(helper.bass.Offset(is31Edo), divisions) != 0) {
+                string bassName;
+                if (is31Edo) {
+                    int rootFifths = Edo31.FifthsForStep(root, preferredFifths);
+                    int degree = Edo31.Mod(helper.bass.degree - 1, 7) + 1;
+                    int bassFifths = rootFifths + NaturalDegreeFifths[degree - 1] + helper.bass.alteration * 7;
+                    bassName = Edo31.FifthName(bassFifths);
+                } else {
+                    int bass = Edo31.Mod(root + helper.bass.Offset(false), divisions);
+                    bassName = MusicMath.KeysInOctave[bass].Item1;
+                }
+                name += "/" + bassName;
+            }
+            return name;
         }
     }
 }

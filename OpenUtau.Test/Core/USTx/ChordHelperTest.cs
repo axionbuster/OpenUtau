@@ -50,6 +50,32 @@ namespace OpenUtau.Core.Ustx {
         }
 
         [Fact]
+        public void ChordNamesUseExactQualitiesEllipsesAndSpelledBass() {
+            var helper = new UChordHelper {
+                root = 0,
+                tones = ChordHelperTheory.CreatePreset("Major"),
+                bass = new UChordInterval(3),
+            };
+            Assert.Equal("C/E", ChordHelperTheory.ChordName(helper, false, 0));
+            Assert.Equal("C/E", ChordHelperTheory.ChordName(helper, true, 0));
+
+            helper.tones.Add(new UChordInterval(4, 1));
+            Assert.Equal("C.../E", ChordHelperTheory.ChordName(helper, false, 0));
+            Assert.Equal("C.../E", ChordHelperTheory.ChordName(helper, true, 0));
+
+            helper.tones = ChordHelperTheory.CreatePreset("Diminished");
+            helper.bass = new UChordInterval(5, -1);
+            Assert.Equal("Cdim/G♭", ChordHelperTheory.ChordName(helper, true, 0));
+            helper.bass = null;
+            Assert.Equal("Cdim", ChordHelperTheory.ChordName(helper, false, 0));
+
+            helper.tones = ChordHelperTheory.CreatePreset("Unison");
+            Assert.Equal("C (unison)", ChordHelperTheory.ChordName(helper, false, 0));
+            helper.tones = ChordHelperTheory.CreatePreset("Fifth");
+            Assert.Equal("C5", ChordHelperTheory.ChordName(helper, false, 0));
+        }
+
+        [Fact]
         public void InversionDoesNotChangeMembershipAndResetsWhenRemoved() {
             var helper = new UChordHelper {
                 tones = ChordHelperTheory.CreatePreset("Major"),

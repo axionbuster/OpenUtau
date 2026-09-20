@@ -174,6 +174,79 @@ namespace OpenUtau.App {
             }
         }
 
+        [AvaloniaFact]
+        public void RootRowsRenderKnownAndCustomChordNames() {
+            ThreadGuard.SetUiThread(System.Threading.Thread.CurrentThread);
+            var project = Core.Format.Ustx.Create();
+            project.Is31Edo = true;
+            project.tracks.Clear();
+            project.tracks.Add(new UTrack("Chord names") { TrackNo = 0 });
+            var part = new UVoicePart { trackNo = 0, position = 0, Duration = 2400 };
+            var known = new UChordHelper {
+                position = 120,
+                duration = 720,
+                root = 0,
+                tones = ChordHelperTheory.CreatePreset("Major seventh"),
+                bass = new UChordInterval(3),
+                color = "#D99F28",
+            };
+            var customTones = ChordHelperTheory.CreatePreset("Major");
+            customTones.Add(new UChordInterval(4, 1));
+            var custom = new UChordHelper {
+                position = 960,
+                duration = 720,
+                root = 0,
+                tones = customTones,
+                bass = new UChordInterval(3),
+                color = "#358ED8",
+            };
+            part.chordHelpers.Add(known);
+            part.chordHelpers.Add(custom);
+            project.parts.Add(part);
+            var previous = DocManager.Inst.TakeProjectForTest(project);
+            var previousSink = DocManager.Inst.CommandSink;
+            int oldKey = Preferences.Default.PreferredKey31Fifths;
+            Window? window = null;
+            try {
+                Preferences.Default.PreferredKey31Fifths = 0;
+                DocManager.Inst.CommandSink = _ => { };
+                DocManager.Inst.SearchAllLegacyPlugins();
+                var vm = new PianoRollViewModel();
+                var editor = new PianoRoll(vm);
+                window = new Window { Width = 1280, Height = 720, Content = editor };
+                window.Show();
+                vm.NotesViewModel.OnNext(new LoadPartNotification(part, project, 0), false);
+                vm.NotesViewModel.TrackHeight = 22;
+                vm.NotesViewModel.TrackOffset = Math.Max(0,
+                    vm.NotesViewModel.DisplayTrackCount - 1 - vm.NotesViewModel.StepToDisplayRow(155) - 4);
+                Assert.True(vm.ChordHelpers.TrySelect(part, part, custom));
+                vm.NotesViewModel.ShowNoteParams = true;
+                Dispatcher.UIThread.RunJobs();
+
+                AvaloniaHeadlessPlatform.ForceRenderTimerTick();
+                using var frame = window.CaptureRenderedFrame();
+                Assert.NotNull(frame);
+                string? output = Environment.GetEnvironmentVariable("OPENUTAU_QA_OUTPUT");
+                if (!string.IsNullOrEmpty(output)) {
+                    Directory.CreateDirectory(output);
+                    frame.Save(Path.Combine(output, "chord-helper-chord-names.png"));
+                    project.BeforeSave();
+                    try {
+                        File.WriteAllText(Path.Combine(output, "chord-helper-chord-names.ustx31"),
+                            Core.Format.Ustx31.Serialize(project));
+                    } finally {
+                        project.AfterSave();
+                    }
+                }
+            } finally {
+                window?.Close();
+                Preferences.Default.PreferredKey31Fifths = oldKey;
+                DocManager.Inst.CommandSink = previousSink;
+                DocManager.Inst.TakeProjectForTest(previous);
+                ThreadGuard.SetUiThread(null);
+            }
+        }
+
         [AvaloniaTheory]
         [InlineData(false)]
         [InlineData(true)]

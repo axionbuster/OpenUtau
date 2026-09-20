@@ -165,6 +165,11 @@ namespace OpenUtau.App {
                 Assert.Equal(12, vm.ChordHelpers.Degrees.Select(degree => degree.Background).Distinct().Count());
                 Assert.All(vm.ChordHelpers.Degrees,
                     degree => Assert.True(Contrast(degree.Background, degree.Foreground) >= 4.5));
+                Assert.All(vm.ChordHelpers.Degrees, degree => {
+                    var selected = new ChordDegreeViewModel(degree.Interval, true);
+                    Assert.Equal("#FFFFFF", selected.Foreground);
+                    Assert.True(Contrast(selected.Background, selected.Foreground) >= 4.5);
+                });
                 var enabledRoot = new ChordDegreeViewModel(new UChordInterval(1), true);
                 var inactiveRoot = new ChordDegreeViewModel(new UChordInterval(1), false);
                 Assert.NotEqual(enabledRoot.Background, inactiveRoot.Background);
@@ -314,6 +319,11 @@ namespace OpenUtau.App {
                 Assert.Equal(31, vm.ChordHelpers.Degrees.Select(degree => degree.Background).Distinct().Count());
                 Assert.All(vm.ChordHelpers.Degrees,
                     degree => Assert.True(Contrast(degree.Background, degree.Foreground) >= 4.5));
+                Assert.All(vm.ChordHelpers.Degrees, degree => {
+                    var selected = new ChordDegreeViewModel(degree.Interval, true);
+                    Assert.Equal("#FFFFFF", selected.Foreground);
+                    Assert.True(Contrast(selected.Background, selected.Foreground) >= 4.5);
+                });
 
                 AvaloniaHeadlessPlatform.ForceRenderTimerTick();
                 using var frame = window.CaptureRenderedFrame();

@@ -61,6 +61,9 @@ namespace OpenUtau.App.ViewModels {
         }
         public string Foreground {
             get {
+                if (IsEnabled) {
+                    return "#FFFFFF";
+                }
                 var background = DegreeColorPalette.Background(PaletteIndex, IsEnabled);
                 return DegreeColorPalette.Hex(DegreeColorPalette.Foreground(background));
             }

@@ -62,7 +62,24 @@ namespace OpenUtau.App {
             }
             double lightness = (max + min) / 2;
             double saturation = delta == 0 ? 0 : delta / (1 - Math.Abs(2 * lightness - 1));
-            return FromHsl(hue, Math.Max(0.7, saturation), 0.4);
+            saturation = Math.Max(0.7, saturation);
+            const double preferredLightness = 0.4;
+            var active = FromHsl(hue, saturation, preferredLightness);
+            if (Contrast(active, Avalonia.Media.Colors.White) >= 4.5) {
+                return active;
+            }
+            double low = 0.05;
+            double high = preferredLightness;
+            for (int iteration = 0; iteration < 12; iteration++) {
+                double middle = (low + high) / 2;
+                var candidate = FromHsl(hue, saturation, middle);
+                if (Contrast(candidate, Avalonia.Media.Colors.White) >= 4.5) {
+                    low = middle;
+                } else {
+                    high = middle;
+                }
+            }
+            return FromHsl(hue, saturation, low);
         }
 
         static Color FromHsl(double hue, double saturation, double lightness) {

@@ -141,16 +141,20 @@ namespace OpenUtau.Core {
         }
     }
 
-    public class KeyCommand : ProjectCommand{
+    public class KeyCommand : KeySignatureCommand{
         public readonly int oldKey;
         public readonly int newKey;
-        public KeyCommand(UProject project, int key) : base(project) {
+        static System.Collections.Generic.IEnumerable<UKeySignature> WithInitialKey(UProject project, int key) {
+            var changes = project.KeyTimeline().Select(change => change.Clone()).ToList();
+            changes[0].key = key;
+            return changes;
+        }
+        public KeyCommand(UProject project, int key) : base(project, WithInitialKey(project, key)) {
             oldKey = project.key;
             newKey = key;
         }
         public override string ToString() => $"Change key from {oldKey} to {newKey}";
-        public override void Execute() => project.key = newKey;
-        public override void Unexecute() => project.key = oldKey;
+
     }
 
     public class PitchReference31Command : ProjectCommand {

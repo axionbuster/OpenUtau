@@ -9,6 +9,7 @@ using Avalonia.Input;
 using Avalonia.Media;
 using OpenUtau.Core;
 using OpenUtau.Core.Util;
+using OpenUtau.Core.Ustx;
 using ReactiveUI;
 using ReactiveUI.Primitives;
 
@@ -25,6 +26,12 @@ namespace OpenUtau.App.Controls {
         public static readonly StyledProperty<bool> HasPinnedChordTrackProperty =
             AvaloniaProperty.Register<TrackBackground, bool>(nameof(HasPinnedChordTrack));
         public bool HasPinnedChordTrack { get => GetValue(HasPinnedChordTrackProperty); set => SetValue(HasPinnedChordTrackProperty, value); }
+        public static readonly StyledProperty<double> TickWidthProperty = AvaloniaProperty.Register<TrackBackground, double>(nameof(TickWidth));
+        public double TickWidth { get => GetValue(TickWidthProperty); set => SetValue(TickWidthProperty, value); }
+        public static readonly StyledProperty<double> TickOffsetProperty = AvaloniaProperty.Register<TrackBackground, double>(nameof(TickOffset));
+        public double TickOffset { get => GetValue(TickOffsetProperty); set => SetValue(TickOffsetProperty, value); }
+        public static readonly StyledProperty<int> TickOriginProperty = AvaloniaProperty.Register<TrackBackground, int>(nameof(TickOrigin));
+        public int TickOrigin { get => GetValue(TickOriginProperty); set => SetValue(TickOriginProperty, value); }
         // One continuous tonic-relative hue circle for all 31 pitches, including folded views.
         // Equal OKLCH lightness/chroma (0.82/0.075), hues spaced 360/31 degrees apart.
         // Interval labels and tonic boundaries carry meaning independently of hue.
@@ -113,7 +120,7 @@ namespace OpenUtau.App.Controls {
                 return;
             }
             int step = DisplayRows == null ? row : DisplayRows[row];
-            int relativeStep = Edo31.ScaleColorIndex(step, Preferences.Default.PreferredKey31Fifths);
+            int relativeStep = Edo31.ScaleColorIndex(step, Key);
             string unit = relativeStep == 1 ? "step" : "steps";
             ToolTip.SetTip(this, $"{relativeStep} {unit}");
         }
@@ -123,6 +130,7 @@ namespace OpenUtau.App.Controls {
             if (change.Property == DisplayRowsProperty || change.Property == Is31EdoProperty ||
                 change.Property == FoldMajor31Property || change.Property == FoldMinor31Property ||
                 change.Property == HasPinnedChordTrackProperty ||
+                change.Property == TickWidthProperty || change.Property == TickOffsetProperty || change.Property == TickOriginProperty ||
                 change.Property == TrackHeightProperty ||
                 change.Property == TrackOffsetProperty ||
                 change.Property == ForegroundProperty ||
@@ -136,6 +144,34 @@ namespace OpenUtau.App.Controls {
         }
 
         public override void Render(DrawingContext context) {
+            if (!IsPianoRoll || IsKeyboard || TickWidth <= 0) {
+                RenderRows(context, new UKeySignature { key = Key, major = FoldMajor31, minor = FoldMinor31 });
+                return;
+            }
+            var timeline = DocManager.Inst.Project.KeyTimeline().ToArray();
+            for (int i = 0; i < timeline.Length; i++) {
+                var signature = timeline[i];
+                double start = (signature.position - TickOrigin - TickOffset) * TickWidth;
+                double end = i + 1 < timeline.Length
+                    ? (timeline[i + 1].position - TickOrigin - TickOffset) * TickWidth : Bounds.Width;
+                double left = Math.Max(0, start), right = Math.Min(Bounds.Width, end);
+                if (right <= left) continue;
+                using (context.PushClip(new Rect(left, 0, right - left, Bounds.Height))) {
+                    RenderRows(context, signature);
+                    if (i > 0 && start >= 0) {
+                        context.DrawLine(new Pen(Brushes.Gray, 1.5), new Point(start, 0), new Point(start, Bounds.Height));
+                    }
+                    var label = TextLayoutCache.Get(signature.Label(Is31Edo),
+                        ThemeManager.IsDarkMode ? Brushes.White : Brushes.Black, 11);
+                    context.DrawRectangle(ThemeManager.IsDarkMode ? Brushes.Black : Brushes.White, null,
+                        new Rect(left + 3, 1, label.Width + 6, label.Height + 2));
+                    label.Draw(context, new Point(left + 6, 2));
+                }
+            }
+        }
+
+        void RenderRows(DrawingContext context, UKeySignature signature) {
+            int key = signature.key;
             if (TrackHeight == 0) {
                 return;
             }
@@ -169,12 +205,12 @@ namespace OpenUtau.App.Controls {
                     int row = (DisplayRows?.Length ?? Edo31.MaxStep) - 1 - track;
                     if (row < 0 || row >= (DisplayRows?.Length ?? Edo31.MaxStep)) { break; }
                     int step = DisplayRows == null ? row : DisplayRows[row];
-                    int colorIndex = Edo31.ScaleColorIndex(step, Preferences.Default.PreferredKey31Fifths);
+                    int colorIndex = Edo31.ScaleColorIndex(step, key);
                     var color = DegreeColorPalette.Brushes[colorIndex];
                     context.DrawRectangle(IsKeyboard ? color : Background, null, new Rect(0, (int)top, Bounds.Width, TrackHeight));
                     if (!IsKeyboard) {
                         // Tonic emphasis is permanent and survives the minimum eight-pixel row height.
-                        using (context.PushOpacity(colorIndex == 0 ? 0.28 : colorIndex is 13 or 18 ? 0.20 : 0.12)) {
+                        using (context.PushOpacity(colorIndex == 0 ? 0.28 : signature.Contains(step, true) ? 0.20 : 0.06)) {
                             context.DrawRectangle(color, null, new Rect(0, (int)top, Bounds.Width, TrackHeight));
                         }
                         if (colorIndex is 13 or 18) {
@@ -204,10 +240,16 @@ namespace OpenUtau.App.Controls {
                     if (perfectLabels != null && colorIndex is 0 or 13 or 18) {
                         perfectLabels.Add((colorIndex, top + TrackHeight / 2));
                     }
-                    if (IsKeyboard && TrackHeight >= 12) {
-                        bool isFoldedScale = FoldMajor31 || FoldMinor31;
-                        bool isScaleDegree = Edo31.IsMajorDegree(colorIndex) || Edo31.IsMinorDegree(colorIndex);
-                        string degreeText = Edo31.ScaleDegreeLabel(step, Preferences.Default.PreferredKey31Fifths);
+                    if (IsPianoRoll && !IsKeyboard && signature.Contains(ViewConstants.MaxTone - 1 - track, false)) {
+                    using (context.PushOpacity(0.10)) {
+                        context.DrawRectangle(ThemeManager.IsDarkMode ? Brushes.White : Brushes.Black, null,
+                            new Rect(0, (int)top, Bounds.Width, TrackHeight));
+                    }
+                }
+                if (IsKeyboard && TrackHeight >= 12) {
+                        bool isFoldedScale = signature.major || signature.minor;
+                        bool isScaleDegree = signature.Contains(step, true);
+                        string degreeText = Edo31.ScaleDegreeLabel(step, key);
                         var degree = TextLayoutCache.Get(
                             degreeText,
                             isScaleDegree ? Brushes.Black : ChromaticDegreeBrush, isScaleDegree ? 12 : 10,
@@ -215,8 +257,8 @@ namespace OpenUtau.App.Controls {
                             letterSpacing: TextLayoutCache.CompactAccidentalLetterSpacing(degreeText));
                         degree.Draw(context, new Point(4, top + (TrackHeight - degree.Height) / 2));
                         bool isSelectedScaleDegree = Edo31.IsDegreeInSelectedScales(
-                            colorIndex, FoldMajor31, FoldMinor31);
-                        string labelText = Edo31.Name(step, Preferences.Default.PreferredKey31Fifths);
+                            colorIndex, signature.major, signature.minor);
+                        string labelText = Edo31.Name(step, key);
                         var label = TextLayoutCache.Get(
                             labelText,
                             Brushes.Black, 12, bold: colorIndex == 0,
@@ -237,6 +279,12 @@ namespace OpenUtau.App.Controls {
                     brush,
                     null,
                     new Rect(0, (int)top, Bounds.Width, TrackHeight));
+                if (IsPianoRoll && !IsKeyboard && signature.Contains(ViewConstants.MaxTone - 1 - track, false)) {
+                    using (context.PushOpacity(0.10)) {
+                        context.DrawRectangle(ThemeManager.IsDarkMode ? Brushes.White : Brushes.Black, null,
+                            new Rect(0, (int)top, Bounds.Width, TrackHeight));
+                    }
+                }
                 if (IsKeyboard && TrackHeight >= 12) {
                     brush = isCenterKey ? ThemeManager.CenterKeyNameBrush
                         : isAltTrack ? ThemeManager.BlackKeyNameBrush
@@ -249,7 +297,7 @@ namespace OpenUtau.App.Controls {
                         toneTextLayout.Draw(context, new Point());
                     }
                     //scale degree display
-                    int degree = mod(tone - Key, 12);
+                    int degree = mod(tone - key, 12);
                     string degreeName = degreeNames[degree];
                     var degreeTextLayout = TextLayoutCache.Get(degreeName, brush, 12);
                     var degreeTextPosition = new Point(4, (int)(top + (TrackHeight - degreeTextLayout.Height) / 2));

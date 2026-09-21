@@ -22,7 +22,7 @@ namespace OpenUtau.App {
     [Collection(RenderSingletonCollection.Name)]
     public class Edo31EditorTest {
         [AvaloniaFact]
-        public void NativeKeyboardEditsAndRespellsWithoutDocumentChanges() {
+        public void NativeKeyboardEditsAndPersistsKeyAndMode() {
             ThreadGuard.SetUiThread(System.Threading.Thread.CurrentThread);
             var project = Core.Format.Ustx.Create();
             project.Is31Edo = true;
@@ -33,7 +33,7 @@ namespace OpenUtau.App {
             }
             var previous = DocManager.Inst.TakeProjectForTest(project);
             var previousSink = DocManager.Inst.CommandSink;
-            DocManager.Inst.CommandSink = _ => { };
+            DocManager.Inst.CommandSink = cmd => { if (cmd is KeySignatureCommand) cmd.Execute(); };
             int oldKey = Preferences.Default.PreferredKey31Fifths;
             bool? oldFold = Preferences.Default.FoldMajor31;
             bool? oldMinor = Preferences.Default.FoldMinor31;
@@ -73,8 +73,8 @@ namespace OpenUtau.App {
                 var notes = vm.NotesViewModel;
                 Assert.Equal(341, notes.TrackCount);
                 Assert.Equal(31, notes.Keys.Count);
-                Assert.Equal("Tonic: D", notes.KeyText);
-                Assert.True(editor.FindControl<MenuItem>("SpellingMenu").IsVisible);
+                Assert.Equal("Key: D Chromatic", notes.KeyText);
+                Assert.True(editor.FindControl<Button>("KeyModeButton").IsVisible);
                 for (int step = 155; step <= 186; step++) {
                     var point = notes.TickToneToPoint(0, notes.GridToTone(step));
                     var center = point.WithY(point.Y + notes.TrackHeight / 2);
@@ -92,44 +92,40 @@ namespace OpenUtau.App {
                 project.AfterSave();
                 bool savedBefore = DocManager.Inst.ChangesSaved;
                 notes.SetKeyCommand.Execute(0).Subscribe();
-                Assert.Equal("Tonic: C", notes.KeyText);
+                Assert.Equal("Key: C Chromatic", notes.KeyText);
                 Assert.Equal(savedBefore, DocManager.Inst.ChangesSaved);
                 project.BeforeSave();
-                Assert.Equal(before, Core.Format.Ustx31.Serialize(project));
+                Assert.NotEqual(before, Core.Format.Ustx31.Serialize(project));
                 project.AfterSave();
                 notes.SetKeyCommand.Execute(2).Subscribe();
                 Capture(window, "keyboard-31edo.png");
                 notes.SetKeyCommand.Execute(-15).Subscribe();
-                Assert.Equal("Tonic: F♭♭", notes.KeyText);
+                Assert.Equal("Key: F♭♭ Chromatic", notes.KeyText);
                 Dispatcher.UIThread.RunJobs();
                 Capture(window, "keyboard-31edo-f-double-flat.png");
                 notes.SetKeyCommand.Execute(2).Subscribe();
                 Dispatcher.UIThread.RunJobs();
                 Assert.Contains("[31-TET]", new MainWindowViewModel().AppVersion);
                 Assert.Contains("0.1.570-tet31.", new MainWindowViewModel().AppVersion);
-                var toggle = editor.FindControl<CheckBox>("MajorScaleToggle");
-                Assert.True(toggle.IsVisible);
-                editor.Focus();
-                var togglePoint = toggle.TranslatePoint(new Point(toggle.Bounds.Width / 2, toggle.Bounds.Height / 2), window)!.Value;
-                window.MouseDown(togglePoint, MouseButton.Left);
-                window.MouseUp(togglePoint, MouseButton.Left);
-                Assert.True(toggle.IsChecked);
-                window.KeyPress(Key.Space, RawInputModifiers.None, PhysicalKey.Space, " ");
-                window.KeyRelease(Key.Space, RawInputModifiers.None, PhysicalKey.Space, " ");
-                Assert.True(toggle.IsChecked);
-                var minorToggle = editor.FindControl<CheckBox>("MinorScaleToggle");
-                toggle.Focus(NavigationMethod.Tab);
-                window.KeyPress(Key.Tab, RawInputModifiers.None, PhysicalKey.Tab, "\t");
-                window.KeyRelease(Key.Tab, RawInputModifiers.None, PhysicalKey.Tab, "\t");
-                Assert.True(minorToggle.IsFocused);
-                window.KeyPress(Key.Space, RawInputModifiers.None, PhysicalKey.Space, " ");
-                window.KeyRelease(Key.Space, RawInputModifiers.None, PhysicalKey.Space, " ");
-                Assert.True(minorToggle.IsChecked);
+                var keyButton = editor.FindControl<Button>("KeyModeButton");
+                var flyout = (Avalonia.Controls.Flyout)keyButton.Flyout!;
+                flyout.ShowAt(keyButton);
+                Dispatcher.UIThread.RunJobs();
+                var modeChoice = editor.FindControl<ComboBox>("KeyModeChoice");
+                Assert.Equal(3, modeChoice.SelectedIndex);
+                modeChoice.SelectedIndex = 0;
+                Assert.True(notes.FoldMajor31);
+                Assert.False(notes.FoldMinor31);
+                modeChoice.SelectedIndex = 2;
+                Assert.True(notes.FoldMajor31);
+                Assert.True(notes.FoldMinor31);
+                Capture(window, "key-mode-editor.png");
+                flyout.Hide();
                 notes.FoldMinor31 = false;
                 editor.Focus();
                 Dispatcher.UIThread.RunJobs();
                 Assert.True(notes.FoldMajor31);
-                Assert.True(Preferences.Default.FoldMajor31);
+                Assert.Null(Preferences.Default.FoldMajor31); // Editing the project no longer changes preferences.
                 Assert.DoesNotContain(185, notes.DisplayRows!); // D augmented sixth is not in major.
                 Assert.DoesNotContain(181, notes.DisplayRows!); // D major omits B-flat.
                 Assert.Contains(155, notes.DisplayRows!); // Existing C remains visible.
@@ -172,7 +168,7 @@ namespace OpenUtau.App {
                 }
                 Assert.Equal(savedBefore, DocManager.Inst.ChangesSaved);
                 project.BeforeSave();
-                Assert.Equal(before, Core.Format.Ustx31.Serialize(project));
+                Assert.NotEqual(before, Core.Format.Ustx31.Serialize(project));
                 project.AfterSave();
                 notes.TrackOffset = notes.DisplayTrackCount - 1 - notes.StepToDisplayRow(193);
                 Capture(window, "keyboard-31edo-diatonic.png");
@@ -209,10 +205,10 @@ namespace OpenUtau.App {
                 Dispatcher.UIThread.RunJobs();
                 Assert.Equal(132, notes.TrackCount);
                 Assert.Null(notes.DisplayRows);
-                Assert.False(toggle.IsVisible);
+                Assert.True(keyButton.IsVisible);
                 Assert.Equal(12, notes.Keys.Count);
-                Assert.DoesNotContain("Tonic", notes.KeyText);
-                Assert.False(editor.FindControl<MenuItem>("SpellingMenu").IsVisible);
+                Assert.Contains("Key:", notes.KeyText);
+                Assert.True(editor.FindControl<Button>("KeyModeButton").IsVisible);
                 Capture(window, "keyboard-12edo.png");
             } finally {
                 window?.Close();
@@ -230,6 +226,85 @@ namespace OpenUtau.App {
                 DocManager.Inst.TakeProjectForTest(previous);
             }
         }
+        [AvaloniaFact]
+        public void KeyChangesUseSongTimeAndUndoWithoutMovingFoldedNotes() {
+            var doc = DocManager.Inst;
+            var threadField = typeof(DocManager).GetField("mainThread",
+                System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance)!;
+            var previousThread = threadField.GetValue(doc);
+            var previousProject = doc.Project;
+            var previousSink = doc.CommandSink;
+            var project = Core.Format.Ustx.Create();
+            project.Is31Edo = true;
+            project.Saved = true;
+            var part = new UVoicePart { trackNo = 1, position = 480, Duration = 3840 };
+            project.parts.Add(part);
+            part.notes.Add(project.CreateGridNote(155, 0, 480));
+            part.notes.Add(project.CreateGridNote(160, 480, 480));
+            project.keySignatures = new() { new() { key = 0, major = true, minor = false } };
+            Window? window = null;
+            try {
+                threadField.SetValue(doc, System.Threading.Thread.CurrentThread);
+                ThreadGuard.SetUiThread(System.Threading.Thread.CurrentThread);
+                doc.CommandSink = null;
+                doc.ExecuteCmd(new LoadProjectNotification(project));
+                doc.SearchAllLegacyPlugins();
+                var vm = new PianoRollViewModel();
+                var notes = vm.NotesViewModel;
+                var editor = new PianoRoll(vm);
+                window = new Window { Width = 1100, Height = 900, Content = editor };
+                window.Show();
+                doc.ExecuteCmd(new LoadPartNotification(part, project, 480));
+                Assert.True(doc.ChangesSaved);
+                doc.ExecuteCmd(new SetPlayPosTickNotification(960));
+                notes.AddKeyChangeCommand.Execute().Subscribe();
+                notes.SetKeyCommand.Execute(2).Subscribe();
+                notes.FoldMajor31 = false;
+                notes.FoldMinor31 = true;
+                Assert.False(doc.ChangesSaved);
+                Assert.Equal(960, project.keySignatures[1].position);
+                Assert.Equal("Minor", project.KeyAt(960).ModeName);
+                Assert.Equal("Major", project.KeyAt(959).ModeName);
+                Assert.Equal(0, project.KeyAt(959).key);
+                var rows = notes.DisplayRows!.ToArray();
+                var point = notes.TickToneToPoint(480, notes.GridToTone(160));
+                doc.ExecuteCmd(new SetPlayPosTickNotification(959));
+                Assert.Equal(0, notes.Key);
+                Assert.True(notes.FoldMajor31);
+                Assert.False(notes.FoldMinor31);
+                Assert.Equal(rows, notes.DisplayRows);
+                Assert.Equal(point, notes.TickToneToPoint(480, notes.GridToTone(160)));
+                doc.ExecuteCmd(new SetPlayPosTickNotification(960));
+                Assert.Equal(2, notes.Key);
+                Assert.False(notes.FoldMajor31);
+                Assert.True(notes.FoldMinor31);
+                Assert.Equal(rows, notes.DisplayRows);
+                Assert.Equal(point, notes.TickToneToPoint(480, notes.GridToTone(160)));
+                notes.TickWidth = 0.45;
+                notes.TickOffset = 0;
+                notes.TrackHeight = 18;
+                notes.TrackOffset = Math.Max(0, notes.DisplayTrackCount - 1 - notes.StepToDisplayRow(193));
+                Capture(window, "key-timeline.png");
+                string? output = Environment.GetEnvironmentVariable("OPENUTAU_QA_OUTPUT");
+                if (!string.IsNullOrEmpty(output)) Core.Format.Ustx.Save(Path.Combine(output, "key-timeline.ustx31"), project);
+                notes.RemoveKeyChangeCommand.Execute().Subscribe();
+                Assert.Single(project.keySignatures);
+                Assert.Equal(0, notes.Key);
+                doc.Undo();
+                Assert.Equal(2, project.keySignatures.Count);
+                Assert.Equal(2, notes.Key);
+                Assert.True(notes.FoldMinor31);
+                doc.Redo();
+                Assert.Single(project.keySignatures);
+                Assert.Equal(new[] { 155, 160 }, part.notes.Select(n => n.GridTone));
+            } finally {
+                window?.Close();
+                doc.ExecuteCmd(new LoadProjectNotification(previousProject));
+                doc.CommandSink = previousSink;
+                threadField.SetValue(doc, previousThread);
+            }
+        }
+
         static void Capture(Window window, string name) {
             AvaloniaHeadlessPlatform.ForceRenderTimerTick();
             using var frame = window.CaptureRenderedFrame();

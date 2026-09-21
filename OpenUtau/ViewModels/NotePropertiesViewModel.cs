@@ -157,7 +157,7 @@ namespace OpenUtau.App.ViewModels {
 
             SubscribeExtensions.Subscribe(MessageBus.Current.Listen<Spelling31ChangedEvent>(), _ => {
                 var note = selectedNotes.FirstOrDefault();
-                if (note?.tone31 != null) { Tone = Edo31.Name(note.tone31.Value, Preferences.Default.PreferredKey31Fifths); }
+                if (note?.tone31 != null) { Tone = Edo31.Name(note.tone31.Value, DocManager.Inst.Project.KeyAt((Part?.position ?? 0) + note.position).key); }
             });
             DocManager.Inst.AddSubscriber(this);
         }
@@ -180,7 +180,7 @@ namespace OpenUtau.App.ViewModels {
                 }
 
                 Lyric = note.lyric;
-                Tone = (note.tone31.HasValue ? Edo31.Name(note.tone31.Value, Preferences.Default.PreferredKey31Fifths) : MusicMath.GetToneName(note.tone));
+                Tone = (note.tone31.HasValue ? Edo31.Name(note.tone31.Value, DocManager.Inst.Project.KeyAt((Part?.position ?? 0) + note.position).key) : MusicMath.GetToneName(note.tone));
                 Tuning = note.tuning;
                 SetTuningFontWeight();
                 if (note.pitch.data.Count >= 2) {
@@ -367,7 +367,7 @@ namespace OpenUtau.App.ViewModels {
                     Lyric = note.lyric;
                     this.RaisePropertyChanged(nameof(Lyric));
                 } else if (cmd is MoveNoteCommand) {
-                    Tone = (note.tone31.HasValue ? Edo31.Name(note.tone31.Value, Preferences.Default.PreferredKey31Fifths) : MusicMath.GetToneName(note.tone));
+                    Tone = (note.tone31.HasValue ? Edo31.Name(note.tone31.Value, DocManager.Inst.Project.KeyAt((Part?.position ?? 0) + note.position).key) : MusicMath.GetToneName(note.tone));
                     this.RaisePropertyChanged(nameof(Tone));
                 } else if (cmd is ChangeNoteTuningCommand) {
                     Tuning = note.tuning;
@@ -505,7 +505,7 @@ namespace OpenUtau.App.ViewModels {
                         }
                     } catch {
                         var note = selectedNotes.FirstOrDefault();
-                        Tone = note != null ? (note.tone31.HasValue ? Edo31.Name(note.tone31.Value, Preferences.Default.PreferredKey31Fifths) : MusicMath.GetToneName(note.tone)) : string.Empty;
+                        Tone = note != null ? (note.tone31.HasValue ? Edo31.Name(note.tone31.Value, DocManager.Inst.Project.KeyAt((Part?.position ?? 0) + note.position).key) : MusicMath.GetToneName(note.tone)) : string.Empty;
                         this.RaisePropertyChanged(nameof(Tone));
                     }
                 } else if (tag == "Tuning") {

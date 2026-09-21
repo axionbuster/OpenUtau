@@ -239,6 +239,8 @@ namespace OpenUtau.App.ViewModels {
             ToggleDegreeCommand = ReactiveCommand.Create<ChordDegreeViewModel>(ToggleDegree);
             DeleteCommand = ReactiveCommand.Create(DeleteSelected);
             CreateRegionCommand = ReactiveCommand.Create(CreateRegionFromSelected);
+            ReactiveUI.Primitives.SubscribeExtensions.Subscribe(
+                MessageBus.Current.Listen<Spelling31ChangedEvent>(), _ => Refresh());
         }
 
         void CreateRegionFromSelected() {
@@ -354,7 +356,7 @@ namespace OpenUtau.App.ViewModels {
                 this.RaisePropertyChanged(nameof(DegreeGridWidth));
                 for (int pitchClass = 0; pitchClass < divisions; pitchClass++) {
                     string name = is31
-                        ? Edo31.FifthName(Edo31.FifthsForStep(pitchClass, Preferences.Default.PreferredKey31Fifths))
+                        ? Edo31.FifthName(Edo31.FifthsForStep(pitchClass, DocManager.Inst.Project.KeyAt((selectedPart?.position ?? 0) + (selectedRegion?.position ?? 0) + (selectedHelper?.position ?? 0)).key))
                         : MusicMath.KeysInOctave[pitchClass].Item1;
                     RootChoices.Add(new ChordRootChoice(pitchClass, name));
                 }

@@ -59,6 +59,11 @@ namespace OpenUtau.Core.Ustx {
         public int expPrimary = 0;
         public int expSecondary = 1;
         public int key = 0;//Music key of the project, 0 = C, 1 = C#, 2 = D, ..., 11 = B
+        // Null only for older files, whose original 12-TET key remains the fallback.
+        public List<UKeySignature>? keySignatures;
+        public UKeySignature KeyAt(int tick) => keySignatures?.LastOrDefault(change => change.position <= Math.Max(0, tick))
+            ?? new UKeySignature { key = Is31Edo ? 2 : Math.Clamp(key, 0, 11) };
+        public IEnumerable<UKeySignature> KeyTimeline() => keySignatures ?? new List<UKeySignature> { KeyAt(0) };
         public List<UTimeSignature> timeSignatures;
         public List<UTempo> tempos;
         public List<UTrack> tracks;

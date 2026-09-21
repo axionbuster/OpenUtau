@@ -12,7 +12,8 @@ namespace OpenUtau.Core.Format {
         public const string FormatId = "axion.openutau";
         public const string Feature = "edo31-v1";
         public const string PitchReferenceFeature = "pitch-reference-v1";
-        public const string CurrentRevision = "2";
+        public const string CurrentRevision = "3";
+        public const string KeySignatureFeature = "key-signatures-v1";
         static YamlMappingNode Parse(string text) {
             var stream = new YamlStream();
             stream.Load(new StringReader(text));
@@ -100,7 +101,14 @@ namespace OpenUtau.Core.Format {
             if (notes.Any(n => n.tone31.HasValue != project.Is31Edo || n.tone31 < 0 || n.tone31 >= Edo31.MaxStep)) {
                 throw new FileFormatException("Note tuning does not match the project format.");
             }
+            UKeySignature.Validate(project.KeyTimeline().ToList(), project.Is31Edo);
             string yaml = Yaml.DefaultSerializer.Serialize(project);
+            // Materialize the fallback in the saved payload without mutating the live document.
+            var serialized = Parse(yaml);
+            serialized.Children[new YamlScalarNode("key_signatures")] =
+                Parse(Yaml.DefaultSerializer.Serialize(new { key_signatures = project.KeyTimeline().ToList() }))
+                    .Children[new YamlScalarNode("key_signatures")];
+            yaml = Write(serialized);
             if (!project.Is31Edo) { return yaml; }
             var payload = Parse(yaml);
             payload.Children.Remove(new YamlScalarNode("ustx_version"));
@@ -110,7 +118,7 @@ namespace OpenUtau.Core.Format {
                 { "format", FormatId },
                 { "format_revision", CurrentRevision },
                 { "base_schema", new YamlMappingNode { { "format", "ustx" }, { "version", Ustx.kUstxVersion.ToString() } } },
-                { "features", new YamlSequenceNode(new YamlScalarNode(Feature), new YamlScalarNode(PitchReferenceFeature)) },
+                { "features", new YamlSequenceNode(new YamlScalarNode(Feature), new YamlScalarNode(PitchReferenceFeature), new YamlScalarNode(KeySignatureFeature)) },
                 { "project", payload },
             });
         }
@@ -135,8 +143,14 @@ namespace OpenUtau.Core.Format {
                     CheckFeatures(root, Feature);
                     // Revision 1 fixed C to the ordinary MIDI reference.
                     pitchReference = Edo31PitchReference.LegacyC;
-                } else if (revision == CurrentRevision) {
-                    CheckFeatures(root, Feature, PitchReferenceFeature);
+                } else if (revision == "2" || revision == CurrentRevision) {
+                    if (revision == "2") CheckFeatures(root, Feature, PitchReferenceFeature);
+                    else {
+                        CheckFeatures(root, Feature, PitchReferenceFeature, KeySignatureFeature);
+                        if (!projectMap.Children.TryGetValue(new YamlScalarNode("key_signatures"), out var keys)
+                                || keys is not YamlSequenceNode)
+                            throw new FileFormatException("Missing key signatures.");
+                    }
                     pitchReference = DeserializePitchReference(projectMap);
                     projectMap.Children.Remove(new YamlScalarNode("pitch_reference"));
                 } else {
@@ -151,6 +165,9 @@ namespace OpenUtau.Core.Format {
             }
             result.Is31Edo = native;
             result.PitchReference31 = pitchReference;
+            result.keySignatures ??= new() { result.KeyAt(0) };
+            UKeySignature.Validate(result.keySignatures, native);
+            if (!native) result.key = result.keySignatures[0].key;
             foreach (var note in (result.voiceParts ?? new()).SelectMany(p => p.notes)) {
                 if (note.tone31.HasValue != native || (native && (note.tone31 < 0 || note.tone31 >= Edo31.MaxStep))) {
                     throw new FileFormatException("Invalid note tuning for this project format.");
@@ -196,7 +213,15 @@ namespace OpenUtau.Core.Format {
                 }
                 helper.Normalize(to31);
             }
+            if (source.Is31Edo != to31) {
+                foreach (var signature in copy.keySignatures!) {
+                    signature.key = to31
+                        ? Edo31.FifthsForStep(Edo31.NearestStepForTwelveTetPitchClass(signature.key), 0)
+                        : Edo31.Mod(signature.key * 7, 12);
+                }
+            }
             copy.Is31Edo = to31;
+            if (!to31) copy.key = copy.keySignatures![0].key;
             copy.PitchReference31 = Edo31PitchReference.Default;
             copy.FilePath = string.Empty;
             copy.Saved = false;

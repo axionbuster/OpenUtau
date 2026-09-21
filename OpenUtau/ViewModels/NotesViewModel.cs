@@ -75,12 +75,10 @@ namespace OpenUtau.App.ViewModels {
         }
         private void RebuildDisplayRows(bool retainRows = false) {
             double center = DisplayRowToStep(DisplayTrackCount - 1 - TrackOffset - ViewportTracks / 2);
-            if (Is31Edo && (FoldMajor31 || FoldMinor31)) {
-                int tonic = ((Preferences.Default.PreferredKey31Fifths * 18) % 31 + 31) % 31;
-                var scale = Enumerable.Range(0, 31).Where(step =>
-                    Edo31.IsDegreeInSelectedScales(step, FoldMajor31, FoldMinor31)).ToArray();
+            var signatures = Project.KeyTimeline().ToArray();
+            if (Is31Edo && signatures.All(k => k.major || k.minor)) {
                 var rows = new SortedSet<int>(Enumerable.Range(0, TrackCount)
-                    .Where(step => scale.Contains((step - tonic + 31) % 31)));
+                    .Where(step => signatures.Any(k => k.Contains(step, true))));
                 if (retainRows && DisplayRows != null) { rows.UnionWith(DisplayRows); }
                 rows.UnionWith(Project.parts.OfType<UVoicePart>().SelectMany(p => p.notes).Select(n => n.GridTone));
                 var chordPitchClasses = Project.parts.OfType<UVoicePart>()
@@ -183,7 +181,57 @@ namespace OpenUtau.App.ViewModels {
         private string? portraitSource;
         private readonly object portraitLock = new object();
         private int userSnapDiv = -2;
-        private int userKey => Project.key;
+        private bool syncingKey;
+        private int keyCursorTick;
+        public int KeyCursorTick => Math.Max(0, keyCursorTick);
+        public string KeyPositionText {
+            get {
+                Project.timeAxis.TickPosToBarBeat(Project.KeyAt(KeyCursorTick).position,
+                    out int bar, out int beat, out int remainder);
+                return $"Editing section from bar {bar + 1}, beat {beat + 1}"
+                    + (remainder == 0 ? "" : $" + {remainder}/{Project.resolution}");
+            }
+        }
+        public string[] KeyChoices => Keys.Select(choice => choice.Header ?? "").ToArray();
+        public string[] ModeChoices { get; } = { "Major", "Natural minor", "Major + natural minor", "Chromatic (all pitches)" };
+        public int KeyChoiceIndex {
+            get => Is31Edo ? Key + 15 : Key;
+            set { if (value >= 0 && value < (Is31Edo ? 31 : 12)) EditKey(k => k.key = Is31Edo ? value - 15 : value); }
+        }
+        public int ModeChoiceIndex {
+            get => FoldMajor31 ? (FoldMinor31 ? 2 : 0) : FoldMinor31 ? 1 : 3;
+            set {
+                if (value < 0 || value > 3) return;
+                EditKey(k => { k.major = value is 0 or 2; k.minor = value is 1 or 2; });
+            }
+        }
+        public string KeyPlayheadText {
+            get {
+                Project.timeAxis.TickPosToBarBeat(KeyCursorTick, out int bar, out int beat, out int remainder);
+                return $"Playhead: bar {bar + 1}, beat {beat + 1}"
+                    + (remainder == 0 ? "" : $" + {remainder}/{Project.resolution}");
+            }
+        }
+        public bool CanAddKeyChange => KeyCursorTick > 0 && !Project.KeyTimeline().Any(k => k.position == KeyCursorTick);
+        public bool CanRemoveKeyChange => Project.KeyAt(KeyCursorTick).position > 0;
+        public ReactiveCommand<RxVoid, RxVoid> AddKeyChangeCommand { get; }
+        public ReactiveCommand<RxVoid, RxVoid> RemoveKeyChangeCommand { get; }
+
+        void EditKey(Action<UKeySignature> edit) {
+            if (syncingKey) return;
+            var changes = Project.KeyTimeline().Select(k => k.Clone()).ToList();
+            var current = changes.Last(k => k.position <= KeyCursorTick);
+            var before = current.Clone();
+            edit(current);
+            if (before.key == current.key && before.major == current.major && before.minor == current.minor) return;
+            CommitKeys(changes);
+        }
+        void CommitKeys(List<UKeySignature> changes) {
+            DocManager.Inst.StartUndoGroup("command.project.key");
+            DocManager.Inst.ExecuteCmd(new KeySignatureCommand(Project, changes));
+            DocManager.Inst.EndUndoGroup();
+            UpdateKey();
+        }
 
         public NotesViewModel() {
             SnapDivs = new List<MenuItemViewModel>();
@@ -192,28 +240,27 @@ namespace OpenUtau.App.ViewModels {
                 UpdateSnapDiv();
             });
 
-            FoldMajor31 = Preferences.Default.FoldMajor31 ?? Preferences.Default.FoldDiatonic31;
-            FoldMinor31 = Preferences.Default.FoldMinor31 ?? Preferences.Default.FoldDiatonic31;
+            syncingKey = true;
+            FoldMajor31 = Project.KeyAt(0).major;
+            FoldMinor31 = Project.KeyAt(0).minor;
+            syncingKey = false;
             this.WhenAnyValue(x => x.FoldMajor31, x => x.FoldMinor31).Skip(1).Subscribe(value => {
-                Preferences.Default.FoldMajor31 = value.Item1;
-                Preferences.Default.FoldMinor31 = value.Item2;
-                Preferences.Save();
-                RebuildDisplayRows();
+                EditKey(key => { key.major = value.Item1; key.minor = value.Item2; });
             });
             Keys = new List<MenuItemViewModel>();
-            SetKeyCommand = ReactiveCommand.Create<int>(key => {
-                if (Is31Edo) {
-                    Preferences.Default.PreferredKey31Fifths = key;
-                    Preferences.Save();
-                    UpdateKey();
-                    MessageBus.Current.SendMessage(new NotesRefreshEvent());
-                    MessageBus.Current.SendMessage(new Spelling31ChangedEvent());
-                    return;
-                }
-                DocManager.Inst.StartUndoGroup("command.project.key");
-                DocManager.Inst.ExecuteCmd(new KeyCommand(Project, key));
-                DocManager.Inst.EndUndoGroup();
-                UpdateKey();
+            SetKeyCommand = ReactiveCommand.Create<int>(key => EditKey(current => current.key = key));
+            AddKeyChangeCommand = ReactiveCommand.Create(() => {
+                if (!CanAddKeyChange) return;
+                var changes = Project.KeyTimeline().Select(k => k.Clone()).ToList();
+                var added = Project.KeyAt(KeyCursorTick).Clone();
+                added.position = KeyCursorTick;
+                changes.Add(added);
+                CommitKeys(changes.OrderBy(k => k.position).ToList());
+            });
+            RemoveKeyChangeCommand = ReactiveCommand.Create(() => {
+                if (!CanRemoveKeyChange) return;
+                int position = Project.KeyAt(KeyCursorTick).position;
+                CommitKeys(Project.KeyTimeline().Where(k => k.position != position).ToList());
             });
 
             viewportTicks = this.WhenAnyValue(x => x.Bounds, x => x.TickWidth)
@@ -301,7 +348,7 @@ namespace OpenUtau.App.ViewModels {
                         }));
                     } else Keys.AddRange(MusicMath.KeysInOctave
                         .Select((key, index) => new MenuItemViewModel {
-                            Header = $"1={key.Item1}",
+                            Header = key.Item1,
                             Command = SetKeyCommand,
                             CommandParameter = index,
                         }));
@@ -464,18 +511,26 @@ namespace OpenUtau.App.ViewModels {
             SnapDivText = $"(1/{div})";
         }
 
-        private void UpdateKey() {
-            RebuildDisplayRows();
+        private void UpdateKey(bool rebuildRows = true) {
+            var current = Project.KeyAt(KeyCursorTick);
+            syncingKey = true;
+            Key = current.key;
+            FoldMajor31 = current.major;
+            FoldMinor31 = current.minor;
+            syncingKey = false;
+            if (rebuildRows) RebuildDisplayRows();
             this.RaisePropertyChanged(nameof(Is31Edo));
             this.RaisePropertyChanged(nameof(TrackCount));
             this.RaisePropertyChanged(nameof(VScrollBarMax));
-            if (Is31Edo) {
-                Key = Preferences.Default.PreferredKey31Fifths;
-                KeyText = "Tonic: " + Edo31.FifthName(Key);
-                return;
-            }
-            Key = userKey;
-            KeyText = "1=" + MusicMath.KeysInOctave[userKey].Item1;
+            this.RaisePropertyChanged(nameof(KeyPositionText));
+            this.RaisePropertyChanged(nameof(CanAddKeyChange));
+            this.RaisePropertyChanged(nameof(CanRemoveKeyChange));
+            this.RaisePropertyChanged(nameof(KeyChoices));
+            this.RaisePropertyChanged(nameof(KeyChoiceIndex));
+            this.RaisePropertyChanged(nameof(ModeChoiceIndex));
+            KeyText = "Key: " + current.Label(Is31Edo);
+            MessageBus.Current.SendMessage(new NotesRefreshEvent());
+            MessageBus.Current.SendMessage(new Spelling31ChangedEvent());
         }
 
         public void OnXZoomed(Point position, double delta) {
@@ -1206,6 +1261,12 @@ namespace OpenUtau.App.ViewModels {
             if (waitingRendering) {
                 return;
             }
+            var oldKey = Project.KeyAt(KeyCursorTick);
+            keyCursorTick = Math.Max(0, tick);
+            var newKey = Project.KeyAt(KeyCursorTick);
+            if (oldKey.position != newKey.position || oldKey.key != newKey.key) UpdateKey(false);
+            this.RaisePropertyChanged(nameof(CanAddKeyChange));
+            this.RaisePropertyChanged(nameof(KeyPlayheadText));
             tick -= Part?.position ?? 0;
             playPosTick = tick;
             PlayPosX = TickToneToPoint(tick, 0).X;
@@ -1310,6 +1371,7 @@ namespace OpenUtau.App.ViewModels {
                     TickOffset = Math.Clamp(tickOffset, 0, HScrollBarMax);
                     PrimaryKeyNotSupported = !IsExpSupported(PrimaryKey);
                 } else if (cmd is LoadProjectNotification) {
+                    keyCursorTick = 0;
                     this.RaisePropertyChanged(nameof(Project));
                     UpdateKey();
                     TrackOffset = Is31Edo ? Math.Clamp(DisplayTrackCount - StepToDisplayRow(155) - 12, 0, VScrollBarMax) : 4 * 12 + 6;
@@ -1350,6 +1412,8 @@ namespace OpenUtau.App.ViewModels {
                 } else if (notif is RealCurveCoverageNotification && notif.part == Part) {
                     MessageBus.Current.SendMessage(new RealCurveRefreshEvent());
                 }
+            } else if (cmd is KeySignatureCommand) {
+                UpdateKey();
             } else if (cmd is PartCommand partCommand) {
                 if (cmd is ReplacePartCommand replacePart) {
                     if (!isUndo) {
@@ -1373,6 +1437,7 @@ namespace OpenUtau.App.ViewModels {
                     OnPartModified();
                 } else if (cmd is MovePartCommand) {
                     OnPartModified();
+                    UpdateKey();
                 } else if (cmd is RenamePartCommand) {
                     LoadWindowTitle(Part, Project);
                 }

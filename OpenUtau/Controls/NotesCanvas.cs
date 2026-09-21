@@ -504,7 +504,7 @@ namespace OpenUtau.App.Controls {
                     .ToDictionary(group => group.Key, group => ChordHelperTheory.DisplayInterval(
                         group.First(), helper.tones, project.Is31Edo));
                 string chordName = ChordHelperTheory.ChordName(
-                    helper, project.Is31Edo, Preferences.Default.PreferredKey31Fifths);
+                    helper, project.Is31Edo, project.KeyAt(absoluteStart).key);
                 foreach (int step in rows) {
                     int interval = Edo31.Mod(step - helper.root, divisions);
                     if (!tones.TryGetValue(interval, out var tone)) {

@@ -70,10 +70,6 @@ namespace OpenUtau.App.Controls {
                 double.IsFinite(savedKeyboardWidth) ? savedKeyboardWidth : 96,
                 KeyboardColumn.MinWidth,
                 KeyboardColumn.MaxWidth));
-            foreach (string name in new[] { "MajorScaleToggle", "MinorScaleToggle" }) {
-                this.FindControl<CheckBox>(name)!.AddHandler(PointerReleasedEvent,
-                    OnScaleTogglePointerReleased, RoutingStrategies.Bubble, handledEventsToo: true);
-            }
             DataContext = ViewModel = model;
             ValueTip.IsVisible = false;
             SetPenToolIcon();
@@ -1684,12 +1680,15 @@ namespace OpenUtau.App.Controls {
 
         #endregion
 
-        // Mouse interaction returns Space to playback; Tab navigation keeps the checkboxes operable.
-        void OnScaleTogglePointerReleased(object? sender, PointerReleasedEventArgs args) => Focus();
+        bool keyEditorOpen;
+        void OnKeyEditorOpened(object? sender, EventArgs args) => keyEditorOpen = true;
+        void OnKeyEditorClosed(object? sender, EventArgs args) {
+            keyEditorOpen = false;
+            Focus();
+        }
 
         void OnKeyDown(object? sender, KeyEventArgs args) {
-            if (RootWindow.FocusManager?.GetFocusedElement() is CheckBox scale &&
-                (scale.Name == "MajorScaleToggle" || scale.Name == "MinorScaleToggle")) {
+            if (keyEditorOpen) {
                 return;
             }
             var notesVm = ViewModel.NotesViewModel;

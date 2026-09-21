@@ -1,26 +1,29 @@
 # Project formats
 
 The fork supports ordinary `.ustx` documents and native `.ustx31` documents.
-The native format is revision 2. It uses fixed 31-TET steps with a project-level
-absolute pitch reference.
+The native format is revision 3. It uses fixed 31-TET steps with a project-level
+absolute pitch reference and a timeline of key/mode changes.
 
 ## Ordinary USTx
 
-Ordinary documents retain the upstream schema and semitone editing grid, including
-existing per-note cent offsets. Saving does not add fork identity, features,
-temperament steps, or preferred-key fields. Opening a document never converts it.
+Ordinary documents retain the semitone editing grid and per-note cent offsets.
+This fork adds `key_signatures` to ordinary documents; the legacy `key` field mirrors
+the initial tonic. Saving does not add fork identity, feature headers, or temperament
+steps. Opening a document never converts its tuning. Upstream builds may ignore or
+reject the added timeline; use this fork to preserve key/mode changes.
 
 ## Native header
 
 ```yaml
 format: axion.openutau
-format_revision: 2
+format_revision: 3
 base_schema:
   format: ustx
   version: '0.9'
 features:
 - edo31-v1
 - pitch-reference-v1
+- key-signatures-v1
 project:
   pitch_reference:
     mode: a4-frequency
@@ -30,11 +33,13 @@ project:
 
 `format` identifies the dialect. `format_revision` versions this dialect
 independently of upstream. `base_schema` identifies the underlying upstream
-structure. Every entry in `features` is required for safe editing; revision 2
-accepts exactly `edo31-v1` and `pitch-reference-v1`. Unsupported identities,
+structure. Every entry in `features` is required for safe editing; revision 3
+accepts exactly `edo31-v1`, `pitch-reference-v1`, and `key-signatures-v1`. Unsupported identities,
 revisions, base schemas, features, and invalid note steps or pitch references are
 rejected before project initialization. Revision 1 files remain readable and
-retain their historical C-anchored tuning when loaded.
+retain their historical C-anchored tuning when loaded. Revision 2 remains readable
+and retains its stored pitch reference. Earlier builds reject revision 3 rather than
+silently discarding its key timeline.
 
 The native payload does not contain `ustx_version` or `key`. The distinct header
 avoids advertising the file as ordinary USTx to the upstream content detector.
@@ -71,10 +76,41 @@ it is derived from `tone31` in native documents. `tuning` remains an additional
 integer-cent offset. Pitch curves and vibrato retain their existing units.
 Ordinary notes omit `tone31`. Mixed note representations in one project are invalid.
 
-Preferred key and display spellings remain separate from the sounding reference
-and are not serialized in either format. The current spelling is derived from
-exact steps and the application preference.
-Project-level keys and key changes for native documents are deferred.
+## Key and mode timeline
+
+Both formats store `key_signatures`, ordered by absolute project tick:
+
+```yaml
+key_signatures:
+- position: 0
+  key: 0
+  major: true
+  minor: false
+- position: 1920
+  key: 2
+  major: false
+  minor: true
+```
+
+In `.ustx31`, `key` is the fifths index (-15 through 15); in `.ustx`, it is the
+12-TET pitch class (0 through 11). The example is C major followed by D natural minor
+in either system. Both flags enable the major/minor union; neither means chromatic.
+The first entry must be at zero; later positions must be strictly increasing.
+Missing, duplicate, unordered, negative, or out-of-range entries are rejected.
+A key change applies at its exact tick, through the next change or the project end.
+
+Older ordinary files use their saved `key`; older native files use D with both
+Major and Minor enabled, the previous factory defaults. Historical app preferences
+were not in those files and cannot be recovered from them. Loading does not consult
+current app preferences, so the same file has the same interpretation on every machine.
+The next save records the fallback explicitly. New documents use the same defaults
+(C for 12-TET, D for 31-TET; both scales enabled).
+
+Key/mode commands participate in dirty state and undo/redo. They have no audio pipeline
+impact and do not transpose notes or change the pitch reference. Conversion maps each
+tonic to the destination system while preserving positions and mode flags. Moving or
+splitting a part leaves the project-wide key timeline in place; importing parts uses
+the destination project's timeline.
 
 ## Save, recovery, and conversion
 

@@ -81,7 +81,8 @@ namespace OpenUtau.Core.Ustx {
             var text = SaveText(Fixture(true));
             Assert.StartsWith("format: " + Ustx31.FormatId, text);
             Assert.DoesNotContain("ustx_version:", text);
-            Assert.DoesNotContain("key:", text);
+            Assert.DoesNotContain("\n  key:", text);
+            Assert.Contains("key_signatures:", text);
             Assert.DoesNotContain("preferred", text);
             Assert.Contains("features:", text);
             Assert.Contains("pitch-reference-v1", text);
@@ -101,7 +102,7 @@ namespace OpenUtau.Core.Ustx {
             project.BeforeSave();
             var upstream = Yaml.DefaultSerializer.Serialize(project);
             var actual = Ustx31.Serialize(project);
-            Assert.Equal(upstream, actual);
+            Assert.Equal(project.key, Ustx31.Deserialize(actual).KeyAt(0).key);
             Assert.DoesNotContain("tone31", actual);
             Assert.DoesNotContain("format_revision", actual);
             Assert.DoesNotContain("features", actual);
@@ -110,7 +111,7 @@ namespace OpenUtau.Core.Ustx {
             Assert.Equal(7, loaded.voiceParts.Single(part => !part.IsChordPart).notes.First().tuning);
         }
         [Theory]
-        [InlineData("format_revision: 2", "format_revision: 3")]
+        [InlineData("format_revision: 3", "format_revision: 4")]
         [InlineData("edo31-v1", "unknown-v1")]
         [InlineData("tone31: 156", "tone31: -1")]
         [InlineData("tone31: 156", "tone31: 341")]
@@ -151,7 +152,8 @@ namespace OpenUtau.Core.Ustx {
         [Fact]
         public void RevisionOneMigratesToItsOriginalCReference() {
             string text = SaveText(Fixture(true))
-                .Replace("format_revision: 2", "format_revision: 1")
+                .Replace("format_revision: 3", "format_revision: 1")
+                .Replace("- key-signatures-v1\n", "")
                 .Replace("- pitch-reference-v1\n", "");
             text = Regex.Replace(text,
                 @"  pitch_reference:\n    mode: a4-frequency\n    frequency: 440\n", "");

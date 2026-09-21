@@ -33,14 +33,21 @@ They occupy separate columns so they remain legible even on adjacent folded rows
 Drag the right edge of the piano keyboard to resize its full column from 72 to 320 pixels.
 The chosen width persists across launches and applies to both 31-TET and 12-TET projects.
 
-The **Tonic** menu beside the Major/Minor checkboxes selects the reference for colors, scale-degree labels, and note names.
-It is an application preference, persists across launches, and defaults to **D** when unset. Changing it
-does not mark the project modified. No preferred-key information is saved in the
-project. This is a spelling center, not a major/minor key declaration.
+The **Key: D Major + Minor** button opens a **Key and mode** panel. It names the
+section being edited by its start bar and beat. A **Tonic** picker and a single **Mode**
+picker replace the independent checkboxes. Modes are **Major**, **Natural minor**,
+**Major + natural minor**, and **Chromatic (all pitches)**. Changes apply immediately
+to the active section, are saved with the project, and can be undone.
 
-The independent **Major** and **Minor** checkboxes at the start of the piano-roll toolbar
-collapse empty non-scale rows. Minor means natural minor. Both can be enabled together
-for their combined collection, rooted at the preferred spelling key. Each mode shows
+To modulate, position the playhead, open the panel, and choose **Start a new section
+at the playhead** before choosing its tonic and mode. The panel displays the playhead's
+bar and beat separately from the section start. **Remove this section's key change**
+extends the preceding section; the initial entry cannot be removed.
+The keyboard follows the playhead. Background regions show their own key/mode labels,
+colors, and scale emphasis. Selected-note and chord names use the key at their positions.
+These changes affect notation, never sounding pitch.
+
+The selected modes collapse empty non-scale rows. Major and natural minor each show
 seven pitches per octave; together they show ten. The 25-step approximation to 7:4
 (about 967.7 cents) is spelled **♯6**, the septimal-meantone augmented sixth, rather than
 as a harmonic or minor seventh. It is not part of the major or natural-minor collections,
@@ -48,17 +55,19 @@ so folded views hide it unless an existing note reveals that row. The adjacent 2
 and 26-step intervals are labeled **♭♭7**, **♯6**, and **♭7** respectively. All other rows
 likewise use fifth-based septimal-meantone scale degrees with Arabic numerals and accidentals;
 raw 31-TET step counts appear on hover. While either scale view is active, note names outside the selected scale
-collection are italicized to make them less prominent. Existing pitches anywhere in the project remain visible, including
+collection are italicized to make them less prominent. The folded grid includes the union
+of scales used throughout the project, keeping note positions stable when playback crosses
+a key change. A chromatic section expands the whole grid. Existing pitches anywhere in the project remain visible, including
 out-of-scale notes. Rows revealed during editing stay available until the view is
 expanded and collapsed again, so deleting a note does not shift the grid beneath
-the pointer. Turn both off to restore all 31 steps per octave.
-Tab to either checkbox and press Space
-to toggle it; after a mouse click, Space continues to control playback. Existing Diatonic
-preferences migrate to both checkboxes.
+the pointer. Choose Chromatic to restore all 31 steps per octave.
+The pickers support keyboard navigation. Closing the panel returns focus to the
+piano roll so Space controls playback.
 
-This application preference persists across launches and is available only for
-31-TET documents. It does not change notes, tuning, undo history, or project files.
+Key and mode are also available in 12-TET documents; their grid remains unfolded.
 Pitch curves retain their exact pitch values and follow the folded display.
+Older native projects default to D with both scales enabled because their previous
+app-specific choices were never saved. See the format documentation for migration.
 
 Drawing a note or pressing a piano-roll key previews its exact grid frequency with
 a band-limited harmonic tone rather than a pure sine. The preview includes the

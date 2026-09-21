@@ -124,6 +124,11 @@ namespace OpenUtau.App {
                 Assert.True(notes.FoldMinor31);
                 Capture(window, "key-mode-editor.png");
                 flyout.Hide();
+                keyButton.Focus(NavigationMethod.Tab);
+                window.KeyPress(Key.Enter, RawInputModifiers.None, PhysicalKey.Enter, "\r");
+                window.KeyRelease(Key.Enter, RawInputModifiers.None, PhysicalKey.Enter, "\r");
+                Assert.True(flyout.IsOpen);
+                flyout.Hide();
                 notes.FoldMinor31 = false;
                 editor.Focus();
                 Dispatcher.UIThread.RunJobs();

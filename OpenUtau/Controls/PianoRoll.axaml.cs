@@ -1691,7 +1691,7 @@ namespace OpenUtau.App.Controls {
         }
 
         void OnKeyDown(object? sender, KeyEventArgs args) {
-            if (keyEditorOpen) {
+            if (keyEditorOpen || KeyModeButton.IsKeyboardFocusWithin) {
                 return;
             }
             var notesVm = ViewModel.NotesViewModel;

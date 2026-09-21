@@ -339,6 +339,7 @@
                               Cursor="Arrow"/>
           <c:TrackBackground Grid.Row="2" Grid.Column="1" Margin="0" IsHitTestVisible="False"
                             Foreground="{DynamicResource TrackBackgroundAltBrush}"
+                            HasPinnedChordTrack="True"
                             DataContext="{Binding TracksViewModel}"
                             Bounds="{Binding Bounds, Mode=OneWayToSource}"
                             TrackHeight="{Binding TrackHeight}"

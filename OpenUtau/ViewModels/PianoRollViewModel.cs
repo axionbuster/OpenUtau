@@ -49,6 +49,7 @@ namespace OpenUtau.App.ViewModels {
         [Reactive] public partial CurveViewModel CurveViewModel { get; set; }
         public ChordHelperViewModel ChordHelpers { get; }
         [Reactive] public partial bool ChordHelperMode { get; set; }
+        public bool IsChordTrackOpen => NotesViewModel.Part?.IsChordPart == true;
 
         public double Width => Preferences.Default.PianorollWindowSize.Width;
         public double Height => Preferences.Default.PianorollWindowSize.Height;
@@ -125,7 +126,10 @@ namespace OpenUtau.App.ViewModels {
             CurveViewModel = new CurveViewModel();
             ChordHelpers = new ChordHelperViewModel();
             NotesViewModel.WhenAnyValue(vm => vm.Part)
-                .Subscribe(ChordHelpers.HandleEditorPartChanged);
+                .Subscribe(part => {
+                    ChordHelpers.HandleEditorPartChanged(part);
+                    this.RaisePropertyChanged(nameof(IsChordTrackOpen));
+                });
 
             this.WhenAnyValue(vm => vm.ToolIndex)
                 .Subscribe(index => {

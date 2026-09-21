@@ -83,6 +83,14 @@ namespace OpenUtau.App.ViewModels {
                     .Where(step => scale.Contains((step - tonic + 31) % 31)));
                 if (retainRows && DisplayRows != null) { rows.UnionWith(DisplayRows); }
                 rows.UnionWith(Project.parts.OfType<UVoicePart>().SelectMany(p => p.notes).Select(n => n.GridTone));
+                var chordPitchClasses = Project.parts.OfType<UVoicePart>()
+                    .SelectMany(part => part.chordHelpers.Concat(
+                        part.chordRegions.SelectMany(region => region.chordHelpers)))
+                    .SelectMany(helper => helper.tones.Select(tone =>
+                        Edo31.Mod(helper.root + tone.Offset(true), 31)))
+                    .ToHashSet();
+                rows.UnionWith(Enumerable.Range(0, TrackCount)
+                    .Where(step => chordPitchClasses.Contains(Edo31.Mod(step, 31))));
                 var next = rows.ToArray();
                 if (DisplayRows != null && DisplayRows.SequenceEqual(next)) { return; }
                 DisplayRows = next;
@@ -1382,8 +1390,9 @@ namespace OpenUtau.App.ViewModels {
                         }
                     }
                 }
-            } else if (cmd is ChordHelperCommand) {
+            } else if (cmd is ChordHelperCommand || cmd is ChordRegionCommand) {
                 ExtendEditorTimeline();
+                RebuildDisplayRows();
                 MessageBus.Current.SendMessage(new NotesRefreshEvent());
             } else if (cmd is ExpCommand) {
                 MessageBus.Current.SendMessage(new NotesRefreshEvent());

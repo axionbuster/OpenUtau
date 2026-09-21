@@ -120,7 +120,8 @@ namespace OpenUtau.App.Controls {
             Canvas.SetLeft(pinnedLane, 0);
             Canvas.SetTop(pinnedLane, 0);
             pinnedLane.SetValue(Panel.ZIndexProperty, 1500);
-            pinnedLane.Bind(HeightProperty, this.GetObservable(TrackHeightProperty));
+            pinnedLane.Bind(HeightProperty, this.GetObservable(TrackHeightProperty)
+                .Select(TrackLayout.ChordHeight));
             pinnedLane.Bind(WidthProperty, this.WhenAnyValue(x => x.Bounds).Select(bounds => bounds.Width));
             RefreshPinnedLane();
             Children.Add(pinnedLane);
@@ -143,6 +144,7 @@ namespace OpenUtau.App.Controls {
                         control.SetSize();
                         control.SetPosition();
                         control.Refersh();
+                        control.InvalidateVisual();
                     }
                 });
             MessageBus.Current.Listen<PartRedrawEvent>()
@@ -166,8 +168,9 @@ namespace OpenUtau.App.Controls {
         void RefreshPinnedLane() {
             var chordTrack = Core.DocManager.Inst.Project.tracks.FirstOrDefault(track => track.IsChordsTrack);
             if (chordTrack == null) return;
-            var color = ThemeManager.GetTrackColor(chordTrack.TrackColor);
-            pinnedLane.Background = color.AccentColorLightSemi;
+            // The Chords lane uses the same arrangement background as ordinary tracks.
+            // Chord regions themselves carry the track color.
+            pinnedLane.Background = Brushes.Transparent;
             pinnedLane.BorderBrush = ThemeManager.NeutralAccentBrush;
         }
 
@@ -247,7 +250,7 @@ namespace OpenUtau.App.Controls {
             var part = Core.DocManager.Inst.Project.ChordsPart;
             var region = part.chordRegions.LastOrDefault(item => tick >= item.position && tick < item.End);
             if (region == null) return null;
-            bool handle = point.Y <= 12 && Math.Abs(point.X - (region.End - TickOffset) * TickWidth) <= 12;
+            bool handle = Math.Abs(point.X - (region.End - TickOffset) * TickWidth) <= ViewConstants.ResizeMargin;
             return (region, handle);
         }
     }

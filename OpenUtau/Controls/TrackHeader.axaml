@@ -259,7 +259,7 @@
                   Padding="7,2" ToolTip.Tip="Edit the project's chords"/>
         </StackPanel>
         <StackPanel Grid.Row="1" Grid.Column="0" Grid.ColumnSpan="2" Orientation="Horizontal" Spacing="6"
-                    VerticalAlignment="Center">
+                    VerticalAlignment="Center" IsVisible="{Binding IsChordMixerVisible}">
           <TextBlock Text="Vol" VerticalAlignment="Center"/>
           <Slider Width="72" Classes="fader" Minimum="-24" Maximum="12" Value="{Binding Volume}"
                   PointerPressed="VolumeFaderPointerPressed" ValueChanged="VolumeOrPanSliderValueChanged"

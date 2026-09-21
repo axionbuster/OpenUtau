@@ -116,6 +116,12 @@ namespace OpenUtau.App {
 
                 var panel = editor.FindControl<ScrollViewer>("ChordHelperPanel");
                 Assert.True(panel.IsEffectivelyVisible);
+                var quality = editor.FindControl<ComboBox>("ChordQuality");
+                Assert.Equal("Major", quality.SelectedItem);
+                var bass = editor.FindControl<ComboBox>("ChordBass");
+                Assert.Equal("1", bass.SelectedItem?.ToString());
+                Assert.Single(vm.ChordHelpers.BassChoices, choice => choice.Name == "1");
+                Assert.DoesNotContain(vm.ChordHelpers.BassChoices, choice => choice.Name == "Root position");
                 var dock = panel.GetVisualAncestors().OfType<Border>()
                     .First(border => Grid.GetColumn(border) == 3 && Grid.GetRowSpan(border) == 6);
                 Assert.NotNull(dock);
@@ -324,6 +330,13 @@ namespace OpenUtau.App {
                     Assert.Equal("#FFFFFF", selected.Foreground);
                     Assert.True(Contrast(selected.Background, selected.Foreground) >= 4.5);
                 });
+                if (folded) {
+                    var chordPitchClasses = helper.tones.Select(tone =>
+                        Edo31.Mod(helper.root + tone.Offset(true), 31)).ToHashSet();
+                    Assert.All(chordPitchClasses, pitchClass =>
+                        Assert.Contains(vm.NotesViewModel.DisplayRows!, row =>
+                            Edo31.Mod(row, 31) == pitchClass));
+                }
 
                 AvaloniaHeadlessPlatform.ForceRenderTimerTick();
                 using var frame = window.CaptureRenderedFrame();

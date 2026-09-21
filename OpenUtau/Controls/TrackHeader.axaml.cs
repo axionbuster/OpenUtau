@@ -72,12 +72,12 @@ namespace OpenUtau.App.Controls {
             this.track = track;
             this.canvas = canvas;
             unbinds.Add(this.Bind(TrackHeightProperty, canvas.GetObservable(TrackHeaderCanvas.TrackHeightProperty)));
-            unbinds.Add(this.Bind(HeightProperty, canvas.GetObservable(TrackHeaderCanvas.TrackHeightProperty)));
             unbinds.Add(this.Bind(OffsetProperty, canvas.WhenAnyValue(x => x.TrackOffset, trackOffset => new Point(0, -trackOffset * TrackHeight))));
             SetPosition();
         }
 
         private void SetPosition() {
+            Height = track?.IsChordsTrack == true ? TrackLayout.ChordHeight(trackHeight) : trackHeight;
             Canvas.SetLeft(this, 0);
             Canvas.SetTop(this, TrackLayout.Top(track?.TrackNo ?? 0,
                 trackHeight == 0 ? 0 : -Offset.Y / trackHeight, trackHeight));
@@ -86,6 +86,8 @@ namespace OpenUtau.App.Controls {
                 ViewModel.IsSingerVisible = track?.IsChordsTrack != true && trackHeight >= ViewConstants.TrackHeightDelta * 3;
                 ViewModel.IsPhonemizerVisible = track?.IsChordsTrack != true && trackHeight >= ViewConstants.TrackHeightDelta * 4;
                 ViewModel.IsRendererVisible = track?.IsChordsTrack != true && trackHeight >= ViewConstants.TrackHeightDelta * 5;
+                ViewModel.IsChordMixerVisible = track?.IsChordsTrack == true &&
+                    TrackLayout.ChordHeight(trackHeight) >= 60;
             }
         }
 

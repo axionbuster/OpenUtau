@@ -1339,6 +1339,17 @@ namespace OpenUtau.App.Views {
                     args.Handled = true;
                     return;
                 }
+                if (viewModel.TracksViewModel.PointToTrackNo(point.Position) == 0) {
+                    selectedChordRegion = CreateChordRegionAt(point.Position);
+                    chordRegionDrag = selectedChordRegion;
+                    chordRegionDragBefore = chordRegionDrag.Clone(false);
+                    chordRegionLoopDrag = false;
+                    chordRegionPointerTick = viewModel.TracksViewModel.PointToTick(point.Position);
+                    args.Pointer.Capture(control);
+                    Cursor = ViewConstants.cursorSizeAll;
+                    args.Handled = true;
+                    return;
+                }
                 if (args.KeyModifiers == cmdKey) {
                     partEditState = new PartSelectionEditState(control, viewModel, SelectionBox);
                     Cursor = ViewConstants.cursorCross;
@@ -1454,6 +1465,11 @@ namespace OpenUtau.App.Views {
                 partEditState.Update(point.Pointer, point.Position);
                 return;
             }
+            var chordHover = partsCanvas.HitTestChordRegion(point.Position);
+            if (chordHover != null) {
+                Cursor = chordHover.Value.LoopHandle ? ViewConstants.cursorSizeWE : ViewConstants.cursorSizeAll;
+                return;
+            }
             var sourceControl = args.Source as Control;
             var hitPartControl = sourceControl?.FindAncestorOfType<PartControl>(includeSelf: true);
             if (hitPartControl != null) {
@@ -1566,14 +1582,7 @@ namespace OpenUtau.App.Views {
             var items = new List<object>();
             if (region == null) {
                 items.Add(new MenuItem { Header = "Create Chord Region", Command = ReactiveCommand.Create(() => {
-                    viewModel.TracksViewModel.PointToLineTick(point, out int left, out _);
-                    var project = DocManager.Inst.Project;
-                    project.timeAxis.TickPosToBarBeat(left, out int bar, out _, out _);
-                    int length = Math.Max(1, project.timeAxis.BarBeatToTickPos(bar + 1, 0) - left);
-                    var created = new UChordRegion { position = left, sourceDuration = length, duration = length };
-                    DocManager.Inst.StartUndoGroup();
-                    DocManager.Inst.ExecuteCmd(new AddChordRegionCommand(project.ChordsPart, created));
-                    DocManager.Inst.EndUndoGroup();
+                    selectedChordRegion = CreateChordRegionAt(point);
                 }) });
                 var payload = DocManager.Inst.ChordsClipboard;
                 items.Add(new MenuItem { Header = "Paste Chord Region", IsEnabled = payload?.Regions.Count > 0,
@@ -1613,6 +1622,18 @@ namespace OpenUtau.App.Views {
             }
             menu.ItemsSource = items;
             menu.Open(target);
+        }
+
+        UChordRegion CreateChordRegionAt(Point point) {
+            viewModel.TracksViewModel.PointToLineTick(point, out int left, out _);
+            var project = DocManager.Inst.Project;
+            project.timeAxis.TickPosToBarBeat(left, out int bar, out _, out _);
+            int length = Math.Max(1, project.timeAxis.BarBeatToTickPos(bar + 1, 0) - left);
+            var created = new UChordRegion { position = left, sourceDuration = length, duration = length };
+            DocManager.Inst.StartUndoGroup();
+            DocManager.Inst.ExecuteCmd(new AddChordRegionCommand(project.ChordsPart, created));
+            DocManager.Inst.EndUndoGroup();
+            return created;
         }
 
         void CopyChordRegion(UChordRegion region) {

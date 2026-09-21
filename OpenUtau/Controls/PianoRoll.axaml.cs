@@ -30,6 +30,7 @@ namespace OpenUtau.App.Controls {
     }
 
     public partial class PianoRoll : UserControl, IValueTip, ICmdSubscriber {
+        private UVoicePart? chordReturnPart;
         public MainWindow? MainWindow { get; set; }
         public PianoRollViewModel ViewModel;
 
@@ -281,6 +282,28 @@ namespace OpenUtau.App.Controls {
 
         void OnMenuPointerLeave(object sender, PointerEventArgs args) {
             Focus(); // Force unfocus menu for key down events.
+        }
+
+        void OnChordTrackButtonClick(object sender, RoutedEventArgs args) {
+            var notesVm = ViewModel.NotesViewModel;
+            var project = DocManager.Inst.Project;
+            UVoicePart? target;
+            if (notesVm.Part?.IsChordPart == true) {
+                target = chordReturnPart != null && project.parts.Contains(chordReturnPart)
+                    ? chordReturnPart
+                    : project.parts.OfType<UVoicePart>().FirstOrDefault(part => !part.IsChordPart);
+            } else {
+                chordReturnPart = notesVm.Part;
+                target = project.ChordsPart;
+            }
+            if (target == null) {
+                return;
+            }
+            int tick = Math.Max(target.position, DocManager.Inst.playPosTick);
+            DocManager.Inst.ExecuteCmd(new LoadPartNotification(target, project, tick));
+            ViewModel.ChordHelperMode = true;
+            AttachExpressions();
+            args.Handled = true;
         }
 
         // Edit menu

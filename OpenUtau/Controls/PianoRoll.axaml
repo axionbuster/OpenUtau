@@ -443,11 +443,6 @@
                   <ListBoxItem Classes="toolbar pitchSmoothenTool" ToolTip.Tip="{DynamicResource pianoroll.tool.pitchsmoothen}"/>
                 </ListBox.Items>
             </ListBox>
-            <ToggleButton Name="ChordHelperTool" Classes="toolbar" Margin="4,0,0,0" Padding="1" Height="20" Width="28"
-                          IsChecked="{Binding ChordHelperMode, Mode=TwoWay}"
-                          ToolTip.Tip="Chord helper: create, select, move, and resize harmonic guides">
-              <TextBlock Text="Ch" FontSize="10" FontWeight="Bold" HorizontalAlignment="Center" VerticalAlignment="Center"/>
-            </ToggleButton>
             <ToggleButton Classes="toolbar" Margin="0" Padding="1" Height="20" Width="20" IsChecked="{Binding PitchOverwrite}"
                     ToolTip.Tip="{DynamicResource pianoroll.toggle.overwritepitch}">
               <Grid Width="18" Height="18">
@@ -616,6 +611,12 @@
                 </Path>
               </Grid>
             </ToggleButton>
+            <ToggleButton Name="ChordHelperTool" Classes="toolbar" Margin="4,0,0,0" Padding="1" Height="20" Width="28"
+                          IsChecked="{Binding IsChordTrackOpen, Mode=OneWay}"
+                          Click="OnChordTrackButtonClick"
+                          ToolTip.Tip="Open the Chords track; click again to return to the previous voice part">
+              <TextBlock Text="Ch" FontSize="10" FontWeight="Bold" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+            </ToggleButton>
             <!-- Hide PianoRoll Padding -->
             <Border IsVisible="{Binding HideMenuItemVisible}">
               <Border Width="20" IsVisible="{Binding !NotesViewModel.ShowNoteParams}"/>
@@ -725,11 +726,22 @@
               <Button Content="Create Region from Chord Range" Command="{Binding ChordHelpers.CreateRegionCommand}"
                       IsVisible="{Binding !ChordHelpers.HasRegion}"/>
 
-              <Grid ColumnDefinitions="110,*" RowDefinitions="Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto">
+              <Grid ColumnDefinitions="110,*" RowDefinitions="Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto" RowSpacing="4">
+                <Grid.Styles>
+                  <Style Selector="NumericUpDown.chordProperty">
+                    <Setter Property="Height" Value="32"/>
+                    <Setter Property="Padding" Value="4,0"/>
+                    <Setter Property="VerticalContentAlignment" Value="Center"/>
+                  </Style>
+                  <Style Selector="NumericUpDown.chordProperty /template/ TextBox">
+                    <Setter Property="Padding" Value="8,0"/>
+                    <Setter Property="VerticalContentAlignment" Value="Center"/>
+                  </Style>
+                </Grid.Styles>
                 <TextBlock Text="Quality" VerticalAlignment="Center"/>
                 <ComboBox Name="ChordQuality" Grid.Column="1"
                           ItemsSource="{Binding ChordHelpers.QualityChoices}"
-                          SelectedItem="{Binding ChordHelpers.SelectedQuality, Mode=TwoWay}"/>
+                          SelectedIndex="{Binding ChordHelpers.SelectedQualityIndex, Mode=TwoWay}"/>
                 <TextBlock Grid.Row="1" Text="Root" VerticalAlignment="Center"/>
                 <ComboBox Name="ChordRoot" Grid.Row="1" Grid.Column="1"
                           ItemsSource="{Binding ChordHelpers.RootChoices}"
@@ -739,23 +751,21 @@
                           ItemsSource="{Binding ChordHelpers.BassChoices}"
                           SelectedItem="{Binding ChordHelpers.SelectedBass, Mode=TwoWay}"/>
                 <TextBlock Grid.Row="3" Text="Onset (ticks)" VerticalAlignment="Center"/>
-                <NumericUpDown Name="ChordOnset" Grid.Row="3" Grid.Column="1"
-                               Height="32" Padding="4,0" VerticalContentAlignment="Center"
+                <NumericUpDown Name="ChordOnset" Classes="chordProperty" Grid.Row="3" Grid.Column="1"
                                Minimum="0" Maximum="100000000" Increment="1" FormatString="0"
                                Value="{Binding ChordHelpers.Position, Mode=TwoWay}"/>
                 <TextBlock Grid.Row="4" Text="Duration (ticks)" VerticalAlignment="Center"/>
-                <NumericUpDown Name="ChordDuration" Grid.Row="4" Grid.Column="1"
-                               Height="32" Padding="4,0" VerticalContentAlignment="Center"
+                <NumericUpDown Name="ChordDuration" Classes="chordProperty" Grid.Row="4" Grid.Column="1"
                                Minimum="1" Maximum="100000000" Increment="1" FormatString="0"
                                Value="{Binding ChordHelpers.Duration, Mode=TwoWay}"/>
                 <TextBlock Grid.Row="5" Text="Region onset" IsVisible="{Binding ChordHelpers.HasRegion}" VerticalAlignment="Center"/>
-                <NumericUpDown Grid.Row="5" Grid.Column="1" IsVisible="{Binding ChordHelpers.HasRegion}"
+                <NumericUpDown Classes="chordProperty" Grid.Row="5" Grid.Column="1" IsVisible="{Binding ChordHelpers.HasRegion}"
                                Minimum="0" Maximum="100000000" Value="{Binding ChordHelpers.RegionPosition, Mode=TwoWay}"/>
                 <TextBlock Grid.Row="6" Text="Loop length" IsVisible="{Binding ChordHelpers.HasRegion}" VerticalAlignment="Center"/>
-                <NumericUpDown Grid.Row="6" Grid.Column="1" IsVisible="{Binding ChordHelpers.HasRegion}"
+                <NumericUpDown Classes="chordProperty" Grid.Row="6" Grid.Column="1" IsVisible="{Binding ChordHelpers.HasRegion}"
                                Minimum="1" Maximum="100000000" Value="{Binding ChordHelpers.LoopLength, Mode=TwoWay}"/>
                 <TextBlock Grid.Row="7" Text="Region length" IsVisible="{Binding ChordHelpers.HasRegion}" VerticalAlignment="Center"/>
-                <NumericUpDown Grid.Row="7" Grid.Column="1" IsVisible="{Binding ChordHelpers.HasRegion}"
+                <NumericUpDown Classes="chordProperty" Grid.Row="7" Grid.Column="1" IsVisible="{Binding ChordHelpers.HasRegion}"
                                Minimum="1" Maximum="100000000" Value="{Binding ChordHelpers.RegionLength, Mode=TwoWay}"/>
               </Grid>
 

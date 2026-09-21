@@ -22,6 +22,9 @@ namespace OpenUtau.App.Controls {
         public bool FoldMajor31 { get => GetValue(FoldMajor31Property); set => SetValue(FoldMajor31Property, value); }
         public static readonly StyledProperty<bool> FoldMinor31Property = AvaloniaProperty.Register<TrackBackground, bool>(nameof(FoldMinor31));
         public bool FoldMinor31 { get => GetValue(FoldMinor31Property); set => SetValue(FoldMinor31Property, value); }
+        public static readonly StyledProperty<bool> HasPinnedChordTrackProperty =
+            AvaloniaProperty.Register<TrackBackground, bool>(nameof(HasPinnedChordTrack));
+        public bool HasPinnedChordTrack { get => GetValue(HasPinnedChordTrackProperty); set => SetValue(HasPinnedChordTrackProperty, value); }
         // One continuous tonic-relative hue circle for all 31 pitches, including folded views.
         // Equal OKLCH lightness/chroma (0.82/0.075), hues spaced 360/31 degrees apart.
         // Interval labels and tonic boundaries carry meaning independently of hue.
@@ -119,6 +122,7 @@ namespace OpenUtau.App.Controls {
             base.OnPropertyChanged(change);
             if (change.Property == DisplayRowsProperty || change.Property == Is31EdoProperty ||
                 change.Property == FoldMajor31Property || change.Property == FoldMinor31Property ||
+                change.Property == HasPinnedChordTrackProperty ||
                 change.Property == TrackHeightProperty ||
                 change.Property == TrackOffsetProperty ||
                 change.Property == ForegroundProperty ||
@@ -137,6 +141,14 @@ namespace OpenUtau.App.Controls {
             }
             int track = (int)TrackOffset;
             double top = TrackHeight * (track - TrackOffset);
+            if (HasPinnedChordTrack && !IsPianoRoll) {
+                double chordHeight = OpenUtau.App.ViewModels.TrackLayout.ChordHeight(TrackHeight);
+                context.DrawRectangle(Background, null, new Rect(0, 0, Bounds.Width, chordHeight));
+                context.DrawLine(new Pen(Brushes.Gray, 0.5),
+                    new Point(0, chordHeight), new Point(Bounds.Width, chordHeight));
+                track++;
+                top += chordHeight;
+            }
             // Draw oversized labels after all row fills so neighboring rows cannot erase them.
             var perfectLabels = IsPianoRoll && Is31Edo && IsKeyboard && TrackHeight < 12
                 ? new List<(int Degree, double CenterY)>() : null;

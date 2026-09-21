@@ -46,6 +46,7 @@ namespace OpenUtau.App.ViewModels {
         [Reactive] public partial bool IsSingerVisible { get; set; }
         [Reactive] public partial bool IsPhonemizerVisible { get; set; }
         [Reactive] public partial bool IsRendererVisible { get; set; }
+        [Reactive] public partial bool IsChordMixerVisible { get; set; } = true;
         [Reactive] public partial bool MixFxEnabled { get; set; }
         [Reactive] public partial IBrush HeaderBorderBrush { get; set; } = ThemeManager.NeutralAccentBrushSemi;
 

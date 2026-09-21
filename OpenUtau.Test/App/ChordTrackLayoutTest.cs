@@ -115,9 +115,11 @@ namespace OpenUtau.App {
 
                 var headers = canvas.Children.OfType<TrackHeader>()
                     .OrderBy(Canvas.GetTop).ToArray();
+                double chordHeight = TrackLayout.ChordHeight(105);
                 Assert.Equal(2, headers.Length);
                 Assert.Equal(0, Canvas.GetTop(headers[0]));
-                Assert.Equal(105, Canvas.GetTop(headers[1]));
+                Assert.Equal(chordHeight, Canvas.GetTop(headers[1]));
+                Assert.Equal(chordHeight, headers[0].Bounds.Height);
                 Assert.Equal("Chords", headers[0].ViewModel!.TrackName);
                 Assert.Equal(0, headers[0].ViewModel!.TrackNo);
                 Assert.Equal(1, headers[1].ViewModel!.TrackNo);
@@ -135,10 +137,15 @@ namespace OpenUtau.App {
                 canvas.SetValue(TrackHeaderCanvas.TrackOffsetProperty, 1d);
                 Dispatcher.UIThread.RunJobs();
                 Assert.Equal(0, Canvas.GetTop(headers[0]));
-                Assert.Equal(0, Canvas.GetTop(headers[1]));
+                Assert.Equal(chordHeight - 105, Canvas.GetTop(headers[1]));
                 Assert.True(headers[0].ZIndex > headers[1].ZIndex);
                 Assert.Equal(0, TrackLayout.TrackNoAt(50, 1, 105));
-                Assert.Equal(2, TrackLayout.TrackNoAt(106, 1, 105));
+                Assert.Equal(2, TrackLayout.TrackNoAt(chordHeight + 1, 1, 105));
+
+                canvas.SetValue(TrackHeaderCanvas.TrackHeightProperty, 42d);
+                Dispatcher.UIThread.RunJobs();
+                Assert.Equal(42, headers[0].Bounds.Height);
+                Assert.False(headers[0].ViewModel!.IsChordMixerVisible);
             } finally {
                 window?.Close();
                 Core.Util.Preferences.Default.UseTrackColor = oldUseTrackColor;

@@ -182,9 +182,19 @@ namespace OpenUtau.Core {
         UCommandGroup? autosavedPoint = null;
         public bool Recovered { get; set; } = false; // Flag to not overwrite backup file
 
+        public static bool IsBlankProject(UProject project) {
+            bool hasOnlyInitialVoiceTrack = project.tracks.Count(track => !track.IsChordsTrack) <= 1;
+            bool hasOrdinaryParts = project.parts.Any(part =>
+                part is not UVoicePart { IsChordPart: true });
+            var chordParts = project.parts.OfType<UVoicePart>().Where(part => part.IsChordPart);
+            bool hasChordContent = chordParts.Any(part =>
+                part.chordHelpers.Count > 0 || part.chordRegions.Count > 0);
+            return hasOnlyInitialVoiceTrack && !hasOrdinaryParts && !hasChordContent;
+        }
+
         public bool ChangesSaved {
             get {
-                return (Project.Saved || (Project.tracks.Count <= 1 && Project.parts.Count == 0)) &&
+                return (Project.Saved || IsBlankProject(Project)) &&
                     (undoQueue.Count > 0 && savedPoint == undoQueue.Last() || undoQueue.Count == 0 && savedPoint == null) &&
                     !Recovered;
             }

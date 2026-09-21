@@ -150,7 +150,9 @@ namespace OpenUtau.App.Controls {
             unbinds.Add(this.Bind(TickWidthProperty, canvas.GetObservable(PartsCanvas.TickWidthProperty)));
             unbinds.Add(this.Bind(TrackHeightProperty, canvas.GetObservable(PartsCanvas.TrackHeightProperty)));
             unbinds.Add(this.Bind(WidthProperty, canvas.GetObservable(PartsCanvas.TickWidthProperty).Select(tickWidth => tickWidth * part.Duration)));
-            unbinds.Add(this.Bind(HeightProperty, canvas.GetObservable(PartsCanvas.TrackHeightProperty)));
+            unbinds.Add(this.Bind(HeightProperty, canvas.GetObservable(PartsCanvas.TrackHeightProperty)
+                .Select(height => part is UVoicePart { IsChordPart: true }
+                    ? TrackLayout.ChordHeight(height) : height)));
             unbinds.Add(this.Bind(OffsetProperty, canvas.WhenAnyValue(x => x.TickOffset, x => x.TrackOffset,
                 (tick, track) => new Point(-tick * TickWidth, -track * TrackHeight))));
             unbinds.Add(this.Bind(ViewWidthProperty, canvas.WhenAnyValue(x => x.Bounds).Select(bounds => bounds.Width)));
@@ -199,7 +201,8 @@ namespace OpenUtau.App.Controls {
 
         public void SetSize() {
             Width = TickWidth * part.Duration;
-            Height = trackHeight;
+            Height = part is UVoicePart { IsChordPart: true }
+                ? TrackLayout.ChordHeight(trackHeight) : trackHeight;
         }
 
         public void Refersh() {
@@ -302,12 +305,19 @@ namespace OpenUtau.App.Controls {
         void RenderChordRegions(DrawingContext context, UVoicePart part, IBrush brush) {
             var border = new Pen(ThemeManager.NeutralAccentBrush, 1.5);
             var separator = new Pen(new SolidColorBrush(Color.FromArgb(150, 255, 255, 255)), 1);
+            var loopBrush = new SolidColorBrush(Color.FromArgb(105,
+                brush is SolidColorBrush solid ? solid.Color.R : (byte)128,
+                brush is SolidColorBrush solid2 ? solid2.Color.G : (byte)128,
+                brush is SolidColorBrush solid3 ? solid3.Color.B : (byte)128));
             foreach (var region in part.chordRegions) {
                 double x = region.position * TickWidth;
                 double width = Math.Max(1, region.duration * TickWidth);
                 var rect = new Rect(x + 1, 2, Math.Max(1, width - 2), Math.Max(1, Height - 5));
-                context.DrawRectangle(brush, border, rect, 4, 4);
+                context.DrawRectangle(region.IsLooped ? loopBrush : brush, border, rect, 4, 4);
                 if (region.IsLooped) {
+                    double sourceWidth = Math.Min(width, region.sourceDuration * TickWidth);
+                    var sourceRect = new Rect(x + 1, 2, Math.Max(1, sourceWidth - 2), Math.Max(1, Height - 5));
+                    context.DrawRectangle(brush, null, sourceRect, 4, 4);
                     for (long tick = (long)region.position + region.sourceDuration;
                             tick < region.End; tick += region.sourceDuration) {
                         double sx = tick * TickWidth;

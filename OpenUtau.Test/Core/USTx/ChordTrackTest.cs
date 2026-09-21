@@ -6,6 +6,18 @@ using Xunit;
 namespace OpenUtau.Core.Ustx {
     public class ChordTrackTest {
         [Fact]
+        public void NewProjectIsBlankDespiteItsStructuralChordTrack() {
+            var project = Format.Ustx.Create();
+            Assert.True(DocManager.IsBlankProject(project));
+
+            project.ChordsPart.chordRegions.Add(new UChordRegion {
+                sourceDuration = 1920,
+                duration = 1920,
+            });
+            Assert.False(DocManager.IsBlankProject(project));
+        }
+
+        [Fact]
         public void DefaultTrackNamesExcludeTheSpecialChordsTrack() {
             var project = Format.Ustx.Create();
             Assert.Equal("Track1", project.tracks.Single(track => !track.IsChordsTrack).TrackName);

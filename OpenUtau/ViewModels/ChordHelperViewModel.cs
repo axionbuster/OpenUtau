@@ -119,11 +119,21 @@ namespace OpenUtau.App.ViewModels {
                     return;
                 }
                 this.RaiseAndSetIfChanged(ref selectedQuality, value);
+                this.RaisePropertyChanged(nameof(SelectedQualityIndex));
                 if (value == null || syncing || !HasSelection) {
                     return;
                 }
                 if (value != null && ChordHelperTheory.Presets.Any(preset => preset.Name == value)) {
                     ApplyChange(helper => helper.tones = ChordHelperTheory.CreatePreset(value));
+                }
+            }
+        }
+
+        public int SelectedQualityIndex {
+            get => selectedQuality == null ? -1 : QualityChoices.IndexOf(selectedQuality);
+            set {
+                if (value >= 0 && value < QualityChoices.Count) {
+                    SelectedQuality = QualityChoices[value];
                 }
             }
         }
@@ -348,7 +358,9 @@ namespace OpenUtau.App.ViewModels {
 
                 Degrees.Clear();
                 BassChoices.Clear();
-                BassChoices.Add(new ChordBassChoice(null, "Root position"));
+                // The root is both the first chord degree and the root-position bass.
+                // Presenting those as separate choices made two indistinguishable options.
+                BassChoices.Add(new ChordBassChoice(null, "1"));
                 if (!HasSelection) {
                     selectedQuality = null;
                     selectedRoot = null;
@@ -366,7 +378,8 @@ namespace OpenUtau.App.ViewModels {
                     selectedQuality = quality;
                     selectedRoot = RootChoices.First(choice =>
                         choice.PitchClass == Edo31.Mod(helper.root, divisions));
-                    foreach (var tone in helper.tones) {
+                    foreach (var tone in helper.tones.Where(tone =>
+                            Edo31.Mod(tone.Offset(is31), divisions) != 0)) {
                         BassChoices.Add(new ChordBassChoice(tone.Clone(),
                             ChordHelperTheory.DisplayInterval(tone, helper.tones, is31).Label));
                     }
@@ -390,6 +403,7 @@ namespace OpenUtau.App.ViewModels {
                     }
                 }
                 this.RaisePropertyChanged(nameof(SelectedQuality));
+                this.RaisePropertyChanged(nameof(SelectedQualityIndex));
                 this.RaisePropertyChanged(nameof(SelectedRoot));
                 this.RaisePropertyChanged(nameof(SelectedBass));
                 this.RaisePropertyChanged(nameof(HighlightRoot));

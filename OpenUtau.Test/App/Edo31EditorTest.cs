@@ -122,6 +122,14 @@ namespace OpenUtau.App {
                 modeChoice.SelectedIndex = 2;
                 Assert.True(notes.FoldMajor31);
                 Assert.True(notes.FoldMinor31);
+                var tonicChoice = editor.FindControl<ComboBox>("KeyTonicChoice");
+                Assert.Equal(17, tonicChoice.SelectedIndex); // D is two fifths above C.
+                tonicChoice.SelectedIndex = 15;
+                Assert.Equal(0, notes.Key); // Picking a tonic in the editor sticks.
+                Assert.Equal("Key: C Major + Minor", notes.KeyText);
+                Assert.Equal(15, tonicChoice.SelectedIndex);
+                tonicChoice.SelectedIndex = 17;
+                Assert.Equal(2, notes.Key);
                 Capture(window, "key-mode-editor.png");
                 flyout.Hide();
                 keyButton.Focus(NavigationMethod.Tab);

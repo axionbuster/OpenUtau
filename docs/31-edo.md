@@ -33,15 +33,14 @@ They occupy separate columns so they remain legible even on adjacent folded rows
 Drag the right edge of the piano keyboard to resize its full column from 72 to 320 pixels.
 The chosen width persists across launches and applies to both 31-TET and 12-TET projects.
 
-The **Key: D Major + Minor** button opens a **Key and mode** panel. It names the
-section being edited by its start bar and beat. A **Tonic** picker and a single **Mode**
-picker replace the independent checkboxes. Modes are **Major**, **Natural minor**,
-**Major + natural minor**, and **Chromatic (all pitches)**. Changes apply immediately
-to the active section, are saved with the project, and can be undone.
+The **Key: D Major + Minor** button opens a panel holding a **Tonic** picker and a
+single **Mode** picker, which replace the independent checkboxes. Modes are **Major**,
+**Minor**, **Major + minor**, and **Chromatic**. Changes apply immediately to the
+section named below the pickers, are saved with the project, and can be undone.
 
-To modulate, position the playhead, open the panel, and choose **Start a new section
-at the playhead** before choosing its tonic and mode. The panel displays the playhead's
-bar and beat separately from the section start. **Remove this section's key change**
+To modulate, position the playhead, open the panel, and choose **New section at
+bar _n_, beat _n_** before choosing its tonic and mode. That button names the playhead
+position and is disabled where a section already starts. **Remove this section**
 extends the preceding section; the initial entry cannot be removed.
 The keyboard follows the playhead. Background regions show their own key/mode labels,
 colors, and scale emphasis. Selected-note and chord names use the key at their positions.

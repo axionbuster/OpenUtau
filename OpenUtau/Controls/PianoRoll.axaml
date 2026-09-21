@@ -391,29 +391,27 @@
                     ToolTip.Tip="Edit this section's key and mode, or start a new section at the playhead.">
               <FlyoutBase.AttachedFlyout>
                 <Flyout Placement="Bottom" Opened="OnKeyEditorOpened" Closed="OnKeyEditorClosed">
-                  <StackPanel Width="300" Spacing="12" Margin="4">
-                    <TextBlock Text="Key and mode" FontSize="16" FontWeight="SemiBold"/>
-                    <TextBlock Text="{Binding NotesViewModel.KeyPositionText}" TextWrapping="Wrap"/>
-                    <Grid ColumnDefinitions="Auto,*" RowDefinitions="Auto,Auto">
-                      <TextBlock Text="Tonic" VerticalAlignment="Center" Margin="0,0,16,10"/>
-                      <ComboBox Name="KeyTonicChoice" Grid.Column="1" Margin="0,0,0,10" HorizontalAlignment="Stretch"
+                  <StackPanel Width="240" Spacing="8" Margin="4">
+                    <Grid ColumnDefinitions="Auto,*" RowDefinitions="Auto,Auto"
+                          ToolTip.Tip="Applies to this section only. Note pitches stay unchanged.">
+                      <TextBlock Text="Tonic" VerticalAlignment="Center" Margin="0,0,12,8"/>
+                      <ComboBox Name="KeyTonicChoice" Grid.Column="1" Margin="0,0,0,8" HorizontalAlignment="Stretch"
                                 AutomationProperties.Name="Tonic"
                                 ItemsSource="{Binding NotesViewModel.KeyChoices}"
                                 SelectedIndex="{Binding NotesViewModel.KeyChoiceIndex, Mode=TwoWay}"/>
-                      <TextBlock Text="Mode" Grid.Row="1" VerticalAlignment="Center" Margin="0,0,16,0"/>
+                      <TextBlock Text="Mode" Grid.Row="1" VerticalAlignment="Center" Margin="0,0,12,0"/>
                       <ComboBox Name="KeyModeChoice" Grid.Row="1" Grid.Column="1" HorizontalAlignment="Stretch"
                                 AutomationProperties.Name="Mode"
                                 ItemsSource="{Binding NotesViewModel.ModeChoices}"
                                 SelectedIndex="{Binding NotesViewModel.ModeChoiceIndex, Mode=TwoWay}"/>
                     </Grid>
-                    <TextBlock Text="Updates this section immediately. Note pitches stay unchanged." TextWrapping="Wrap" FontSize="12"/>
                     <Separator/>
-                    <TextBlock Text="{Binding NotesViewModel.KeyPlayheadText}"/>
-                    <Button Content="Start a new section at the playhead" HorizontalAlignment="Stretch"
+                    <TextBlock Text="{Binding NotesViewModel.KeyPositionText}" TextWrapping="Wrap" FontSize="12"/>
+                    <Button Content="{Binding NotesViewModel.AddKeyChangeText}" HorizontalAlignment="Stretch"
                             HorizontalContentAlignment="Center" Command="{Binding NotesViewModel.AddKeyChangeCommand}"
                             IsEnabled="{Binding NotesViewModel.CanAddKeyChange}"
-                            ToolTip.Tip="Adds a key change here. Then choose its tonic and mode above."/>
-                    <Button Content="Remove this section's key change" HorizontalAlignment="Stretch"
+                            ToolTip.Tip="Starts a new key section at the playhead, then set its tonic and mode above."/>
+                    <Button Content="Remove this section" HorizontalAlignment="Stretch"
                             HorizontalContentAlignment="Center" Command="{Binding NotesViewModel.RemoveKeyChangeCommand}"
                             IsEnabled="{Binding NotesViewModel.CanRemoveKeyChange}"
                             ToolTip.Tip="Extends the preceding key and mode. The first section cannot be removed."/>

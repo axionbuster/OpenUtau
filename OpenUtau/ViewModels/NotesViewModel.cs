@@ -188,12 +188,14 @@ namespace OpenUtau.App.ViewModels {
             get {
                 Project.timeAxis.TickPosToBarBeat(Project.KeyAt(KeyCursorTick).position,
                     out int bar, out int beat, out int remainder);
-                return $"Editing section from bar {bar + 1}, beat {beat + 1}"
+                return $"Section from bar {bar + 1}, beat {beat + 1}"
                     + (remainder == 0 ? "" : $" + {remainder}/{Project.resolution}");
             }
         }
-        public string[] KeyChoices => Keys.Select(choice => choice.Header ?? "").ToArray();
-        public string[] ModeChoices { get; } = { "Major", "Natural minor", "Major + natural minor", "Chromatic (all pitches)" };
+        // Held as one stable array: replacing the tonic list mid-edit would reset the bound
+        // picker and write its old index straight back, undoing the change just made.
+        [Reactive] public partial string[] KeyChoices { get; set; } = Array.Empty<string>();
+        public string[] ModeChoices { get; } = { "Major", "Minor", "Major + minor", "Chromatic" };
         public int KeyChoiceIndex {
             get => Is31Edo ? Key + 15 : Key;
             set { if (value >= 0 && value < (Is31Edo ? 31 : 12)) EditKey(k => k.key = Is31Edo ? value - 15 : value); }
@@ -205,10 +207,10 @@ namespace OpenUtau.App.ViewModels {
                 EditKey(k => { k.major = value is 0 or 2; k.minor = value is 1 or 2; });
             }
         }
-        public string KeyPlayheadText {
+        public string AddKeyChangeText {
             get {
                 Project.timeAxis.TickPosToBarBeat(KeyCursorTick, out int bar, out int beat, out int remainder);
-                return $"Playhead: bar {bar + 1}, beat {beat + 1}"
+                return $"New section at bar {bar + 1}, beat {beat + 1}"
                     + (remainder == 0 ? "" : $" + {remainder}/{Project.resolution}");
             }
         }
@@ -227,10 +229,16 @@ namespace OpenUtau.App.ViewModels {
             CommitKeys(changes);
         }
         void CommitKeys(List<UKeySignature> changes) {
-            DocManager.Inst.StartUndoGroup("command.project.key");
-            DocManager.Inst.ExecuteCmd(new KeySignatureCommand(Project, changes));
-            DocManager.Inst.EndUndoGroup();
-            UpdateKey();
+            if (syncingKey) return;
+            syncingKey = true;
+            try {
+                DocManager.Inst.StartUndoGroup("command.project.key");
+                DocManager.Inst.ExecuteCmd(new KeySignatureCommand(Project, changes));
+                DocManager.Inst.EndUndoGroup();
+                UpdateKey();
+            } finally {
+                syncingKey = false;
+            }
         }
 
         public NotesViewModel() {
@@ -352,6 +360,12 @@ namespace OpenUtau.App.ViewModels {
                             Command = SetKeyCommand,
                             CommandParameter = index,
                         }));
+                    // A new tonic list resets the bound picker, whose stale index would
+                    // otherwise land on the project that just replaced this one.
+                    bool wasSyncing = syncingKey;
+                    syncingKey = true;
+                    KeyChoices = Keys.Select(choice => choice.Header ?? "").ToArray();
+                    syncingKey = wasSyncing;
                 });
 
             ShowTips = Preferences.Default.ShowTips;
@@ -513,11 +527,12 @@ namespace OpenUtau.App.ViewModels {
 
         private void UpdateKey(bool rebuildRows = true) {
             var current = Project.KeyAt(KeyCursorTick);
+            bool wasSyncing = syncingKey;
             syncingKey = true;
             Key = current.key;
             FoldMajor31 = current.major;
             FoldMinor31 = current.minor;
-            syncingKey = false;
+            syncingKey = wasSyncing;
             if (rebuildRows) RebuildDisplayRows();
             this.RaisePropertyChanged(nameof(Is31Edo));
             this.RaisePropertyChanged(nameof(TrackCount));
@@ -525,7 +540,6 @@ namespace OpenUtau.App.ViewModels {
             this.RaisePropertyChanged(nameof(KeyPositionText));
             this.RaisePropertyChanged(nameof(CanAddKeyChange));
             this.RaisePropertyChanged(nameof(CanRemoveKeyChange));
-            this.RaisePropertyChanged(nameof(KeyChoices));
             this.RaisePropertyChanged(nameof(KeyChoiceIndex));
             this.RaisePropertyChanged(nameof(ModeChoiceIndex));
             KeyText = "Key: " + current.Label(Is31Edo);
@@ -1266,7 +1280,7 @@ namespace OpenUtau.App.ViewModels {
             var newKey = Project.KeyAt(KeyCursorTick);
             if (oldKey.position != newKey.position || oldKey.key != newKey.key) UpdateKey(false);
             this.RaisePropertyChanged(nameof(CanAddKeyChange));
-            this.RaisePropertyChanged(nameof(KeyPlayheadText));
+            this.RaisePropertyChanged(nameof(AddKeyChangeText));
             tick -= Part?.position ?? 0;
             playPosTick = tick;
             PlayPosX = TickToneToPoint(tick, 0).X;

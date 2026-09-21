@@ -113,7 +113,8 @@ namespace OpenUtau.App.Controls {
         Dictionary<UPart, PartControl> partControls = new Dictionary<UPart, PartControl>();
         readonly Border pinnedLane = new Border {
             BorderThickness = new Thickness(0, 0, 0, 2),
-            IsHitTestVisible = true,
+            // Let empty-lane pointer events reach PartsCanvas, just like ordinary tracks.
+            IsHitTestVisible = false,
         };
 
         public PartsCanvas() {

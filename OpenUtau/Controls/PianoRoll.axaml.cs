@@ -1680,6 +1680,9 @@ namespace OpenUtau.App.Controls {
 
         #endregion
 
+        void OnKeyModeClick(object? sender, RoutedEventArgs args) {
+            FlyoutBase.ShowAttachedFlyout(KeyModeButton);
+        }
         bool keyEditorOpen;
         void OnKeyEditorOpened(object? sender, EventArgs args) => keyEditorOpen = true;
         void OnKeyEditorClosed(object? sender, EventArgs args) {

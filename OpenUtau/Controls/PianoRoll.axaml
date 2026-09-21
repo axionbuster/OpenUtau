@@ -387,9 +387,9 @@
         <Border Grid.Column="2">
           <StackPanel Orientation="Horizontal">
             <Button Name="KeyModeButton" Content="{Binding NotesViewModel.KeyText}" Padding="6,0" Height="24"
-                    AutomationProperties.Name="Project key and mode"
+                    AutomationProperties.Name="Project key and mode" Focusable="True" Click="OnKeyModeClick"
                     ToolTip.Tip="Edit this section's key and mode, or start a new section at the playhead.">
-              <Button.Flyout>
+              <FlyoutBase.AttachedFlyout>
                 <Flyout Placement="Bottom" Opened="OnKeyEditorOpened" Closed="OnKeyEditorClosed">
                   <StackPanel Width="300" Spacing="12" Margin="4">
                     <TextBlock Text="Key and mode" FontSize="16" FontWeight="SemiBold"/>
@@ -419,7 +419,7 @@
                             ToolTip.Tip="Extends the preceding key and mode. The first section cannot be removed."/>
                   </StackPanel>
                 </Flyout>
-              </Button.Flyout>
+              </FlyoutBase.AttachedFlyout>
             </Button>
             <ToggleButton Classes="toolbar" Margin="0" Padding="1" Height="20" Width="20" IsChecked="{Binding NotesViewModel.ShowTips}"
                           ToolTip.Tip="{DynamicResource pianoroll.toggle.tips}">

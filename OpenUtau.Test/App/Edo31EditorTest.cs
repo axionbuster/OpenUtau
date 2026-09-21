@@ -108,8 +108,11 @@ namespace OpenUtau.App {
                 Assert.Contains("[31-TET]", new MainWindowViewModel().AppVersion);
                 Assert.Contains("0.1.570-tet31.", new MainWindowViewModel().AppVersion);
                 var keyButton = editor.FindControl<Button>("KeyModeButton");
-                var flyout = (Avalonia.Controls.Flyout)keyButton.Flyout!;
-                flyout.ShowAt(keyButton);
+                var flyout = (Avalonia.Controls.Flyout)Avalonia.Controls.Primitives.FlyoutBase.GetAttachedFlyout(keyButton)!;
+                var keyButtonPoint = keyButton.TranslatePoint(new Point(keyButton.Bounds.Width / 2, keyButton.Bounds.Height / 2), window)!.Value;
+                window.MouseDown(keyButtonPoint, MouseButton.Left);
+                window.MouseUp(keyButtonPoint, MouseButton.Left);
+                Assert.True(flyout.IsOpen);
                 Dispatcher.UIThread.RunJobs();
                 var modeChoice = editor.FindControl<ComboBox>("KeyModeChoice");
                 Assert.Equal(3, modeChoice.SelectedIndex);

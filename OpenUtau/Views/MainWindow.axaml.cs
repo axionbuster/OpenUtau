@@ -38,6 +38,7 @@ namespace OpenUtau.App.Views {
         private readonly MainWindowViewModel viewModel;
 
         private PianoRollDetachedWindow? pianoRollWindow;
+        private Task? pianoRollLoading;
         private PianoRoll? pianoRoll;
         private WindowNotificationManager notificationManager;
 
@@ -1537,44 +1538,94 @@ namespace OpenUtau.App.Views {
                     .FirstOrDefault(pc => pc?.part is UVoicePart { IsChordPart: true });
             }
             if (hitPartControl?.part is UVoicePart) {
-                if (pianoRoll == null) {
-                    LoadingWindow.BeginLoading(this);
-
-                    var model = await Task.Run<PianoRollViewModel>(() => new PianoRollViewModel());
-
-                    // Let's attach when needed to avoid startup slowdowns
-                    pianoRoll = new PianoRoll(model) {
-                        MainWindow = this
-                    };
-
-                    if (Preferences.Default.DetachPianoRoll) {
-                        viewModel.ShowPianoRoll = false;
-                        pianoRollWindow = new(pianoRoll);
-                    } else {
-                        PianoRollContainer.Content = pianoRoll;
-                    }
-
-                    await Task.Run(() =>
-                        pianoRoll.InitializePianoRollWindowAsync()
-                    );
-                    LoadingWindow.EndLoading();
-
-                    pianoRoll.ViewModel.PlaybackViewModel = viewModel.PlaybackViewModel;
-                }
-                if (pianoRollWindow != null) {
-                    pianoRollWindow.Show();
-                    pianoRollWindow.Activate();
-                } else {
-                    viewModel.ShowPianoRoll = true;
-                    pianoRoll.Focus();
+                var editor = await ShowNoteEditorAsync();
+                if (editor == null) {
+                    return;
                 }
                 int tick = viewModel.TracksViewModel.PointToTick(args.GetPosition(canvas));
                 DocManager.Inst.ExecuteCmd(new LoadPartNotification(hitPartControl.part, DocManager.Inst.Project, tick));
                 if (chordHit != null && hitPartControl.part is UVoicePart chordPart) {
-                    pianoRoll.ViewModel.ChordHelpers.SelectRegion(chordPart, chordHit.Value.Region);
+                    editor.ViewModel.ChordHelpers.SelectRegion(chordPart, chordHit.Value.Region);
                 }
-                pianoRoll.AttachExpressions();
+                editor.AttachExpressions();
             }
+        }
+
+        /// <summary>
+        /// Brings the note editor up, building it, or its detached window, when either is
+        /// missing. Returns null when the editor could not be built.
+        /// </summary>
+        public async Task<PianoRoll?> ShowNoteEditorAsync() {
+            if (pianoRoll == null) {
+                // One shared task, so asking again while the editor is still loading joins
+                // that load instead of building a second editor.
+                pianoRollLoading ??= CreatePianoRollAsync();
+                try {
+                    await pianoRollLoading;
+                } finally {
+                    if (pianoRoll == null) {
+                        pianoRollLoading = null;
+                    }
+                }
+                if (pianoRoll == null) {
+                    return null;
+                }
+            }
+            if (Preferences.Default.DetachPianoRoll) {
+                if (pianoRollWindow == null) {
+                    viewModel.ShowPianoRoll = false;
+                    pianoRollWindow = NewPianoRollWindow(pianoRoll);
+                }
+                pianoRollWindow.Show();
+                pianoRollWindow.Activate();
+            } else {
+                viewModel.ShowPianoRoll = true;
+                pianoRoll.Focus();
+            }
+            return pianoRoll;
+        }
+
+        // Builds the note editor once. Callers share the returned task rather than racing to
+        // build a second editor and a second detached window.
+        async Task CreatePianoRollAsync() {
+            LoadingWindow.BeginLoading(this);
+
+            var model = await Task.Run<PianoRollViewModel>(() => new PianoRollViewModel());
+
+            // Let's attach when needed to avoid startup slowdowns
+            var roll = new PianoRoll(model) {
+                MainWindow = this
+            };
+            pianoRoll = roll;
+
+            if (Preferences.Default.DetachPianoRoll) {
+                viewModel.ShowPianoRoll = false;
+                pianoRollWindow = NewPianoRollWindow(roll);
+            } else {
+                PianoRollContainer.Content = roll;
+            }
+
+            await Task.Run(() =>
+                roll.InitializePianoRollWindowAsync()
+            );
+            LoadingWindow.EndLoading();
+
+            roll.ViewModel.PlaybackViewModel = viewModel.PlaybackViewModel;
+        }
+
+        // A detached note editor normally hides instead of closing, but it can still be closed
+        // for good - by re-attaching it, or by a shutdown that the platform carries out. Showing
+        // a closed window throws, so the field drops its window as soon as that window closes
+        // and the next open builds a fresh one.
+        PianoRollDetachedWindow NewPianoRollWindow(PianoRoll roll) {
+            PianoRollContainer.Content = null;
+            var window = new PianoRollDetachedWindow(roll);
+            window.Closed += (sender, args) => {
+                if (pianoRollWindow == window) {
+                    pianoRollWindow = null;
+                }
+            };
+            return window;
         }
 
         void OpenChordRegionMenu(Control target, Point point, UChordRegion? region) {
@@ -1695,10 +1746,9 @@ namespace OpenUtau.App.Views {
                 return;
             }
             if (Preferences.Default.DetachPianoRoll) {
-                PianoRollContainer.Content = null;
                 viewModel.ShowPianoRoll = false;
                 if (pianoRollWindow == null) {
-                    pianoRollWindow = new(pianoRoll);
+                    pianoRollWindow = NewPianoRollWindow(pianoRoll);
                     pianoRollWindow.Show();
                 }
             } else {

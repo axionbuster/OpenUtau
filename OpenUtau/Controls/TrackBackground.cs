@@ -158,14 +158,10 @@ namespace OpenUtau.App.Controls {
                 if (right <= left) continue;
                 using (context.PushClip(new Rect(left, 0, right - left, Bounds.Height))) {
                     RenderRows(context, signature);
+                    // The key name itself lives in the ruler's key lane.
                     if (i > 0 && start >= 0) {
                         context.DrawLine(new Pen(Brushes.Gray, 1.5), new Point(start, 0), new Point(start, Bounds.Height));
                     }
-                    var label = TextLayoutCache.Get(signature.Label(Is31Edo),
-                        ThemeManager.IsDarkMode ? Brushes.White : Brushes.Black, 11);
-                    context.DrawRectangle(ThemeManager.IsDarkMode ? Brushes.Black : Brushes.White, null,
-                        new Rect(left + 3, 1, label.Width + 6, label.Height + 2));
-                    label.Draw(context, new Point(left + 6, 2));
                 }
             }
         }

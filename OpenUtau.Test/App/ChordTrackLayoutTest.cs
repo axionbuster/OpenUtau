@@ -1,4 +1,4 @@
-#nullable enable
+﻿#nullable enable
 using System.Linq;
 using System.Collections.ObjectModel;
 using Avalonia.Controls;
@@ -144,7 +144,9 @@ namespace OpenUtau.App {
 
                 canvas.SetValue(TrackHeaderCanvas.TrackHeightProperty, 42d);
                 Dispatcher.UIThread.RunJobs();
-                Assert.Equal(42, headers[0].Bounds.Height);
+                // The chord row keeps shrinking past the ordinary track minimum.
+                Assert.Equal(28, headers[0].Bounds.Height);
+                Assert.Equal(28, Canvas.GetTop(headers[1]) + 42);
                 Assert.False(headers[0].ViewModel!.IsChordMixerVisible);
             } finally {
                 window?.Close();

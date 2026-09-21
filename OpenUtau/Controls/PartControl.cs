@@ -193,9 +193,11 @@ namespace OpenUtau.App.Controls {
         }
 
         public void SetPosition() {
-            Canvas.SetLeft(this, Offset.X + part.position * tickWidth);
-            double ordinaryOffset = trackHeight == 0 ? 0 : -Offset.Y / trackHeight;
-            Canvas.SetTop(this, TrackLayout.Top(part.trackNo, ordinaryOffset, trackHeight));
+            // Offsets come straight from the canvas: recovering them by dividing the
+            // pixel offset misplaces every row for one frame after a zoom, because
+            // that offset was computed with the previous tick width or track height.
+            Canvas.SetLeft(this, (part.position - partsCanvas.TickOffset) * tickWidth);
+            Canvas.SetTop(this, TrackLayout.Top(part.trackNo, partsCanvas.TrackOffset, trackHeight));
             SetValue(Panel.ZIndexProperty, part is UVoicePart { IsChordPart: true } ? 1600 : 0);
         }
 

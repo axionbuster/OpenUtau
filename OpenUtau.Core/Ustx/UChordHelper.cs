@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Linq;
 using OpenUtau.Core.Util;
@@ -92,6 +92,7 @@ namespace OpenUtau.Core.Ustx {
                 .Select(group => group.First().Clone())
                 .OrderBy(tone => Edo31.Mod(tone.Offset(is31Edo), divisions))
                 .ToList();
+            quality = ChordHelperTheory.CanonicalQuality(quality);
             if (!ChordHelperTheory.IsPresetSpelling(quality, tones)) {
                 quality = null;
             }
@@ -251,26 +252,26 @@ namespace OpenUtau.Core.Ustx {
             new ChordHelperPreset("Minor", I(1), I(3, -1), I(5)),
             new ChordHelperPreset("Diminished", I(1), I(3, -1), I(5, -1)),
             new ChordHelperPreset("Augmented", I(1), I(3), I(5, 1)),
-            new ChordHelperPreset("Sus2", I(1), I(2), I(5)),
-            new ChordHelperPreset("Sus4", I(1), I(4), I(5)),
-            new ChordHelperPreset("Sixth", I(1), I(3), I(5), I(6)),
-            new ChordHelperPreset("Minor sixth", I(1), I(3, -1), I(5), I(6)),
-            new ChordHelperPreset("Dominant seventh", I(1), I(3), I(5), I(7, -1)),
-            new ChordHelperPreset("Major seventh", I(1), I(3), I(5), I(7)),
-            new ChordHelperPreset("Minor seventh", I(1), I(3, -1), I(5), I(7, -1)),
-            new ChordHelperPreset("Half-diminished seventh", I(1), I(3, -1), I(5, -1), I(7, -1)),
-            new ChordHelperPreset("Diminished seventh", I(1), I(3, -1), I(5, -1), I(7, -2)),
-            new ChordHelperPreset("Add ninth", I(1), I(3), I(5), I(9)),
-            new ChordHelperPreset("Dominant ninth", I(1), I(3), I(5), I(7, -1), I(9)),
-            new ChordHelperPreset("Major ninth", I(1), I(3), I(5), I(7), I(9)),
-            new ChordHelperPreset("Minor ninth", I(1), I(3, -1), I(5), I(7, -1), I(9)),
-            new ChordHelperPreset("Dominant eleventh", I(1), I(3), I(5), I(7, -1), I(9), I(11)),
-            new ChordHelperPreset("Dominant thirteenth", I(1), I(3), I(5), I(7, -1), I(9), I(11), I(13)),
-            new ChordHelperPreset("Harmonic seventh", I(1), I(3), I(5), I(6, 1)),
-            new ChordHelperPreset("Italian augmented sixth", I(1), I(3), I(6, 1)),
-            new ChordHelperPreset("French augmented sixth", I(1), I(3), I(4, 1), I(6, 1)),
-            new ChordHelperPreset("German augmented sixth", I(1), I(3), I(5), I(6, 1)),
-            new ChordHelperPreset("Japanese augmented sixth", I(1), I(2), I(4, 1), I(6, 1)),
+            new ChordHelperPreset("Sus 2", I(1), I(2), I(5)),
+            new ChordHelperPreset("Sus 4", I(1), I(4), I(5)),
+            new ChordHelperPreset("Major 6", I(1), I(3), I(5), I(6)),
+            new ChordHelperPreset("Minor 6", I(1), I(3, -1), I(5), I(6)),
+            new ChordHelperPreset("Dominant 7", I(1), I(3), I(5), I(7, -1)),
+            new ChordHelperPreset("Major 7", I(1), I(3), I(5), I(7)),
+            new ChordHelperPreset("Minor 7", I(1), I(3, -1), I(5), I(7, -1)),
+            new ChordHelperPreset("Half-diminished 7", I(1), I(3, -1), I(5, -1), I(7, -1)),
+            new ChordHelperPreset("Diminished 7", I(1), I(3, -1), I(5, -1), I(7, -2)),
+            new ChordHelperPreset("Add 9", I(1), I(3), I(5), I(9)),
+            new ChordHelperPreset("Dominant 9", I(1), I(3), I(5), I(7, -1), I(9)),
+            new ChordHelperPreset("Major 9", I(1), I(3), I(5), I(7), I(9)),
+            new ChordHelperPreset("Minor 9", I(1), I(3, -1), I(5), I(7, -1), I(9)),
+            new ChordHelperPreset("Dominant 11", I(1), I(3), I(5), I(7, -1), I(9), I(11)),
+            new ChordHelperPreset("Dominant 13", I(1), I(3), I(5), I(7, -1), I(9), I(11), I(13)),
+            new ChordHelperPreset("Harmonic 7", I(1), I(3), I(5), I(6, 1)),
+            new ChordHelperPreset("Italian +6", I(1), I(3), I(6, 1)),
+            new ChordHelperPreset("French +6", I(1), I(3), I(4, 1), I(6, 1)),
+            new ChordHelperPreset("German +6", I(1), I(3), I(5), I(6, 1)),
+            new ChordHelperPreset("Japanese +6", I(1), I(2), I(4, 1), I(6, 1)),
         };
 
         public static int IntervalOffset(int degree, int alteration, bool is31Edo) {
@@ -335,6 +336,56 @@ namespace OpenUtau.Core.Ustx {
             return new UChordInterval(int.Parse(label[index..]), alteration);
         }
 
+        // Quality names were unified; projects saved under the older wording still
+        // carry the analysis the writer chose, so those names resolve to the new ones.
+        static readonly Dictionary<string, string> RenamedQualities = new() {
+            ["Sus2"] = "Sus 2",
+            ["Sus4"] = "Sus 4",
+            ["Sixth"] = "Major 6",
+            ["Minor sixth"] = "Minor 6",
+            ["Dominant seventh"] = "Dominant 7",
+            ["Major seventh"] = "Major 7",
+            ["Minor seventh"] = "Minor 7",
+            ["Half-diminished seventh"] = "Half-diminished 7",
+            ["Diminished seventh"] = "Diminished 7",
+            ["Add ninth"] = "Add 9",
+            ["Dominant ninth"] = "Dominant 9",
+            ["Major ninth"] = "Major 9",
+            ["Minor ninth"] = "Minor 9",
+            ["Dominant eleventh"] = "Dominant 11",
+            ["Dominant thirteenth"] = "Dominant 13",
+            ["Harmonic seventh"] = "Harmonic 7",
+            ["Italian augmented sixth"] = "Italian +6",
+            ["French augmented sixth"] = "French +6",
+            ["German augmented sixth"] = "German +6",
+            ["Japanese augmented sixth"] = "Japanese +6",
+        };
+
+        public static string? CanonicalQuality(string? name) =>
+            name != null && RenamedQualities.TryGetValue(name, out var renamed) ? renamed : name;
+
+        /// <summary>
+        /// The other 12-TET spelling of an altered degree, so the grid can offer
+        /// "♭3/♯2" rather than picking one side. Only genuine sharp/flat pairs
+        /// qualify: a natural partner such as 6 for ♭♭7 adds nothing to read.
+        /// </summary>
+        public static UChordInterval? EnharmonicPartner(UChordInterval interval, bool is31Edo) {
+            if (is31Edo || interval.alteration == 0 || interval.degree < 1 || interval.degree > 7) {
+                return null;
+            }
+            int offset = interval.Offset(false);
+            foreach (int degree in new[] { interval.degree - 1, interval.degree + 1 }) {
+                if (degree < 1 || degree > 7) {
+                    continue;
+                }
+                int alteration = offset - Natural12[degree - 1];
+                if (alteration != 0 && Math.Abs(alteration) <= 1) {
+                    return new UChordInterval(degree, alteration);
+                }
+            }
+            return null;
+        }
+
         public static List<UChordInterval> CreatePreset(string name) {
             var preset = Presets.FirstOrDefault(candidate => candidate.Name == name)
                 ?? throw new ArgumentException($"Unknown chord helper preset: {name}", nameof(name));
@@ -351,6 +402,7 @@ namespace OpenUtau.Core.Ustx {
         public static string QualityName(
                 IEnumerable<UChordInterval> tones, bool is31Edo, string? preferredQuality = null) {
             var toneList = tones.ToList();
+            preferredQuality = CanonicalQuality(preferredQuality);
             var spelledMatches = Presets.Where(preset => SameSpelling(toneList, preset.Tones)).ToList();
             if (preferredQuality != null && spelledMatches.Any(preset => preset.Name == preferredQuality)) {
                 return preferredQuality;
@@ -388,26 +440,26 @@ namespace OpenUtau.Core.Ustx {
                 "Minor" => "m",
                 "Diminished" => "dim",
                 "Augmented" => "aug",
-                "Sus2" => "sus2",
-                "Sus4" => "sus4",
-                "Sixth" => "6",
-                "Minor sixth" => "m6",
-                "Dominant seventh" => "7",
-                "Major seventh" => "maj7",
-                "Minor seventh" => "m7",
-                "Half-diminished seventh" => "m7♭5",
-                "Diminished seventh" => "dim7",
-                "Add ninth" => "add9",
-                "Dominant ninth" => "9",
-                "Major ninth" => "maj9",
-                "Minor ninth" => "m9",
-                "Dominant eleventh" => "11",
-                "Dominant thirteenth" => "13",
-                "Harmonic seventh" => "7:4",
-                "Italian augmented sixth" => "It+6",
-                "French augmented sixth" => "Fr+6",
-                "German augmented sixth" => "Ger+6",
-                "Japanese augmented sixth" => "Jp+6",
+                "Sus 2" => "sus2",
+                "Sus 4" => "sus4",
+                "Major 6" => "6",
+                "Minor 6" => "m6",
+                "Dominant 7" => "7",
+                "Major 7" => "maj7",
+                "Minor 7" => "m7",
+                "Half-diminished 7" => "m7♭5",
+                "Diminished 7" => "dim7",
+                "Add 9" => "add9",
+                "Dominant 9" => "9",
+                "Major 9" => "maj9",
+                "Minor 9" => "m9",
+                "Dominant 11" => "11",
+                "Dominant 13" => "13",
+                "Harmonic 7" => "7:4",
+                "Italian +6" => "It+6",
+                "French +6" => "Fr+6",
+                "German +6" => "Ger+6",
+                "Japanese +6" => "Jp+6",
                 _ => "...",
             };
             string name = rootName + suffix;

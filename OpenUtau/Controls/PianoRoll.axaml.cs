@@ -44,6 +44,7 @@ namespace OpenUtau.App.Controls {
         private UChordHelper? chordDragHelper;
         private UChordHelper? chordDragBefore;
         private int chordDragStartLineTick;
+        private int chordDragStartTone;
         private bool chordDragResize;
 
         private bool isSelectingRange;
@@ -751,6 +752,14 @@ namespace OpenUtau.App.Controls {
                 args.Handled = true;
                 return;
             }
+            if (ViewModel.ChordHelperMode && point.Properties.IsRightButtonPressed) {
+                var doomed = HitTestChordHelper(point.Position);
+                if (doomed != null) {
+                    ViewModel.ChordHelpers.Delete(doomed.Value.Part, doomed.Value.Helper);
+                }
+                args.Handled = true;
+                return;
+            }
             if (editState != null) {
                 // Finalize pitch curve in adjusting phase before starting a new edit
                 if (editState is PitchCurveState pcs2 && pcs2.IsInAdjustingPhase) {
@@ -832,9 +841,10 @@ namespace OpenUtau.App.Controls {
                 };
                 helper.Normalize(notesVm.Is31Edo);
                 DocManager.Inst.StartUndoGroup();
-                var region = ViewModel.ChordHelpers.SelectedRegion;
-                if (region != null && !chordPart.chordRegions.Contains(region)) region = null;
-                region ??= chordPart.chordRegions.LastOrDefault(item =>
+                // Only a region that already spans this tick can host the chord.
+                // Reusing the selected region instead folded the new chord back into
+                // that region's loop and dropped it somewhere else entirely.
+                var region = chordPart.chordRegions.LastOrDefault(item =>
                     absolutePosition >= item.position && absolutePosition < item.position + item.sourceDuration);
                 if (region == null) {
                     int sourceDuration = Math.Max(duration, DocManager.Inst.Project.resolution * 4);
@@ -842,8 +852,9 @@ namespace OpenUtau.App.Controls {
                         sourceDuration = sourceDuration, duration = sourceDuration };
                     DocManager.Inst.ExecuteCmd(new AddChordRegionCommand(chordPart, region));
                 }
-                helper.position = Math.Max(0, absolutePosition - region.position) % region.sourceDuration;
+                helper.position = Math.Max(0, absolutePosition - region.position);
                 DocManager.Inst.ExecuteCmd(new AddChordHelperCommand(chordPart, helper, region));
+                ChordHelperViewModel.ResolveOverlaps(chordPart, helper);
                 DocManager.Inst.EndUndoGroup();
                 ViewModel.ChordHelpers.TrySelect(currentPart, chordPart, helper);
                 notesVm.ShowNoteParams = true;
@@ -854,6 +865,7 @@ namespace OpenUtau.App.Controls {
             chordDragBefore = chordDragHelper.Clone();
             chordDragResize = hit.Value.Resize;
             notesVm.PointToLineTick(point.Position, out chordDragStartLineTick, out _);
+            chordDragStartTone = notesVm.PointToTone(point.Position);
             ViewModel.ChordHelpers.TrySelect(currentPart, chordDragPart, chordDragHelper);
             notesVm.ShowNoteParams = true;
             point.Pointer.Capture(control);
@@ -866,13 +878,24 @@ namespace OpenUtau.App.Controls {
             if (chordDragHelper == null || chordDragBefore == null) {
                 return;
             }
-            ViewModel.NotesViewModel.PointToLineTick(point, out int lineTick, out _);
+            var notesVm = ViewModel.NotesViewModel;
+            notesVm.PointToLineTick(point, out int lineTick, out _);
             int delta = lineTick - chordDragStartLineTick;
             if (chordDragResize) {
                 chordDragHelper.duration = Math.Max(1, chordDragBefore.duration + delta);
-            } else {
-                chordDragHelper.position = Math.Max(0, chordDragBefore.position + delta);
+                MessageBus.Current.SendMessage(new NotesRefreshEvent());
+                return;
             }
+            chordDragHelper.position = Math.Max(0, chordDragBefore.position + delta);
+            // Dragging vertically transposes the chord: the root moves and the
+            // root-relative tones come along, so the quality is untouched.
+            int divisions = notesVm.Is31Edo ? 31 : 12;
+            int toneDelta = notesVm.PointToTone(point) - chordDragStartTone;
+            int rootTone = Math.Clamp(
+                (chordDragBefore.rootTone ?? chordDragBefore.root) + toneDelta,
+                0, notesVm.TrackCount - 1);
+            chordDragHelper.rootTone = rootTone;
+            chordDragHelper.root = Edo31.Mod(rootTone, divisions);
             MessageBus.Current.SendMessage(new NotesRefreshEvent());
         }
 

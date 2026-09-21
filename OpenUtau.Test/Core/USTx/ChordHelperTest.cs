@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Linq;
 using OpenUtau.Core.Format;
 using OpenUtau.Core.Util;
@@ -27,19 +27,19 @@ namespace OpenUtau.Core.Ustx {
         public void PresetsUseExactTemperamentArithmetic() {
             Assert.Equal(new[] { 0, 10, 18 }, ChordHelperTheory.CreatePreset("Major").Select(t => t.Offset(true)));
             Assert.Equal(new[] { 0, 8, 18 }, ChordHelperTheory.CreatePreset("Minor").Select(t => t.Offset(true)));
-            Assert.Equal(new[] { 0, 8, 16, 24 }, ChordHelperTheory.CreatePreset("Diminished seventh").Select(t => t.Offset(true)));
+            Assert.Equal(new[] { 0, 8, 16, 24 }, ChordHelperTheory.CreatePreset("Diminished 7").Select(t => t.Offset(true)));
             Assert.Equal(new[] { 0, 10, 20 }, ChordHelperTheory.CreatePreset("Augmented").Select(t => t.Offset(true)));
-            Assert.Equal(new[] { 0, 10, 18, 23 }, ChordHelperTheory.CreatePreset("Sixth").Select(t => t.Offset(true)));
-            Assert.Equal(new[] { 0, 10, 18, 26 }, ChordHelperTheory.CreatePreset("Dominant seventh").Select(t => t.Offset(true)));
+            Assert.Equal(new[] { 0, 10, 18, 23 }, ChordHelperTheory.CreatePreset("Major 6").Select(t => t.Offset(true)));
+            Assert.Equal(new[] { 0, 10, 18, 26 }, ChordHelperTheory.CreatePreset("Dominant 7").Select(t => t.Offset(true)));
             Assert.Equal(new[] { 0, 4, 7 }, ChordHelperTheory.CreatePreset("Major").Select(t => t.Offset(false)));
             Assert.Equal(new[] { 0, 3, 7 }, ChordHelperTheory.CreatePreset("Minor").Select(t => t.Offset(false)));
-            Assert.Equal(25, ChordHelperTheory.CreatePreset("Harmonic seventh").Last().Offset(true));
-            Assert.Equal("♯6", ChordHelperTheory.CreatePreset("Harmonic seventh").Last().Label);
-            Assert.Equal(new[] { 0, 10, 25 }, ChordHelperTheory.CreatePreset("Italian augmented sixth").Select(t => t.Offset(true)));
-            Assert.Equal(new[] { 0, 10, 15, 25 }, ChordHelperTheory.CreatePreset("French augmented sixth").Select(t => t.Offset(true)));
-            Assert.Equal(new[] { 0, 10, 18, 25 }, ChordHelperTheory.CreatePreset("German augmented sixth").Select(t => t.Offset(true)));
-            Assert.Equal(new[] { 0, 5, 15, 25 }, ChordHelperTheory.CreatePreset("Japanese augmented sixth").Select(t => t.Offset(true)));
-            Assert.Equal(new[] { 0, 2, 6, 10 }, ChordHelperTheory.CreatePreset("Japanese augmented sixth").Select(t => t.Offset(false)));
+            Assert.Equal(25, ChordHelperTheory.CreatePreset("Harmonic 7").Last().Offset(true));
+            Assert.Equal("♯6", ChordHelperTheory.CreatePreset("Harmonic 7").Last().Label);
+            Assert.Equal(new[] { 0, 10, 25 }, ChordHelperTheory.CreatePreset("Italian +6").Select(t => t.Offset(true)));
+            Assert.Equal(new[] { 0, 10, 15, 25 }, ChordHelperTheory.CreatePreset("French +6").Select(t => t.Offset(true)));
+            Assert.Equal(new[] { 0, 10, 18, 25 }, ChordHelperTheory.CreatePreset("German +6").Select(t => t.Offset(true)));
+            Assert.Equal(new[] { 0, 5, 15, 25 }, ChordHelperTheory.CreatePreset("Japanese +6").Select(t => t.Offset(true)));
+            Assert.Equal(new[] { 0, 2, 6, 10 }, ChordHelperTheory.CreatePreset("Japanese +6").Select(t => t.Offset(false)));
             Assert.Equal("♯4", ChordHelperTheory.CanonicalInterval(15, true).Label);
             Assert.Equal("♭5", ChordHelperTheory.CanonicalInterval(16, true).Label);
         }
@@ -51,10 +51,10 @@ namespace OpenUtau.Core.Ustx {
                 quality = quality,
             };
 
-            var italian = Helper("Italian augmented sixth");
-            var french = Helper("French augmented sixth");
-            var german = Helper("German augmented sixth");
-            var japanese = Helper("Japanese augmented sixth");
+            var italian = Helper("Italian +6");
+            var french = Helper("French +6");
+            var german = Helper("German +6");
+            var japanese = Helper("Japanese +6");
             Assert.Equal(new[] { "1", "3", "♯6" }, italian.tones.Select(tone => tone.Label));
             Assert.Equal(new[] { "1", "3", "♯4", "♯6" }, french.tones.Select(tone => tone.Label));
             Assert.Equal(new[] { "1", "3", "5", "♯6" }, german.tones.Select(tone => tone.Label));
@@ -67,10 +67,10 @@ namespace OpenUtau.Core.Ustx {
             Assert.Equal("CGer+6", ChordHelperTheory.ChordName(german, false, 0));
             Assert.Equal("CJp+6", ChordHelperTheory.ChordName(japanese, false, 0));
 
-            var dominant = new UChordHelper { tones = ChordHelperTheory.CreatePreset("Dominant seventh") };
+            var dominant = new UChordHelper { tones = ChordHelperTheory.CreatePreset("Dominant 7") };
             Assert.Equal("C7", ChordHelperTheory.ChordName(dominant, false, 0));
-            Assert.Equal("Harmonic seventh", ChordHelperTheory.QualityName(german.tones, false));
-            Assert.Equal("German augmented sixth",
+            Assert.Equal("Harmonic 7", ChordHelperTheory.QualityName(german.tones, false));
+            Assert.Equal("German +6",
                 ChordHelperTheory.QualityName(german.tones, false, german.quality));
         }
 
@@ -79,21 +79,21 @@ namespace OpenUtau.Core.Ustx {
             var project = Fixture(false);
             var part = project.parts.OfType<UVoicePart>().Single(part => !part.IsChordPart);
             var helper = new UChordHelper {
-                tones = ChordHelperTheory.CreatePreset("German augmented sixth"),
-                quality = "German augmented sixth",
+                tones = ChordHelperTheory.CreatePreset("German +6"),
+                quality = "German +6",
             };
             part.chordHelpers.Add(helper);
-            Assert.Equal("German augmented sixth", helper.Clone().quality);
+            Assert.Equal("German +6", helper.Clone().quality);
 
             var loaded = Ustx31.Deserialize(SaveText(project));
             loaded.AfterLoad();
             var actual = loaded.ChordsPart.chordHelpers.Single();
-            Assert.Equal("German augmented sixth", actual.quality);
+            Assert.Equal("German +6", actual.quality);
             Assert.Equal("CGer+6", ChordHelperTheory.ChordName(actual, false, 0));
 
             var native = Ustx31.ConvertCopy(project, true);
             var converted = native.ChordsPart.chordHelpers.Single();
-            Assert.Equal("German augmented sixth", converted.quality);
+            Assert.Equal("German +6", converted.quality);
             Assert.Equal("CGer+6", ChordHelperTheory.ChordName(converted, true, 0));
 
             actual.tones = ChordHelperTheory.CreatePreset("Major");
@@ -147,19 +147,19 @@ namespace OpenUtau.Core.Ustx {
             Assert.Equal(5, Edo31.Mod(new UChordInterval(9).Offset(true), 31));
             Assert.Equal("♯11", ChordHelperTheory.DisplayInterval(new UChordInterval(4, 1), major, true).Label);
 
-            var sus2 = ChordHelperTheory.CreatePreset("Sus2");
-            var sus4 = ChordHelperTheory.CreatePreset("Sus4");
+            var sus2 = ChordHelperTheory.CreatePreset("Sus 2");
+            var sus4 = ChordHelperTheory.CreatePreset("Sus 4");
             Assert.Equal("2", ChordHelperTheory.DisplayInterval(sus2[1], sus2, false).Label);
             Assert.Equal("4", ChordHelperTheory.DisplayInterval(sus4[1], sus4, false).Label);
 
-            var sixth = ChordHelperTheory.CreatePreset("Sixth");
+            var sixth = ChordHelperTheory.CreatePreset("Major 6");
             Assert.Equal("6", ChordHelperTheory.DisplayInterval(sixth[^1], sixth, false).Label);
-            var dominant = ChordHelperTheory.CreatePreset("Dominant seventh");
+            var dominant = ChordHelperTheory.CreatePreset("Dominant 7");
             Assert.Equal("13", ChordHelperTheory.DisplayInterval(new UChordInterval(6), dominant, false).Label);
 
             var diminished = ChordHelperTheory.CreatePreset("Diminished");
             Assert.Equal("♭5", ChordHelperTheory.DisplayInterval(diminished[^1], diminished, true).Label);
-            var harmonic = ChordHelperTheory.CreatePreset("Harmonic seventh");
+            var harmonic = ChordHelperTheory.CreatePreset("Harmonic 7");
             Assert.Equal("♯6", ChordHelperTheory.DisplayInterval(harmonic[^1], harmonic, true).Label);
             Assert.Equal("♭♭8", ChordHelperTheory.DisplayInterval(
                 ChordHelperTheory.CanonicalInterval(27, true), major, true).Label);
@@ -169,17 +169,17 @@ namespace OpenUtau.Core.Ustx {
 
         [Fact]
         public void ExtendedPresetsKeepExplicitDegreeIdentityAndNames() {
-            var add9 = new UChordHelper { tones = ChordHelperTheory.CreatePreset("Add ninth") };
+            var add9 = new UChordHelper { tones = ChordHelperTheory.CreatePreset("Add 9") };
             Assert.Equal(new[] { "1", "3", "5", "9" }, add9.tones.Select(tone => tone.Label));
-            Assert.Equal("Add ninth", ChordHelperTheory.QualityName(add9.tones, false));
+            Assert.Equal("Add 9", ChordHelperTheory.QualityName(add9.tones, false));
             Assert.Equal("Cadd9", ChordHelperTheory.ChordName(add9, false, 0));
 
-            var ninth = new UChordHelper { tones = ChordHelperTheory.CreatePreset("Dominant ninth") };
+            var ninth = new UChordHelper { tones = ChordHelperTheory.CreatePreset("Dominant 9") };
             Assert.Equal("C9", ChordHelperTheory.ChordName(ninth, false, 0));
             Assert.Equal("C9", ChordHelperTheory.ChordName(ninth, true, 0));
-            var eleventh = new UChordHelper { tones = ChordHelperTheory.CreatePreset("Dominant eleventh") };
+            var eleventh = new UChordHelper { tones = ChordHelperTheory.CreatePreset("Dominant 11") };
             Assert.Equal("C11", ChordHelperTheory.ChordName(eleventh, false, 0));
-            var thirteenth = new UChordHelper { tones = ChordHelperTheory.CreatePreset("Dominant thirteenth") };
+            var thirteenth = new UChordHelper { tones = ChordHelperTheory.CreatePreset("Dominant 13") };
             Assert.Equal("C13", ChordHelperTheory.ChordName(thirteenth, false, 0));
         }
 
@@ -280,7 +280,7 @@ namespace OpenUtau.Core.Ustx {
             var helper = new UChordHelper {
                 root = 6,
                 rootTone = 66,
-                tones = ChordHelperTheory.CreatePreset("Diminished seventh"),
+                tones = ChordHelperTheory.CreatePreset("Diminished 7"),
             };
             ordinary.parts.OfType<UVoicePart>().Single(part => !part.IsChordPart).chordHelpers.Add(helper);
             var native = Ustx31.ConvertCopy(ordinary, true);
@@ -288,7 +288,7 @@ namespace OpenUtau.Core.Ustx {
             Assert.Equal(16, converted.root);
             Assert.Equal(171, converted.rootTone);
             Assert.Equal(new[] { 0, 8, 16, 24 }, converted.tones.Select(t => t.Offset(true)));
-            Assert.Equal("Diminished seventh", ChordHelperTheory.QualityName(converted.tones, true));
+            Assert.Equal("Diminished 7", ChordHelperTheory.QualityName(converted.tones, true));
             var back = Ustx31.ConvertCopy(native, false);
             var roundTripped = back.ChordsPart.chordHelpers.Single();
             Assert.Equal(66, roundTripped.rootTone);

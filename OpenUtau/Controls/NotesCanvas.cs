@@ -437,7 +437,14 @@ namespace OpenUtau.App.Controls {
             }
         }
 
+        /// <summary>
+        /// Solid bodies behind the notes. Only the chord editor fills them in; every
+        /// other part keeps the helpers as outlines so they read as guides.
+        /// </summary>
         void RenderChordHelperFills(double leftTick, double rightTick, NotesViewModel viewModel, DrawingContext context) {
+            if (!ChordEditing) {
+                return;
+            }
             var project = DocManager.Inst.Project;
             int divisions = project.Is31Edo ? 31 : 12;
             IEnumerable<int> rows = viewModel.DisplayRows ?? Enumerable.Range(0, viewModel.TrackCount);
@@ -452,12 +459,9 @@ namespace OpenUtau.App.Controls {
                 if (start >= rightTick || end <= leftTick || helper.tones.Count == 0) {
                     continue;
                 }
-                var chordTrack = project.tracks.FirstOrDefault(track => track.IsChordsTrack);
-                Color color = chordTrack != null
-                    ? ThemeManager.GetTrackColor(chordTrack.TrackColor).AccentColor.Color
-                    : Color.Parse(helper.color);
-                var fill = new ImmutableSolidColorBrush(Color.FromArgb(190, color.R, color.G, color.B));
-                var rootFill = new ImmutableSolidColorBrush(Color.FromArgb(205, 194, 158, 37));
+                Color color = ChordColor(project, helper);
+                var fill = new ImmutableSolidColorBrush(Color.FromArgb(150, color.R, color.G, color.B));
+                var rootFill = new ImmutableSolidColorBrush(Color.FromArgb(225, color.R, color.G, color.B));
                 var tones = helper.tones
                     .Select(tone => Edo31.Mod(tone.Offset(project.Is31Edo), divisions))
                     .ToHashSet();
@@ -470,11 +474,24 @@ namespace OpenUtau.App.Controls {
                     double width = Math.Max(1, (end - start) * TickWidth);
                     var rect = new Rect(topLeft.X + 0.75, Math.Round(topLeft.Y + 0.75),
                         Math.Max(0.5, width - 1.5), Math.Max(0.5, TrackHeight - 1.5));
-                    context.DrawRectangle(helper.highlightRoot && interval == 0 ? rootFill : fill,
-                        null, rect, 2, 2);
+                    context.DrawRectangle(IsRootRow(helper, step) ? rootFill : fill, null, rect, 2, 2);
                 }
             }
         }
+
+        /// <summary>True on the chord's own root pitch, not its octave copies.</summary>
+        static bool IsRootRow(UChordHelper helper, int step) =>
+            helper.rootTone.HasValue && step == helper.rootTone.Value;
+
+        static Color ChordColor(UProject project, UChordHelper helper) {
+            var chordTrack = project.tracks.FirstOrDefault(track => track.IsChordsTrack);
+            return chordTrack != null
+                ? ThemeManager.GetTrackColor(chordTrack.TrackColor).AccentColor.Color
+                : Color.Parse(helper.color);
+        }
+
+        /// <summary>The chord track is open, so helpers are the thing being edited.</summary>
+        private bool ChordEditing => Part?.IsChordPart == true;
 
         void RenderChordHelpers(double leftTick, double rightTick, NotesViewModel viewModel, DrawingContext context) {
             var project = DocManager.Inst.Project;
@@ -488,15 +505,19 @@ namespace OpenUtau.App.Controls {
                 if (start >= rightTick || end <= leftTick || helper.tones.Count == 0) {
                     continue;
                 }
-                var chordTrack = project.tracks.FirstOrDefault(track => track.IsChordsTrack);
-                Color color = chordTrack != null
-                    ? ThemeManager.GetTrackColor(chordTrack.TrackColor).AccentColor.Color
-                    : Color.Parse(helper.color);
-                bool selected = ReferenceEquals(owner, selectedChordPart) && ReferenceEquals(helper, selectedChordHelper);
-                var brush = new ImmutableSolidColorBrush(Color.FromArgb(selected ? (byte)245 : (byte)190, color.R, color.G, color.B));
-                var pen = new Pen(brush, selected ? 2.4 : 1.2) { LineJoin = PenLineJoin.Round };
+                Color color = ChordColor(project, helper);
+                bool selected = ChordEditing
+                    && ReferenceEquals(owner, selectedChordPart) && ReferenceEquals(helper, selectedChordHelper);
+                // Away from the chord editor the guides drop to a whisper, and the
+                // root reads as the same hue held more firmly rather than a second color.
+                byte bodyAlpha = ChordEditing ? (selected ? (byte)245 : (byte)190) : (byte)50;
+                byte rootAlpha = ChordEditing ? (byte)255 : (byte)120;
+                double bodyThickness = ChordEditing ? (selected ? 2.4 : 1.2) : 1.0;
+                double rootThickness = ChordEditing ? (selected ? 3.2 : 2.0) : 1.6;
+                var brush = new ImmutableSolidColorBrush(Color.FromArgb(bodyAlpha, color.R, color.G, color.B));
+                var pen = new Pen(brush, bodyThickness) { LineJoin = PenLineJoin.Round };
                 var rootPen = new Pen(new ImmutableSolidColorBrush(
-                    Color.FromArgb(selected ? (byte)255 : (byte)230, 255, 224, 92)), selected ? 3.2 : 2.0) {
+                    Color.FromArgb(rootAlpha, color.R, color.G, color.B)), rootThickness) {
                     LineJoin = PenLineJoin.Round,
                 };
                 var tones = helper.tones
@@ -514,11 +535,10 @@ namespace OpenUtau.App.Controls {
                     double width = Math.Max(1, (end - start) * TickWidth);
                     var rect = new Rect(topLeft.X + 0.75, Math.Round(topLeft.Y + 0.75),
                         Math.Max(0.5, width - 1.5), Math.Max(0.5, TrackHeight - 1.5));
-                    context.DrawRectangle(null,
-                        helper.highlightRoot && interval == 0 ? rootPen : pen,
-                        rect, 2, 2);
-                    string? label = interval == 0
-                        ? chordName
+                    bool root = IsRootRow(helper, step);
+                    context.DrawRectangle(null, helper.highlightRoot && root ? rootPen : pen, rect, 2, 2);
+                    string? label = !ChordEditing ? null
+                        : root ? chordName
                         : selected ? tone.Label : null;
                     if (label != null && TrackHeight >= 9 && width >= 12) {
                         var layout = TextLayoutCache.Get(label, Brushes.White, 9);

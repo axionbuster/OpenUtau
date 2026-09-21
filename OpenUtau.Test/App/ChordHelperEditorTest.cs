@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.IO;
 using System.Linq;
 using System.Reactive.Linq;
@@ -185,19 +185,20 @@ namespace OpenUtau.App {
                     vm.ChordHelpers.Degrees.Single(degree => degree.Label == "♭9")).Subscribe();
                 Assert.StartsWith("Custom (", vm.ChordHelpers.SelectedQuality);
 
-                vm.ChordHelpers.SelectedQuality = "Diminished seventh";
-                Assert.Equal(new[] { "1", "♭3", "♭5", "♭♭7" },
+                vm.ChordHelpers.SelectedQuality = "Diminished 7";
+                // 12-TET degree cells carry both enharmonic spellings.
+                Assert.Equal(new[] { "1", "♭3/♯2", "♭5/♯4", "♭♭7" },
                     vm.ChordHelpers.Degrees.Where(degree => degree.IsEnabled).Select(degree => degree.Label));
-                Assert.Equal("Diminished seventh", vm.ChordHelpers.SelectedQuality);
+                Assert.Equal("Diminished 7", vm.ChordHelpers.SelectedQuality);
                 Assert.NotNull(lastChange);
                 lastChange!.Unexecute();
                 vm.ChordHelpers.OnCommand(lastChange);
                 Assert.StartsWith("Custom (", vm.ChordHelpers.SelectedQuality);
 
-                vm.ChordHelpers.SelectedQuality = "German augmented sixth";
-                Assert.Equal(new[] { "1", "3", "5", "♯6" },
+                vm.ChordHelpers.SelectedQuality = "German +6";
+                Assert.Equal(new[] { "1", "3", "5", "♯6/♭7" },
                     vm.ChordHelpers.Degrees.Where(degree => degree.IsEnabled).Select(degree => degree.Label));
-                Assert.Equal("German augmented sixth", helper.quality);
+                Assert.Equal("German +6", helper.quality);
                 vm.ChordHelpers.ToggleDegreeCommand.Execute(
                     vm.ChordHelpers.Degrees.Single(degree => degree.Label == "♯11")).Subscribe();
                 Assert.Null(helper.quality);
@@ -237,7 +238,7 @@ namespace OpenUtau.App {
                 duration = 720,
                 root = 0,
                 rootTone = 155,
-                tones = ChordHelperTheory.CreatePreset("Dominant thirteenth"),
+                tones = ChordHelperTheory.CreatePreset("Dominant 13"),
                 bass = new UChordInterval(3),
                 color = "#D99F28",
             };
@@ -257,8 +258,8 @@ namespace OpenUtau.App {
                 duration = 720,
                 root = 0,
                 rootTone = 155,
-                tones = ChordHelperTheory.CreatePreset("Japanese augmented sixth"),
-                quality = "Japanese augmented sixth",
+                tones = ChordHelperTheory.CreatePreset("Japanese +6"),
+                quality = "Japanese +6",
                 color = "#A855F7",
             };
             part.chordHelpers.Add(known);

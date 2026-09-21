@@ -38,6 +38,7 @@ namespace OpenUtau.App.Controls {
         private double trackHeight;
         private Point offset;
         private int trackNo;
+        private TrackHeaderCanvas? canvas;
 
         public TrackAdder() {
             InitializeComponent();
@@ -53,6 +54,7 @@ namespace OpenUtau.App.Controls {
         }
 
         internal void Bind(TrackHeaderCanvas canvas) {
+            this.canvas = canvas;
             this.Bind(TrackHeightProperty, canvas.GetObservable(TrackHeaderCanvas.TrackHeightProperty));
             this.Bind(HeightProperty, canvas.GetObservable(TrackHeaderCanvas.TrackHeightProperty));
             this.Bind(OffsetProperty, canvas.WhenAnyValue(x => x.TrackOffset, trackOffset => new Point(0, -trackOffset * TrackHeight)));
@@ -61,8 +63,7 @@ namespace OpenUtau.App.Controls {
 
         private void SetPosition() {
             Canvas.SetLeft(this, 0);
-            Canvas.SetTop(this, TrackLayout.Top(TrackNo,
-                trackHeight == 0 ? 0 : -Offset.Y / trackHeight, trackHeight));
+            Canvas.SetTop(this, TrackLayout.Top(TrackNo, canvas?.TrackOffset ?? 0, trackHeight));
         }
 
         private void ButtonClicked(object sender, RoutedEventArgs e) {

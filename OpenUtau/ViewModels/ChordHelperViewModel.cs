@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
@@ -46,7 +46,12 @@ namespace OpenUtau.App.ViewModels {
     public partial class ChordDegreeViewModel : ViewModelBase {
         public UChordInterval Interval { get; }
         [Reactive] public partial bool IsEnabled { get; set; }
-        public string Label => Interval.Label;
+        public string Label {
+            get {
+                var partner = ChordHelperTheory.EnharmonicPartner(Interval, DocManager.Inst.Project.Is31Edo);
+                return partner == null ? Interval.Label : Interval.Label + "/" + partner.Label;
+            }
+        }
         public FontWeight Weight => IsEnabled ? FontWeight.Bold : FontWeight.Normal;
         int PaletteIndex {
             get {
@@ -76,6 +81,7 @@ namespace OpenUtau.App.ViewModels {
             IsEnabled = enabled;
         }
         public void Refresh() {
+            this.RaisePropertyChanged(nameof(Label));
             this.RaisePropertyChanged(nameof(Weight));
             this.RaisePropertyChanged(nameof(Background));
             this.RaisePropertyChanged(nameof(Foreground));
@@ -110,7 +116,8 @@ namespace OpenUtau.App.ViewModels {
         public ObservableCollectionExtended<ChordBassChoice> BassChoices { get; } = new();
         public ObservableCollectionExtended<ChordDegreeViewModel> Degrees { get; } = new();
         public int DegreeColumns => DocManager.Inst.Project.Is31Edo ? 6 : 4;
-        public double DegreeGridWidth => DegreeColumns * 46;
+        // 12-TET cells carry two spellings, so they need more room than 31-EDO's single one.
+        public double DegreeGridWidth => DocManager.Inst.Project.Is31Edo ? DegreeColumns * 46 : DegreeColumns * 62;
 
         public string? SelectedQuality {
             get => selectedQuality;
@@ -348,7 +355,7 @@ namespace OpenUtau.App.ViewModels {
                 bool is31 = DocManager.Inst.Project.Is31Edo;
                 QualityChoices.Clear();
                 QualityChoices.AddRange(ChordHelperTheory.Presets
-                    .Where(preset => is31 || preset.Name != "Harmonic seventh")
+                    .Where(preset => is31 || preset.Name != "Harmonic 7")
                     .Select(preset => preset.Name));
                 RootChoices.Clear();
                 int divisions = is31 ? 31 : 12;
@@ -447,12 +454,27 @@ namespace OpenUtau.App.ViewModels {
             if (!HasSelection) {
                 return;
             }
-            var part = selectedPart!;
-            var helper = selectedHelper!;
+            Delete(selectedPart!, selectedHelper!);
+        }
+
+        /// <summary>
+        /// Removes one chord, and the region with it once the region holds nothing,
+        /// so an emptied loop block does not linger in the arrangement.
+        /// </summary>
+        public void Delete(UVoicePart part, UChordHelper helper) {
+            var region = part.chordRegions.FirstOrDefault(item => item.chordHelpers.Contains(helper));
+            if (region == null && !part.chordHelpers.Contains(helper)) {
+                return;
+            }
             DocManager.Inst.StartUndoGroup();
             DocManager.Inst.ExecuteCmd(new RemoveChordHelperCommand(part, helper));
+            if (region != null && region.chordHelpers.Count == 0) {
+                DocManager.Inst.ExecuteCmd(new RemoveChordRegionCommand(part, region));
+            }
             DocManager.Inst.EndUndoGroup();
-            Select(null, null);
+            if (ReferenceEquals(helper, selectedHelper)) {
+                Select(null, null);
+            }
         }
 
         public bool CopySelected() {
@@ -500,7 +522,7 @@ namespace OpenUtau.App.ViewModels {
         }
 
         public void CommitSnapshot(UVoicePart part, UChordHelper helper, UChordHelper before) {
-            if (helper.position == before.position && helper.duration == before.duration) {
+            if (Equivalent(helper, before)) {
                 Select(part, helper);
                 return;
             }
@@ -508,8 +530,39 @@ namespace OpenUtau.App.ViewModels {
             helper.CopyFrom(before);
             DocManager.Inst.StartUndoGroup();
             DocManager.Inst.ExecuteCmd(new ChangeChordHelperCommand(part, helper, after));
+            ResolveOverlaps(part, helper);
             DocManager.Inst.EndUndoGroup();
             Select(part, helper);
+            Refresh();
+        }
+
+        /// <summary>
+        /// Chords share a single timeline the way notes in a voice part do: at most
+        /// one sounds at a time. Whatever <paramref name="kept"/> now covers is
+        /// trimmed back, and anything it covers completely goes. Call inside an
+        /// open undo group.
+        /// </summary>
+        public static void ResolveOverlaps(UVoicePart part, UChordHelper kept) {
+            var region = part.chordRegions.FirstOrDefault(item => item.chordHelpers.Contains(kept));
+            var siblings = (region?.chordHelpers ?? part.chordHelpers)
+                .Where(helper => !ReferenceEquals(helper, kept)).ToList();
+            foreach (var helper in siblings) {
+                if (helper.End <= kept.position || helper.position >= kept.End) {
+                    continue;
+                }
+                if (helper.position >= kept.position && helper.End <= kept.End) {
+                    DocManager.Inst.ExecuteCmd(new RemoveChordHelperCommand(part, helper));
+                    continue;
+                }
+                var trimmed = helper.Clone();
+                if (helper.position < kept.position) {
+                    trimmed.duration = kept.position - helper.position;
+                } else {
+                    trimmed.duration = helper.End - kept.End;
+                    trimmed.position = kept.End;
+                }
+                DocManager.Inst.ExecuteCmd(new ChangeChordHelperCommand(part, helper, trimmed));
+            }
         }
 
         void ApplyChange(Action<UChordHelper> change) {
@@ -521,6 +574,7 @@ namespace OpenUtau.App.ViewModels {
             }
             DocManager.Inst.StartUndoGroup();
             DocManager.Inst.ExecuteCmd(new ChangeChordHelperCommand(selectedPart!, selectedHelper!, changed));
+            ResolveOverlaps(selectedPart!, selectedHelper!);
             DocManager.Inst.EndUndoGroup();
             Refresh();
             MessageBus.Current.SendMessage(new ChordHelperSelectionEvent(selectedPart, selectedHelper));

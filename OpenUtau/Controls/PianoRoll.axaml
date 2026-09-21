@@ -17,7 +17,7 @@
       <Grid.RowDefinitions>
         <RowDefinition Height="24"/>
         <RowDefinition Height="24"/>
-        <RowDefinition Height="24"/>
+        <RowDefinition Height="54"/>
         <RowDefinition Height="*" MinHeight="60"/>
         <RowDefinition Height="Auto"/>
         <RowDefinition Height="150" 
@@ -142,7 +142,7 @@
                         TickOffset="{Binding NotesViewModel.TickOffset}"
                         SnapDiv="{Binding NotesViewModel.SnapDiv, Mode=OneWay}"
                         SnapTicks="{Binding NotesViewModel.SnapTicks}"
-                        ShowBar="True"/>
+                        ShowBar="True" ShowChords="True"/>
       <!-- Notes backgrounds end -->
       <!-- Expression backgrounds (to rendered below portrait) -->
       <c:TrackBackground Grid.Row="5" Grid.Column="1" IsHitTestVisible="False"

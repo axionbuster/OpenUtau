@@ -411,7 +411,7 @@
                            Foreground="{DynamicResource SystemControlForegroundBaseHighBrush}"/>
               </Grid>
             </ToggleButton>
-            <Border Width="12"/>
+            <Border Width="4"/>
             <ListBox Classes="toolbar" SelectedIndex="{Binding ToolIndex}">
                 <ListBox.ItemsPanel>
                     <ItemsPanelTemplate>
@@ -456,7 +456,7 @@
                 </Path>
               </Grid>
             </ToggleButton>
-            <Border Width="12"/>
+            <Border Width="4"/>
 
             <ToggleButton Classes="toolbar" Margin="0" Padding="1" Height="20" Width="20" IsChecked="{Binding NotesViewModel.ShowVibrato}"
                           ToolTip.Tip="{DynamicResource pianoroll.toggle.vibrato}">
@@ -523,7 +523,7 @@
                 </Path>
               </Grid>
             </ToggleButton>
-            <Border Width="12"/>
+            <Border Width="4"/>
             
             <ToggleButton Classes="toolbar" Margin="0" Padding="1" Height="20" Width="20" IsChecked="{Binding NotesViewModel.PlayTone}"
                           ToolTip.Tip="{DynamicResource pianoroll.toggle.tone}">
@@ -611,7 +611,7 @@
                 </Path>
               </Grid>
             </ToggleButton>
-            <ToggleButton Name="ChordHelperTool" Classes="toolbar" Margin="4,0,0,0" Padding="1" Height="20" Width="28"
+            <ToggleButton Name="ChordHelperTool" Classes="toolbar" Margin="0" Padding="1" Height="20" Width="24"
                           IsChecked="{Binding IsChordTrackOpen, Mode=OneWay}"
                           Click="OnChordTrackButtonClick"
                           ToolTip.Tip="Open the Chords track; click again to return to the previous voice part">

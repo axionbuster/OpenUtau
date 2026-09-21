@@ -194,6 +194,15 @@ namespace OpenUtau.App {
                 vm.ChordHelpers.OnCommand(lastChange);
                 Assert.StartsWith("Custom (", vm.ChordHelpers.SelectedQuality);
 
+                vm.ChordHelpers.SelectedQuality = "German augmented sixth";
+                Assert.Equal(new[] { "1", "3", "5", "♯6" },
+                    vm.ChordHelpers.Degrees.Where(degree => degree.IsEnabled).Select(degree => degree.Label));
+                Assert.Equal("German augmented sixth", helper.quality);
+                vm.ChordHelpers.ToggleDegreeCommand.Execute(
+                    vm.ChordHelpers.Degrees.Single(degree => degree.Label == "♯11")).Subscribe();
+                Assert.Null(helper.quality);
+                Assert.StartsWith("Custom (", vm.ChordHelpers.SelectedQuality);
+
                 vm.ChordHelpers.SelectedQuality = "Unison";
                 var unison = Assert.Single(vm.ChordHelpers.Degrees.Where(degree => degree.IsEnabled));
                 int beforeFinalToggle = commandCount;
@@ -222,7 +231,7 @@ namespace OpenUtau.App {
             project.Is31Edo = true;
             project.tracks.Clear();
             project.tracks.Add(new UTrack("Chord names") { TrackNo = 0 });
-            var part = new UVoicePart { trackNo = 0, position = 0, Duration = 2400 };
+            var part = new UVoicePart { trackNo = 0, position = 0, Duration = 3360 };
             var known = new UChordHelper {
                 position = 120,
                 duration = 720,
@@ -243,8 +252,18 @@ namespace OpenUtau.App {
                 bass = new UChordInterval(3),
                 color = "#358ED8",
             };
+            var japanese = new UChordHelper {
+                position = 1800,
+                duration = 720,
+                root = 0,
+                rootTone = 155,
+                tones = ChordHelperTheory.CreatePreset("Japanese augmented sixth"),
+                quality = "Japanese augmented sixth",
+                color = "#A855F7",
+            };
             part.chordHelpers.Add(known);
             part.chordHelpers.Add(custom);
+            part.chordHelpers.Add(japanese);
             project.parts.Add(part);
             var previous = DocManager.Inst.TakeProjectForTest(project);
             var previousSink = DocManager.Inst.CommandSink;

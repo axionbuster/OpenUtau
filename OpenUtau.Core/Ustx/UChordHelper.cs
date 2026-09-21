@@ -40,6 +40,8 @@ namespace OpenUtau.Core.Ustx {
         public int root;
         public int? rootTone;
         public List<UChordInterval> tones = ChordHelperTheory.CreatePreset("Major");
+        // Retains the selected analysis when one spelling has multiple valid names.
+        public string? quality;
         public UChordInterval? bass;
         public bool highlightRoot = true;
         public bool mute;
@@ -54,6 +56,7 @@ namespace OpenUtau.Core.Ustx {
             root = root,
             rootTone = rootTone,
             tones = tones.Select(tone => tone.Clone()).ToList(),
+            quality = quality,
             bass = bass?.Clone(),
             highlightRoot = highlightRoot,
             mute = mute,
@@ -66,6 +69,7 @@ namespace OpenUtau.Core.Ustx {
             root = other.root;
             rootTone = other.rootTone;
             tones = other.tones.Select(tone => tone.Clone()).ToList();
+            quality = other.quality;
             bass = other.bass?.Clone();
             highlightRoot = other.highlightRoot;
             mute = other.mute;
@@ -88,6 +92,9 @@ namespace OpenUtau.Core.Ustx {
                 .Select(group => group.First().Clone())
                 .OrderBy(tone => Edo31.Mod(tone.Offset(is31Edo), divisions))
                 .ToList();
+            if (!ChordHelperTheory.IsPresetSpelling(quality, tones)) {
+                quality = null;
+            }
             if (bass != null && !tones.Any(tone => tone.Equals(bass))) {
                 bass = null;
             }
@@ -260,6 +267,10 @@ namespace OpenUtau.Core.Ustx {
             new ChordHelperPreset("Dominant eleventh", I(1), I(3), I(5), I(7, -1), I(9), I(11)),
             new ChordHelperPreset("Dominant thirteenth", I(1), I(3), I(5), I(7, -1), I(9), I(11), I(13)),
             new ChordHelperPreset("Harmonic seventh", I(1), I(3), I(5), I(6, 1)),
+            new ChordHelperPreset("Italian augmented sixth", I(1), I(3), I(6, 1)),
+            new ChordHelperPreset("French augmented sixth", I(1), I(3), I(4, 1), I(6, 1)),
+            new ChordHelperPreset("German augmented sixth", I(1), I(3), I(5), I(6, 1)),
+            new ChordHelperPreset("Japanese augmented sixth", I(1), I(2), I(4, 1), I(6, 1)),
         };
 
         public static int IntervalOffset(int degree, int alteration, bool is31Edo) {
@@ -330,8 +341,23 @@ namespace OpenUtau.Core.Ustx {
             return preset.Tones.Select(tone => tone.Clone()).ToList();
         }
 
-        public static string QualityName(IEnumerable<UChordInterval> tones, bool is31Edo) {
+        static bool SameSpelling(IEnumerable<UChordInterval> left, IEnumerable<UChordInterval> right) =>
+            left.OrderBy(tone => tone.degree).ThenBy(tone => tone.alteration)
+                .SequenceEqual(right.OrderBy(tone => tone.degree).ThenBy(tone => tone.alteration));
+
+        public static bool IsPresetSpelling(string? name, IEnumerable<UChordInterval> tones) =>
+            name != null && Presets.Any(preset => preset.Name == name && SameSpelling(tones, preset.Tones));
+
+        public static string QualityName(
+                IEnumerable<UChordInterval> tones, bool is31Edo, string? preferredQuality = null) {
             var toneList = tones.ToList();
+            var spelledMatches = Presets.Where(preset => SameSpelling(toneList, preset.Tones)).ToList();
+            if (preferredQuality != null && spelledMatches.Any(preset => preset.Name == preferredQuality)) {
+                return preferredQuality;
+            }
+            if (spelledMatches.Count > 0) {
+                return spelledMatches[0].Name;
+            }
             int divisions = is31Edo ? 31 : 12;
             var mask = toneList.Select(tone => Edo31.Mod(tone.Offset(is31Edo), divisions)).Distinct().Order().ToArray();
             foreach (var preset in Presets) {
@@ -354,7 +380,7 @@ namespace OpenUtau.Core.Ustx {
             string rootName = is31Edo
                 ? Edo31.FifthName(Edo31.FifthsForStep(root, preferredFifths))
                 : MusicMath.KeysInOctave[root].Item1;
-            string quality = QualityName(helper.tones, is31Edo);
+            string quality = QualityName(helper.tones, is31Edo, helper.quality);
             string suffix = quality switch {
                 "Unison" => " (unison)",
                 "Fifth" => "5",
@@ -378,6 +404,10 @@ namespace OpenUtau.Core.Ustx {
                 "Dominant eleventh" => "11",
                 "Dominant thirteenth" => "13",
                 "Harmonic seventh" => "7:4",
+                "Italian augmented sixth" => "It+6",
+                "French augmented sixth" => "Fr+6",
+                "German augmented sixth" => "Ger+6",
+                "Japanese augmented sixth" => "Jp+6",
                 _ => "...",
             };
             string name = rootName + suffix;

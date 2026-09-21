@@ -124,7 +124,10 @@ namespace OpenUtau.App.ViewModels {
                     return;
                 }
                 if (value != null && ChordHelperTheory.Presets.Any(preset => preset.Name == value)) {
-                    ApplyChange(helper => helper.tones = ChordHelperTheory.CreatePreset(value));
+                    ApplyChange(helper => {
+                        helper.tones = ChordHelperTheory.CreatePreset(value);
+                        helper.quality = value;
+                    });
                 }
             }
         }
@@ -371,7 +374,7 @@ namespace OpenUtau.App.ViewModels {
                     duration = 480;
                 } else {
                     var helper = selectedHelper!;
-                    string quality = ChordHelperTheory.QualityName(helper.tones, is31);
+                    string quality = ChordHelperTheory.QualityName(helper.tones, is31, helper.quality);
                     if (!QualityChoices.Contains(quality)) {
                         QualityChoices.Insert(0, quality);
                     }
@@ -428,6 +431,7 @@ namespace OpenUtau.App.ViewModels {
                 return;
             }
             ApplyChange(helper => {
+                helper.quality = null;
                 int index = helper.tones.FindIndex(tone => Edo31.Mod(tone.Offset(is31), divisions) == target);
                 if (index >= 0) {
                     helper.tones.RemoveAt(index);
@@ -524,7 +528,7 @@ namespace OpenUtau.App.ViewModels {
             left.position == right.position && left.duration == right.duration &&
             left.root == right.root && left.rootTone == right.rootTone &&
             left.highlightRoot == right.highlightRoot && left.mute == right.mute &&
-            left.color == right.color && Equals(left.bass, right.bass) &&
+            left.color == right.color && left.quality == right.quality && Equals(left.bass, right.bass) &&
             left.tones.SequenceEqual(right.tones);
 
         public void OnCommand(UCommand command) {

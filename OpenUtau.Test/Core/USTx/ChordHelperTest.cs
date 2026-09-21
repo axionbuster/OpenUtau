@@ -35,8 +35,70 @@ namespace OpenUtau.Core.Ustx {
             Assert.Equal(new[] { 0, 3, 7 }, ChordHelperTheory.CreatePreset("Minor").Select(t => t.Offset(false)));
             Assert.Equal(25, ChordHelperTheory.CreatePreset("Harmonic seventh").Last().Offset(true));
             Assert.Equal("♯6", ChordHelperTheory.CreatePreset("Harmonic seventh").Last().Label);
+            Assert.Equal(new[] { 0, 10, 25 }, ChordHelperTheory.CreatePreset("Italian augmented sixth").Select(t => t.Offset(true)));
+            Assert.Equal(new[] { 0, 10, 15, 25 }, ChordHelperTheory.CreatePreset("French augmented sixth").Select(t => t.Offset(true)));
+            Assert.Equal(new[] { 0, 10, 18, 25 }, ChordHelperTheory.CreatePreset("German augmented sixth").Select(t => t.Offset(true)));
+            Assert.Equal(new[] { 0, 5, 15, 25 }, ChordHelperTheory.CreatePreset("Japanese augmented sixth").Select(t => t.Offset(true)));
+            Assert.Equal(new[] { 0, 2, 6, 10 }, ChordHelperTheory.CreatePreset("Japanese augmented sixth").Select(t => t.Offset(false)));
             Assert.Equal("♯4", ChordHelperTheory.CanonicalInterval(15, true).Label);
             Assert.Equal("♭5", ChordHelperTheory.CanonicalInterval(16, true).Label);
+        }
+
+        [Fact]
+        public void AugmentedSixthNamesUseSpellingAndPreserveAmbiguousAnalysis() {
+            UChordHelper Helper(string quality) => new UChordHelper {
+                tones = ChordHelperTheory.CreatePreset(quality),
+                quality = quality,
+            };
+
+            var italian = Helper("Italian augmented sixth");
+            var french = Helper("French augmented sixth");
+            var german = Helper("German augmented sixth");
+            var japanese = Helper("Japanese augmented sixth");
+            Assert.Equal(new[] { "1", "3", "♯6" }, italian.tones.Select(tone => tone.Label));
+            Assert.Equal(new[] { "1", "3", "♯4", "♯6" }, french.tones.Select(tone => tone.Label));
+            Assert.Equal(new[] { "1", "3", "5", "♯6" }, german.tones.Select(tone => tone.Label));
+            Assert.Equal(new[] { "1", "2", "♯4", "♯6" }, japanese.tones.Select(tone => tone.Label));
+            italian.quality = null;
+            french.quality = null;
+            japanese.quality = null;
+            Assert.Equal("CIt+6", ChordHelperTheory.ChordName(italian, false, 0));
+            Assert.Equal("CFr+6", ChordHelperTheory.ChordName(french, false, 0));
+            Assert.Equal("CGer+6", ChordHelperTheory.ChordName(german, false, 0));
+            Assert.Equal("CJp+6", ChordHelperTheory.ChordName(japanese, false, 0));
+
+            var dominant = new UChordHelper { tones = ChordHelperTheory.CreatePreset("Dominant seventh") };
+            Assert.Equal("C7", ChordHelperTheory.ChordName(dominant, false, 0));
+            Assert.Equal("Harmonic seventh", ChordHelperTheory.QualityName(german.tones, false));
+            Assert.Equal("German augmented sixth",
+                ChordHelperTheory.QualityName(german.tones, false, german.quality));
+        }
+
+        [Fact]
+        public void AugmentedSixthAnalysisSurvivesCloneAndSerialization() {
+            var project = Fixture(false);
+            var part = project.parts.OfType<UVoicePart>().Single(part => !part.IsChordPart);
+            var helper = new UChordHelper {
+                tones = ChordHelperTheory.CreatePreset("German augmented sixth"),
+                quality = "German augmented sixth",
+            };
+            part.chordHelpers.Add(helper);
+            Assert.Equal("German augmented sixth", helper.Clone().quality);
+
+            var loaded = Ustx31.Deserialize(SaveText(project));
+            loaded.AfterLoad();
+            var actual = loaded.ChordsPart.chordHelpers.Single();
+            Assert.Equal("German augmented sixth", actual.quality);
+            Assert.Equal("CGer+6", ChordHelperTheory.ChordName(actual, false, 0));
+
+            var native = Ustx31.ConvertCopy(project, true);
+            var converted = native.ChordsPart.chordHelpers.Single();
+            Assert.Equal("German augmented sixth", converted.quality);
+            Assert.Equal("CGer+6", ChordHelperTheory.ChordName(converted, true, 0));
+
+            actual.tones = ChordHelperTheory.CreatePreset("Major");
+            actual.Normalize(false);
+            Assert.Null(actual.quality);
         }
 
         [Fact]
